@@ -12,7 +12,7 @@ export default async function ProtectedRoute () {
 		<div>
 			This is a protected Route
 			<br/>
-			You will only see this if you're authenticated
+			You will only see this if you are authenticated
 		</div>
 	)
 }
