@@ -1,0 +1,21 @@
+{
+  "Home": {
+    "title": "Hello world!",
+    "about": "About"
+  },
+  "Navbar": {
+    "home": "Home",
+    "protected": "Protected",
+    "about": "Who are we?",
+    "projects": "Projects",
+    "actualProjects": "Actual Projects",
+    "fliphouses": "Fliphouses",
+    "investments": "Investments",
+    "buyToRent": "Buy To Rent",
+    "buyToBuild": "Buy To Build",
+    "mexicoToUs": "Mexico to US Investments",
+    "signIn": "Sign In",
+    "register": "Register",
+    "signOut": "Sign Out"
+  }
+}

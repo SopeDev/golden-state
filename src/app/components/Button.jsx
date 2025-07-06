@@ -1,0 +1,37 @@
+'use client'
+import Link from 'next/link'
+
+export default function Button({
+	children,
+	onClick,
+	href,
+	type = 'button',
+	className = '',
+	variant = 'primary',
+	...props
+}) {
+	const baseStyles = {
+		primary: 'bg-main-blue hover:bg-secondary-blue text-white py-2 px-4 rounded cursor-pointer',
+		secondary: 'bg-main-gold hover:bg-secondary-gold text-white py-2 px-4 rounded cursor-pointer',
+		ghost: 'text-gray-500 hover:text-gray-300 py-2 px-4 rounded cursor-pointer',
+		unstyled: '',
+	}
+
+	const styles = `${baseStyles[variant] || ''} ${className}`
+
+	if (href) {
+		return (
+			<Link href={href}>
+				<button type={type} className={styles} {...props}>
+					{children}
+				</button>
+			</Link>
+		)
+	}
+
+	return (
+		<button type={type} className={styles} onClick={onClick} {...props}>
+			{children}
+		</button>
+	)
+}

@@ -1,0 +1,21 @@
+{
+  "Home": {
+    "title": "Hola mundo!",
+    "about": "Acerca de"
+  },
+  "Navbar": {
+    "home": "Inicio",
+    "protected": "Protegido",
+    "about": "¿Quiénes somos?",
+    "projects": "Proyectos",
+    "actualProjects": "Proyectos Actuales",
+    "fliphouses": "Fliphouses",
+    "investments": "Inversiones",
+    "buyToRent": "Comprar para Rentar",
+    "buyToBuild": "Comprar para Construir",
+    "mexicoToUs": "Inversiones de México a Estados Unidos",
+    "signIn": "Iniciar Sesión",
+    "register": "Registrarse",
+    "signOut": "Cerrar Sesión"
+  }
+}

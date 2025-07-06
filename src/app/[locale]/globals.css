@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "SenlotSerif";
+  src: url("../../../public/fonts/Senlot-Serif-Ext-Bold.woff") format("woff")
+}
+
+@font-face {
+  font-family: "Gotham";
+  src: url("../../../public/fonts/Gotham-Book.woff") format("woff")
+}
+
+:root {
+  --background: #FFFFFF;
+  --main-blue: #0d2642;
+  --main-gold: #ac8b49;
+  --off-white: #f7f5f0;
+  --secondary-blue: #224066;
+  --secondary-gold: #d1b378;
+  --main-text: #1d1d1d;
+  --secondary-text: #eaeaea;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-main-blue: var(--main-blue);
+  --color-main-gold: var(--main-gold);
+  --color-off-white: var(--off-white);
+  --color-secondary-blue: var(--secondary-blue);
+  --color-secondary-gold: var(--secondary-gold);
+  --color-main-text: var(--main-text);
+  --color-secondary-text: var(--secondary-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #FFFFFF;
+    --main-blue: #0d2642;
+    --main-gold: #ac8b49;
+    --off-white: #f7f5f0;
+    --secondary-blue: #224066;
+    --secondary-gold: #d1b378;
+    --main-text: #1d1d1d;
+    --secondary-text: #eaeaea;
+  }
+}
+
+body {
+  background: var(--off-white);
+  color: var(--foreground);
+  font-family: Gotham, sans-serif;
+}
