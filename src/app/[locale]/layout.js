@@ -8,7 +8,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 
 import SessionProvider from "../components/SessionProvider"
-import NavMenu from "../components/NavMenu"
+import NavMenuServer from "../components/NavMenuServer"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,7 +49,7 @@ export default async function RootLayout({ children, params }) {
         <SessionProvider session={session}>
           <NextIntlClientProvider locale={locale}>
             <main>
-              <NavMenu/>
+              <NavMenuServer/>
               <div id="content" style={{ marginTop: '76px' }}>
                 {children}
               </div>

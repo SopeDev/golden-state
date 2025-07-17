@@ -15,8 +15,10 @@ export default function Button({
 		secondary: 'bg-main-gold hover:bg-secondary-gold text-white py-2 px-4 rounded cursor-pointer',
 		action: 'w-full bg-main-gold hover:bg-secondary-gold text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
 		ghost: 'text-gray-500 hover:text-gray-300 py-2 px-4 rounded cursor-pointer',
-		outlinegold: 'w-full bg-white border-2 border-main-gold text-main-gold hover:bg-main-gold hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
-		outlineblue: 'w-full bg-white border-2 border-main-blue text-main-blue hover:bg-main-blue hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
+		outlinegold: 'bg-white border border-main-gold text-main-gold hover:bg-main-gold hover:text-white py-2 px-4 rounded transition-colors duration-200 cursor-pointer',
+		outlineblue: 'bg-white border border-main-blue text-main-blue hover:bg-main-blue hover:text-white py-2 px-4 rounded transition-colors duration-200 cursor-pointer',
+		outlinegoldfull: 'w-full bg-white border-2 border-main-gold text-main-gold hover:bg-main-gold hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
+		outlinebluefull: 'w-full bg-white border-2 border-main-blue text-main-blue hover:bg-main-blue hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
 		unstyled: '',
 	}
 

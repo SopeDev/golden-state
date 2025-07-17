@@ -166,10 +166,10 @@ export default function PropertyDetailsClient({ property }) {
                 <Button variant="action">
                   {t('investNow')}
                 </Button>
-                <Button variant="outlinegold">
+                <Button variant="outlinegoldfull">
                   {t('downloadProspectus')}
                 </Button>
-                <Button variant="outlineblue">
+                <Button variant="outlinebluefull">
                   {t('scheduleCall')}
                 </Button>
               </div>

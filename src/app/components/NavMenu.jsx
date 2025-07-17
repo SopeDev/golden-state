@@ -3,17 +3,15 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { useSession } from 'next-auth/react'
 import Button from './Button'
 import DropdownNavItem from './DropdownNavItem'
 import LocaleToggle from './LocaleToggle'
 import AuthButton from './AuthButton'
 
-export default function NavMenu() {
+export default function NavMenu({ session }) {
 	const pathName = usePathname()
 	const t = useTranslations('Navbar')
 	const [menuOpen, setMenuOpen] = useState(false)
-	const { data: session } = useSession()
 
 	return (
 		<div id="nav" className="fixed top-0 py-3 w-screen shadow-md bg-white z-50">
@@ -54,17 +52,10 @@ export default function NavMenu() {
 				{/* Right-side controls */}
 				<div className="hidden lg:flex items-center gap-2">
 					<LocaleToggle />
-					<AuthButton t={t} />
-					{session?.user?.email === 'admin@goldenstate.com' && (
-						<div className="flex gap-2 ml-4">
-							<Link href="/admin/schema" className="text-sm text-[--main-blue] hover:text-[--secondary-blue] px-2 py-1 border border-[--main-blue] rounded">
-								Schema
-							</Link>
-							<Link href="/admin/data" className="text-sm text-[--main-blue] hover:text-[--secondary-blue] px-2 py-1 border border-[--main-blue] rounded">
-								Data
-							</Link>
-						</div>
+					{session?.user?.type === 'ADMIN' && (
+						<Button href="/admin/data" variant="outlinegold">Admin</Button>
 					)}
+					<AuthButton t={t} />
 				</div>
 
 				{/* Mobile menu toggle */}

@@ -31,7 +31,8 @@ export const authOptions = {
           if (passwordCorrect) {
             return {
               id: user.id,
-              email: user.email
+              email: user.email,
+              type: user.type
             }
           }
 
@@ -46,6 +47,27 @@ export const authOptions = {
       clientSecret: process.env.GITHUB_SECRET,
     })
   ],
+  callbacks: {
+    async jwt({ token, user, account, profile }) {
+      // Initial sign in
+      if (user) {
+        token.type = user.type;
+      } else if (token.email && typeof token.type === 'undefined') {
+        // For OAuth, fetch user type from DB if not present
+        const dbUser = await prisma.user.findUnique({ where: { email: token.email } });
+        if (dbUser) {
+          token.type = dbUser.type;
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.type = token.type;
+      }
+      return session;
+    }
+  }
 }
 
 const handler = NextAuth(authOptions)
