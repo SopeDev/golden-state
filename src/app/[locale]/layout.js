@@ -9,6 +9,7 @@ import "./globals.css"
 
 import SessionProvider from "../components/SessionProvider"
 import NavMenuServer from "../components/NavMenuServer"
+import Footer from "../components/Footer"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,6 +54,7 @@ export default async function RootLayout({ children, params }) {
               <div id="content" style={{ marginTop: '76px' }}>
                 {children}
               </div>
+              <Footer />
             </main>
           </NextIntlClientProvider>
         </SessionProvider>

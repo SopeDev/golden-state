@@ -47,6 +47,16 @@ export default function NavMenu({ session }) {
 							{ href: '/mexicotous', label: 'mexicoToUs' }
 						]}
 					/>
+					{session?.user && (
+						<DropdownNavItem
+							label="account"
+							t={t}
+							links={[
+								{ href: '/dashboard', label: 'dashboard' },
+								{ href: '/dashboard/portfolio', label: 'portfolio' }
+							]}
+						/>
+					)}
 				</ul>
 
 				{/* Right-side controls */}
@@ -105,6 +115,18 @@ export default function NavMenu({ session }) {
 					<Link href="/mexicotous">
 						<div className="py-1 text-sm text-main-blue hover:text-secondary-blue">{t('mexicoToUs')}</div>
 					</Link>
+					{session?.user && (
+						<>
+							<hr/>
+							<label className="text-lg">{t('account')}</label>
+							<Link href="/dashboard">
+								<div className="py-1 text-sm text-main-blue hover:text-secondary-blue">{t('dashboard')}</div>
+							</Link>
+							<Link href="/dashboard/portfolio">
+								<div className="py-1 text-sm text-main-blue hover:text-secondary-blue">{t('portfolio')}</div>
+							</Link>
+						</>
+					)}
 					<hr/>
 					<div className="flex items-center gap-2 justify-between">
 						<LocaleToggle />
