@@ -16,7 +16,8 @@ async function main() {
     create: {
       email: 'admin@goldenstate.com',
       password: hashedAdminPassword,
-      type: 'ADMIN'
+      type: 'ADMIN',
+      provider: 'credentials'
     }
   })
 
@@ -32,7 +33,8 @@ async function main() {
     create: {
       email: 'investor@example.com',
       password: hashedInvestorPassword,
-      type: 'INVESTOR'
+      type: 'INVESTOR',
+      provider: 'credentials'
     }
   })
 

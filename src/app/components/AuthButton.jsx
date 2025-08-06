@@ -9,7 +9,6 @@ export default function AuthButton({ t }) {
 	if (session) {
 		return (
 			<div className="flex items-center gap-2">
-				<span className="text-sm text-mainblue">{session?.user?.name}</span>
 				<Button onClick={() => signOut()}>
 					{t('signOut')}
 				</Button>

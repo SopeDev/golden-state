@@ -9,6 +9,7 @@ export default function AdminNav() {
 
   const navItems = [  
     { href: '/admin/properties', label: 'Property Management' },
+    { href: '/admin/users', label: 'User Management' },
   ]
 
   const navItemsDatabase = [

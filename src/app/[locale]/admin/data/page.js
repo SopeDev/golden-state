@@ -24,6 +24,7 @@ export default async function DataPage() {
           id: true,
           email: true,
           type: true,
+          provider: true,
           createdAt: true,
           _count: {
             select: { investments: true }
@@ -130,6 +131,11 @@ export default async function DataPage() {
                       <span className="font-semibold text-main-blue">User ID:</span>
                       <br />
                       <span className="text-main-text">#{user.id}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-main-blue">Provider:</span>
+                      <br />
+                      <span className="text-main-text">{user.provider || 'credentials'}</span>
                     </div>
                     <div>
                       <span className="font-semibold text-main-blue">Investments:</span>

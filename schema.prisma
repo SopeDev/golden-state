@@ -10,8 +10,9 @@ generator client {
 model User {
   id       Int   @id @default(autoincrement())
   email    String   @unique
-  password String
+  password String?  // Optional for OAuth users
   type     UserType
+  provider String?  // Track auth provider: 'credentials', 'github', etc.
   createdAt DateTime @default(now())
   
   // Relations
