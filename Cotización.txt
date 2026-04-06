@@ -1,0 +1,107 @@
+﻿________________
+
+
+
+
+Cotización General para Rodolfo - Plataforma de Inversiones
+Diseñar y desarrollar una plataforma web donde inversionistas puedan:
+* Conocer el modelo de inversión y los distintos proyectos disponibles
+
+* Consultar el progreso de los proyectos
+
+* Acceder a un dashboard personalizado con su portafolio
+
+* Recibir actualizaciones y reinvertir ganancias
+Mientras tanto, el equipo administrador tendrá acceso a herramientas para:
+   * Gestionar proyectos:
+   * Crear y editar proyectos con toda su información
+   * Subir imágenes y documentos
+   * Marcar estado del proyecto (en planeación, desarrollo, completado)
+   * Actualizar porcentaje de avance
+
+      * Administrar inversionistas:
+      * Ver listado de usuarios registrados
+      * Asignar proyectos a usuarios
+      * Ver portafolio de inversionistas
+      * Agregar o editar manualmente los montos invertidos
+
+         * Notificar usuarios:
+         * Enviar notificaciones sobre avances o cambios en los proyectos
+Otros requerimientos:
+         * El sistema contempla registro de inversión vía depósito bancario con confirmación manual (sin integración de pagos en línea).
+
+________________
+
+
+Se sugiere implementar el proyecto en 2 FASES de desarrollo. Las fases se constituyen de la siguiente forma:
+________________
+
+
+Fase 1: Sitio Informativo y Captación de Clientes
+Incluye:
+            * Diseño responsivo (adaptado a móvil y desktop)
+
+            * Landing page profesional
+
+            * Secciones: Inicio, Proyectos Terminados, Proyectos en Desarrollo, FAQ, Contacto
+
+            * Idioma automático según IP (Español/Inglés) o por selección manual
+
+            * Formulario de contacto
+
+            * Galería de proyectos con imágenes y datos clave
+
+            * Integración con herramientas de analítica (Google Analytics)
+
+Tiempo estimado: 2–3 semanas
+Costo estimado: $18,000 MXN
+________________
+
+
+Fase 2: Plataforma con Login y Dashboard para Inversionistas
+Incluye:
+               * Registro/Login de usuarios (validación por correo o admin)
+
+               * Dashboard para inversionistas:
+
+                  * Ver portafolio de inversiones
+
+                  * Estado de cada proyecto (porcentaje, imágenes, fechas estimadas)
+
+                  * Documentación del proyecto
+
+                  * Notificaciones sobre actualizaciones
+
+                  * Visualización de dividendos e historial
+
+                     * Panel de administrador:
+
+                        * Crear y editar proyectos
+
+                        * Asignar inversionistas a proyectos
+
+                        * Subir documentación e imágenes
+
+                        * Creación y asignación de roles (inversionista, admin, contador, moderador) con accesos diferenciados
+
+                           * Backend seguro con base de datos estructurada (usuarios, proyectos, relaciones)
+
+Tiempo estimado: 4–6 semanas
+Costo: $32,000
+________________
+
+
+Costo final por ambas fases:
+$50,000 MXN
+(Precio cerrado. Incluye todos los puntos anteriores y está basado en los requerimientos detallados hasta el momento.)
+
+
+Tiempo estimado total:
+6 a 9 semanas
+
+
+Forma de pago:
+Fase 1: 50% de anticipo ($9,000) / 50% al finalizar
+Fase 2: 50% de anticipo ($16,000) / 50% al finalizar
+📱+52 664 386 2569
+✉️ jorgecarlosquevedo@gmail.com
