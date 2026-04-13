@@ -1,107 +1,99 @@
 'use client'
 
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import Button from './Button'
+import { Link } from '@/i18n/navigation'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
 export default function PropertyCard({ property }) {
   const t = useTranslations('Projects')
-  
-  // Debug translation loading
-  console.log('Translation function:', t)
-  console.log('Units translation:', t('units'))
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-off-white hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">
-      {/* Property Image */}
+    <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
       {property.images && property.images.length > 0 && (
-        <div className="h-64 bg-gray-200 relative overflow-hidden">
-          <Link href={`/properties/${property.investmentId}`}>
+        <div className="relative h-64 overflow-hidden bg-muted">
+          <Link href={`/properties/${property.investmentId}`} className="block h-full">
             <img
               src={property.images[0]}
               alt={property.name}
-              className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
             />
           </Link>
-          <div className="absolute top-4 left-4">
-            <span className="bg-main-gold text-white px-3 py-1 rounded-full text-sm font-semibold">
+          <div className="absolute left-4 top-4">
+            <span className="rounded-full bg-main-gold px-3 py-1 text-sm font-semibold text-white">
               #{property.investmentId}
             </span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col flex-1 justify-between h-full">
-        <div className="p-6 flex-1 flex flex-col">
-          {/* Property Type Badge */}
-          <div className="mb-4">
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-              property.type === 'BUILD_TO_SELL' 
-                ? 'bg-secondary-blue text-white' 
-                : 'bg-secondary-gold text-main-blue'
-            }`}>
-              {property.type === 'BUILD_TO_SELL' ? t('buildToSell') : t('buildToRent')}
-            </span>
-          </div>
-
-          {/* Property Name and Location */}
-          <Link href={`/properties/${property.investmentId}`}>
-            <h3 className="text-2xl font-bold text-main-blue mb-2 hover:text-secondary-blue transition-colors cursor-pointer">
-              {property.name}
-            </h3>
-          </Link>
-          <p className="text-main-text mb-4">
-            {property.address}, {property.city}, {property.state}
-          </p>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="text-center">
-              <p className="text-sm text-main-text opacity-70">{t('price')}</p>
-              <p className="text-xl font-bold text-main-blue">
-                ${property.price.toLocaleString()}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-main-text opacity-70">{t('units') || 'Units'}</p>
-              <p className="text-xl font-bold text-main-blue">{property.unitCount}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-main-text opacity-70">{t('minInvestment')}</p>
-              <p className="text-xl font-bold text-main-gold">
-                ${property.minInvestment.toLocaleString()}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-main-text opacity-70">{t('estRoi')}</p>
-              <p className="text-xl font-bold text-main-gold">{property.estimatedROI}%</p>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="mb-6">
-            <p className="text-sm text-main-text opacity-70 mb-1">{t('timeline')}</p>
-            <p className="text-lg font-semibold text-main-blue">{property.estimatedMonths} {t('months')}</p>
-          </div>
-
-          {/* Summary */}
-          {property.summary && (
-            <div>
-              <p className="text-sm text-main-text opacity-70 mb-2">{t('summary')}</p>
-              <p className="text-main-text text-sm line-clamp-3">{property.summary}</p>
-            </div>
-          )}
-        </div>
-        <div className="px-6 pb-6">
-          {/* Action Button */}
-          <Button 
-            href={`/properties/${property.investmentId}`}
-            variant="action"
+      <CardContent className="flex flex-1 flex-col p-6 pt-6">
+        <div className="mb-4">
+          <span
+            className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+              property.type === 'BUILD_TO_SELL'
+                ? 'bg-secondary-blue text-white'
+                : 'bg-secondary-gold text-primary'
+            }`}
           >
-            {t('viewDetails')}
-          </Button>
+            {property.type === 'BUILD_TO_SELL' ? t('buildToSell') : t('buildToRent')}
+          </span>
         </div>
-      </div>
-    </div>
+
+        <Link href={`/properties/${property.investmentId}`}>
+          <h3 className="mb-2 font-heading text-3xl font-semibold text-primary transition-colors hover:text-secondary-blue">
+            {property.name}
+          </h3>
+        </Link>
+        <p className="mb-4 text-muted-foreground">
+          {property.address}, {property.city}, {property.state}
+        </p>
+
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">{t('price')}</p>
+            <p className="text-xl font-semibold text-primary">${property.price.toLocaleString()}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">{t('units')}</p>
+            <p className="text-xl font-semibold text-primary">{property.unitCount}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">{t('minInvestment')}</p>
+            <p className="text-xl font-semibold text-main-gold">
+              ${property.minInvestment.toLocaleString()}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">{t('estRoi')}</p>
+            <p className="text-xl font-semibold text-main-gold">{property.estimatedROI}%</p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <p className="mb-1 text-sm text-muted-foreground">{t('timeline')}</p>
+          <p className="text-lg font-medium text-primary">
+            {property.estimatedMonths} {t('months')}
+          </p>
+        </div>
+
+        {property.summary && (
+          <div className="mt-auto">
+            <p className="mb-2 text-sm text-muted-foreground">{t('summary')}</p>
+            <p className="line-clamp-3 text-sm text-foreground">{property.summary}</p>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="bg-muted/20 px-6 pb-6 pt-4">
+        <Link
+          href={`/properties/${property.investmentId}`}
+          className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full')}
+        >
+          {t('viewDetails')}
+        </Link>
+      </CardFooter>
+    </Card>
   )
-} 
+}

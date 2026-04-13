@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import Button from '../../../components/Button'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { adminSelectClassName } from '@/lib/adminFormClasses'
 
 export default function UsersAdminClient({ users }) {
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -15,7 +19,7 @@ export default function UsersAdminClient({ users }) {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
@@ -40,7 +44,7 @@ export default function UsersAdminClient({ users }) {
       })
 
       if (response.ok) {
-        setUsersList(usersList.filter(u => u.id !== userId))
+        setUsersList(usersList.filter((u) => u.id !== userId))
       } else {
         const error = await response.json()
         alert(`Failed to delete user: ${error.message}`)
@@ -56,31 +60,22 @@ export default function UsersAdminClient({ users }) {
   const handleFormSubmit = async (formData) => {
     setIsLoading(true)
     try {
-      const url = editingUser 
-        ? `/api/admin/users/${editingUser.id}`
-        : '/api/admin/users'
-      
+      const url = editingUser ? `/api/admin/users/${editingUser.id}` : '/api/admin/users'
       const method = editingUser ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 
       if (response.ok) {
         const updatedUser = await response.json()
-        
         if (editingUser) {
-          setUsersList(usersList.map(u => 
-            u.id === editingUser.id ? updatedUser : u
-          ))
+          setUsersList(usersList.map((u) => (u.id === editingUser.id ? updatedUser : u)))
         } else {
           setUsersList([updatedUser, ...usersList])
         }
-        
         setIsFormOpen(false)
         setEditingUser(null)
       } else {
@@ -97,234 +92,194 @@ export default function UsersAdminClient({ users }) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-main-blue mb-4">User Management</h1>
-            <p className="text-lg text-main-text max-w-2xl">
-              Create, edit, and manage users in the Golden State investment platform.
-            </p>
-          </div>
-          <Button
-            onClick={handleCreateUser}
-            variant="primary"
-            className="px-6 py-3"
-          >
-            + Add New User
-          </Button>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-4xl font-semibold text-primary">User Management</h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">
+            Create, edit, and manage users in the Golden State investment platform.
+          </p>
         </div>
-
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-main-blue text-white">
-                <tr>
-                  <th className="px-6 py-4 text-left">ID</th>
-                  <th className="px-6 py-4 text-left">Email</th>
-                  <th className="px-6 py-4 text-left">Type</th>
-                  <th className="px-6 py-4 text-left">Provider</th>
-                  <th className="px-6 py-4 text-left">Investments</th>
-                  <th className="px-6 py-4 text-left">Created</th>
-                  <th className="px-6 py-4 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersList.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-main-blue">#{user.id}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-main-blue">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        user.type === 'ADMIN' 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {user.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">
-                        {user.provider || 'credentials'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-main-gold">
-                        {user._count?.investments || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleEditUser(user)}
-                          variant="outlineblue"
-                          className="px-3 py-1 text-sm"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteUser(user.id)}
-                          variant="ghost"
-                          className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
-                          disabled={isLoading}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* User Form Modal */}
-        {isFormOpen && (
-          <UserForm
-            user={editingUser}
-            onSubmit={handleFormSubmit}
-            onCancel={() => {
-              setIsFormOpen(false)
-              setEditingUser(null)
-            }}
-            isLoading={isLoading}
-          />
-        )}
+        <Button type="button" onClick={handleCreateUser} className="shrink-0">
+          + Add New User
+        </Button>
       </div>
+
+      <Card className="overflow-hidden border-border/80 shadow-md">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-primary text-primary-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium md:px-6">ID</th>
+                <th className="px-4 py-3 text-left font-medium md:px-6">Email</th>
+                <th className="px-4 py-3 text-left font-medium md:px-6">Type</th>
+                <th className="hidden px-6 py-3 text-left font-medium md:table-cell">Provider</th>
+                <th className="px-4 py-3 text-left font-medium md:px-6">Investments</th>
+                <th className="hidden px-6 py-3 text-left font-medium lg:table-cell">Created</th>
+                <th className="px-4 py-3 text-left font-medium md:px-6">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usersList.map((user) => (
+                <tr key={user.id} className="border-b border-border transition-colors hover:bg-muted/40">
+                  <td className="px-4 py-3 md:px-6">
+                    <span className="font-semibold text-primary">#{user.id}</span>
+                  </td>
+                  <td className="max-w-[10rem] truncate px-4 py-3 font-medium text-primary md:max-w-none md:px-6">
+                    {user.email}
+                  </td>
+                  <td className="px-4 py-3 md:px-6">
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        user.type === 'ADMIN' ? 'bg-destructive/15 text-destructive' : 'bg-green-600/15 text-green-800 dark:text-green-400'
+                      }`}
+                    >
+                      {user.type}
+                    </span>
+                  </td>
+                  <td className="hidden px-6 py-3 text-muted-foreground md:table-cell">
+                    {user.provider || 'credentials'}
+                  </td>
+                  <td className="px-4 py-3 md:px-6">
+                    <span className="font-semibold text-main-gold">{user._count?.investments || 0}</span>
+                  </td>
+                  <td className="hidden px-6 py-3 text-muted-foreground lg:table-cell">
+                    {formatDate(user.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 md:px-6">
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteUser(user.id)}
+                        disabled={isLoading}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {isFormOpen && (
+        <UserForm
+          user={editingUser}
+          onSubmit={handleFormSubmit}
+          onCancel={() => {
+            setIsFormOpen(false)
+            setEditingUser(null)
+          }}
+          isLoading={isLoading}
+        />
+      )}
+    </div>
   )
 }
 
 function UserForm({ user, onSubmit, onCancel, isLoading }) {
   const [formData, setFormData] = useState({
     email: user?.email || '',
-    password: '', // Always empty for security
-    type: user?.type || 'INVESTOR'
+    password: '',
+    type: user?.type || 'INVESTOR',
+    provider: user?.provider || 'credentials',
   })
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    // Only include password if it's not empty (for updates)
     const submitData = { ...formData }
+    delete submitData.provider
     if (!submitData.password) {
       delete submitData.password
     }
-
     onSubmit(submitData)
   }
 
   return (
-    <div className="fixed inset-0 bg-[rgba(0,0,0,0.75)] flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-main-blue">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border-border/80 shadow-lg">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+          <CardTitle className="font-heading text-2xl text-primary">
             {user ? 'Edit User' : 'Create New User'}
-          </h2>
-          <Button
-            onClick={onCancel}
-            variant="ghost"
-            className="text-gray-500 hover:text-gray-700"
-          >
+          </CardTitle>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onCancel} aria-label="Close">
             ✕
           </Button>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="user-email">Email Address</Label>
+                <Input
+                  id="user-email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-main-text mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main-blue focus:border-transparent"
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="user-password">Password {user && '(leave blank to keep current)'}</Label>
+                <Input
+                  id="user-password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required={!user}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="user-type">User Type</Label>
+                <select
+                  id="user-type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className={adminSelectClassName()}
+                  required
+                >
+                  <option value="INVESTOR">Investor</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Authentication Provider</Label>
+                <Input value={formData.provider || 'credentials'} disabled readOnly className="bg-muted" />
+                <p className="text-xs text-muted-foreground">
+                  This shows how the user originally signed up and cannot be changed.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-main-text mb-2">
-                Password {user && '(leave blank to keep current)'}
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main-blue focus:border-transparent"
-                required={!user} // Only required for new users
-              />
+            <div className="flex justify-end gap-3 border-t border-border pt-6">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Saving...' : user ? 'Update User' : 'Create User'}
+              </Button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-main-text mb-2">
-                User Type
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main-blue focus:border-transparent"
-                required
-              >
-                <option value="INVESTOR">Investor</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-main-text mb-2">
-                Authentication Provider
-              </label>
-              <input
-                type="text"
-                value={formData.provider || 'credentials'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                disabled
-                readOnly
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This shows how the user originally signed up and cannot be changed
-              </p>
-            </div>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button
-              type="button"
-              onClick={onCancel}
-              variant="outlineblue"
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Saving...' : (user ? 'Update User' : 'Create User')}
-            </Button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
-} 
+}

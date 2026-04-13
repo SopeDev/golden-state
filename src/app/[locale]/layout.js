@@ -2,24 +2,12 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { getServerSession } from "next-auth"
-import { Viewport } from 'next'
 
-import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 
 import SessionProvider from "../components/SessionProvider"
 import NavMenuServer from "../components/NavMenuServer"
 import Footer from "../components/Footer"
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-})
 
 export const metadata = {
   title: "Golden State - Capital Investment",
@@ -44,14 +32,12 @@ export default async function RootLayout({ children, params }) {
 
   return (
     <html lang={locale}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <SessionProvider session={session}>
           <NextIntlClientProvider locale={locale}>
             <main>
               <NavMenuServer/>
-              <div id="content" style={{ marginTop: '76px' }}>
+              <div id="content" className="mt-[76px]">
                 {children}
               </div>
               <Footer />

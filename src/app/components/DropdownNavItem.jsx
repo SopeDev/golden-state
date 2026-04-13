@@ -1,10 +1,10 @@
 'use client'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 
 export default function DropdownNavItem({ label, links = [], t }) {
 	return (
-		<li className="relative group cursor-pointer">
-			<div className="flex items-center gap-1 py-1 px-2 text-main-blue hover:text-secondary-blue">
+		<li className="group relative cursor-pointer">
+			<div className="flex items-center gap-1 px-2 py-1 text-primary hover:text-secondary-blue">
 				{t ? t(label) : label}
 				<svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 					<path
@@ -16,11 +16,11 @@ export default function DropdownNavItem({ label, links = [], t }) {
 				</svg>
 			</div>
 
-			<div className="absolute w-max py-5 left-0 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity flex flex-col bg-white text-black shadow-md rounded z-50 min-w-[150px]">
-				{links.map(({ href, label }, index) => (
+			<div className="pointer-events-none absolute left-0 z-50 flex min-w-[150px] w-max flex-col rounded bg-card py-5 text-card-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+				{links.map(({ href, label: linkLabel }, index) => (
 					<Link key={index} href={href}>
-						<div className="px-4 py-2 text-secondaryblue hover:bg-gray-100">
-							{t ? t(label) : label}
+						<div className="px-4 py-2 text-secondary-blue hover:bg-muted">
+							{t ? t(linkLabel) : linkLabel}
 						</div>
 					</Link>
 				))}

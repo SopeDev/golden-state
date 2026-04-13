@@ -1,7 +1,7 @@
 'use client'
-import Link from 'next/link'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import Button from './Button'
+import { Link } from '@/i18n/navigation'
+import { Button, buttonVariants } from '@/components/ui/button'
 
 export default function AuthButton({ t }) {
 	const { data: session } = useSession()
@@ -9,7 +9,7 @@ export default function AuthButton({ t }) {
 	if (session) {
 		return (
 			<div className="flex items-center gap-2">
-				<Button onClick={() => signOut()}>
+				<Button type="button" variant="default" onClick={() => signOut()}>
 					{t('signOut')}
 				</Button>
 			</div>
@@ -18,12 +18,15 @@ export default function AuthButton({ t }) {
 
 	return (
 		<div className="flex items-center gap-2">
-			<Button onClick={() => signIn()} variant="primary">
+			<Button type="button" variant="default" onClick={() => signIn()}>
 				{t('signIn')}
 			</Button>
-			<Button href="/register" variant="secondary">
+			<Link
+				href="/register"
+				className={buttonVariants({ variant: 'gold', size: 'default' })}
+			>
 				{t('register')}
-			</Button>
+			</Link>
 		</div>
 	)
 }

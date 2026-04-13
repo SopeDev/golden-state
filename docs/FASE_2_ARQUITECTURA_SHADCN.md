@@ -92,52 +92,99 @@ Documento de trabajo **interno** para ejecutar la parte técnica del **pago 2** 
 
 ### Fase B — Baseline shadcn (0.5–1.5 días)
 
-- [ ] Inicializar o alinear **shadcn** con la versión de Tailwind del proyecto (`components.json`, `tailwind.config`).
-- [ ] Definir carpeta canónica para primitivos: p. ej. `src/components/ui` (recomendado) o documentar si se queda bajo `app`.
-- [ ] Añadir **solo** lo necesario al inicio, por ejemplo:
+- [x] Inicializar o alinear **shadcn** con la versión de Tailwind del proyecto (`components.json`, `tailwind.config`).
+- [x] Definir carpeta canónica para primitivos: p. ej. `src/components/ui` (recomendado) o documentar si se queda bajo `app`.
+- [x] Añadir **solo** lo necesario al inicio, por ejemplo:
   - `button`, `input`, `label`, `textarea`
   - `card`
   - `separator` (opcional)
-  - `sheet` o `dialog` (si el nav móvil o modales lo van a usar pronto)
-- [ ] Una sola forma de importar utilidades (`cn` desde `@/lib/utils` o equivalente).
+  - `sheet` o `dialog` (si el nav móvil o modales lo van a usar pronto) — *deferido a Fase D/F si hace falta*
+- [x] Una sola forma de importar utilidades (`cn` desde `@/lib/utils` o equivalente).
+
+#### Fase B ejecutada (abr 2026)
+
+- **CLI:** `npx shadcn@latest init -d` sobre Next 15 + Tailwind v4.
+- **`components.json`:** estilo `base-nova`, `rsc: true`, JS (no TSX), CSS en `src/app/[locale]/globals.css`, alias `@/components`, `@/components/ui`, `@/lib/utils`.
+- **Dependencias añadidas:** `@base-ui/react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `tw-animate-css`; imports en CSS: `tw-animate-css`, `shadcn/tailwind.css`. Paquete **`shadcn`** en **devDependencies** (solo CLI).
+- **Archivos:** `src/lib/utils.js` (`cn`), `src/components/ui/` → `button`, `input`, `label`, `textarea`, `card`, `separator`.
+- **Tema:** variables shadcn en `:root` + `@layer base`; **`--primary`** mapeado a **`--main-blue`**; **`--foreground`** ya definido por el preset (corrige el hueco detectado en Fase A).
+- **Fuentes:** corregido `--font-sans` / `--font-heading` circulares → **Gotham** + **SenlotSerif**; retiradas fuentes **Geist** del `layout.js` para no duplicar con la marca.
+- **Legacy:** `src/app/components/Button.jsx` sigue siendo el botón usado en toda la app; el **Button** shadcn vive en `@/components/ui/button` para **Fase E** (About) y refactors.
 
 ### Fase C — Convenciones por escrito (en código / comentario breve en este doc)
 
-- [ ] Regla: **pantallas nuevas y refactors** importan desde `@/components/ui/*` (o el alias acordado).
-- [ ] Regla: **un componente por carpeta** para piezas de dominio (`About`, `PropertyCard` refactor) cuando crezcan; shadcn en `ui/` sin wrapper salvo que haya token de marca fuerte.
-- [ ] Decidir destino de **`Button.jsx` legacy:** delegar en shadcn, deprecar gradualmente, o mantener hasta último — **una decisión** y aplicarla en About primero.
+- [x] Regla: **pantallas nuevas y refactors** importan desde `@/components/ui/*` (o el alias acordado).
+- [x] Regla: **un componente por carpeta** para piezas de dominio (`About`, `PropertyCard` refactor) cuando crezcan; shadcn en `ui/` sin wrapper salvo que haya token de marca fuerte.
+- [x] Decidir destino de **`Button.jsx` legacy:** delegar en shadcn, deprecar gradualmente, o mantener hasta último — **una decisión** y aplicarla en About primero.
+
+#### Convenciones acordadas (Fase C)
+
+**Alias y primitivos**
+
+- Pantallas **nuevas** y **refactors** de pantallas existentes: importar primitivos desde `@/components/ui/*` y utilidades desde `@/lib/utils` (`cn`). Evitar nuevos `<button>` / `<input>` “sueltos” con Tailwind repetido salvo caso puntual (p. ej. nativo por accesibilidad muy específica).
+- La lista oficial de piezas shadcn del repo es la de **`components.json`** y la carpeta **`src/components/ui/`** (añadir componentes con el CLI, no copiar a mano sin alinear con el CLI).
+
+**Dominio vs `ui/`**
+
+- Piezas de **dominio** (páginas compuestas como About, tarjetas como `PropertyCard`, secciones de marketing): **`src/components/<Nombre>/`** con **`<Nombre>.jsx`** como entrada; si el archivo crece (orientativo **~150 líneas**), extraer subcomponentes en el **mismo directorio** (`AboutHero.jsx`, etc.), no en `ui/`.
+- **`src/components/ui/`**: solo primitivos del sistema (shadcn). **Sin** wrappers de marca por defecto; si hace falta un variant de marca reutilizable, valorar un componente fino bajo `src/components/` (no dentro de `ui/`) o `className` + tokens en la vista.
+
+**`Button.jsx` legacy (`src/app/components/Button.jsx`)**
+
+- **Decisión:** **deprecación gradual** (no sustituir todo el repo en un solo PR).
+- **About (Fase E) y cualquier pantalla nueva:** usar **`Button`** desde **`@/components/ui/button`**. Para enlaces internos, preferir **`Link`** de **`@/i18n/navigation`** + **`buttonVariants`** (o estilos acordados), ya que el `Button` actual no expone `asChild`.
+- **Rutas que aún no se tocan:** pueden seguir importando **`../components/Button`** hasta su refactor en **Fase F**; al **editar** una pantalla, migrar sus botones al primitivo shadcn en el mismo cambio cuando sea razonable.
+- **No** eliminar `Button.jsx` en Fase C; cuando no queden importaciones, borrar o archivar en un PR dedicado.
 
 ### Fase D — Shell del sitio (0.5–1 día)
 
-- [ ] Ajustar **layout** / **NavMenu** / **Footer** lo mínimo para usar tokens y primitivos nuevos donde no rompa todo.
-- [ ] Objetivo: marco visual consistente para About y pulidos posteriores, no rediseño completo del nav en este documento salvo que esté en la lista del cliente.
+- [x] Ajustar **layout** / **NavMenu** / **Footer** lo mínimo para usar tokens y primitivos nuevos donde no rompa todo.
+- [x] Objetivo: marco visual consistente para About y pulidos posteriores, no rediseño completo del nav en este documento salvo que esté en la lista del cliente.
+
+#### Fase D ejecutada
+
+- **`layout`:** `marginTop` inline sustituido por **`mt-[76px]`** (Tailwind).
+- **Navegación localizada:** `NavMenu`, `DropdownNavItem`, `Footer` y **`AuthButton`** usan **`Link` / `usePathname` / `useRouter`** desde **`@/i18n/navigation`** (`createNavigation`) en rutas internas — coherente con **`/[locale]`**.
+- **Tokens:** nav con **`bg-background`**, **`border-border`**, texto **`text-primary`**; footer con **`bg-primary`**, **`text-primary-foreground`** y acentos **`main-gold`** donde ya estaban.
+- **Primitivos:** **`buttonVariants`** + **`cn`** para admin (nav), CTA pie, enlace registro; **`Button`** shadcn en auth (sign in / out).
+- **Accesibilidad / marcado:** primer ítem del nav desktop como **`<li><Link>`**; menú móvil cierra al navegar **`onClick`**; botón hamburguesa con **`type="button"`**.
 
 ### Fase E — Quiénes somos (vertical completa, 1–2 días)
 
-- [ ] Ruta `/{locale}/about` (o la acordada), mensajes en `messages/en.json` y `messages/es.json`.
-- [ ] Composición solo con sistema nuevo (+ tailwind existente donde aplique).
-- [ ] Enlace desde menú y pie ya apunta a página real (cierra el agujero de `/about`).
+- [x] Ruta `/{locale}/about` (o la acordada), mensajes en `messages/en.json` y `messages/es.json`.
+- [x] Composición solo con sistema nuevo (+ tailwind existente donde aplique).
+- [x] Enlace desde menú y pie ya apunta a página real (cierra el agujero de `/about`).
+
+#### Fase E ejecutada
+
+- **Ruta:** `src/app/[locale]/about/page.js` con **`generateMetadata`** (`About.metaTitle` / `metaDescription`).
+- **Vista:** `src/components/About/AboutPage.jsx` (server): **`getTranslations('About')`**, **`Card`** (`CardHeader`, `CardTitle`, `CardDescription`, `CardContent`), CTAs con **`Link`** + **`buttonVariants`** (sin `asChild` en el primitivo actual).
+- **i18n:** claves bajo **`About`** en **`messages/en.json`** y **`messages/es.json`**.
 
 ### Fase F — Pulido incremental (resto del tiempo del pago 2)
 
 Orden sugerido (ajustar con el cliente):
 
-1. [ ] **Registro** — alto impacto percibido (sigue siendo placeholder hasta pago 4, pero puede verse profesional).
-2. [ ] **Proyectos** + **PropertyCard** / detalle — cara pública principal.
-3. [ ] **Dashboard** + **portafolio** — área inversionista.
-4. [ ] **Admin** (usuarios, propiedades) — formularios densos; beneficiarse de `input`/`label`/`card` compartidos.
+1. [x] **Registro** — `Card` + `Label` + `Input` + `Button` shadcn, copy bajo **`Register`** (EN/ES); flujo de negocio sin cambios.
+2. [x] **Proyectos** + **PropertyCard** / detalle — **`Link`** `@/i18n/navigation`, `Card`, `buttonVariants` / `Button`; listado y ficha alineados con tokens.
+3. [x] **Dashboard** + **portafolio** — mismos primitivos; dashboard con **`Dashboard`** i18n; portfolio header/summary/list con `Card`.
+4. [x] **Admin** — `UsersAdminClient` / `PropertiesAdminClient` con `Input`/`Label`/`Card`/`Button`; **`AdminNav`** con `Link`/`usePathname` `@/i18n/navigation`; páginas **data** y **schema** con `Card`; errores de carga con `Card` + `AdminNav`; `redirect` admin desde `@/i18n/navigation`.
 
 En cada ítem: **solo** sustitución de primitivos y espaciado/tipografía; **no** abrir reglas de negocio nuevas.
+
+#### Fase F (2026)
+
+- **Hecho:** registro, proyectos, tarjeta y detalle de propiedad, dashboard, portafolio, **admin** (CRUD usuarios/propiedades, data, schema, nav).
 
 ---
 
 ## 5. Definición de “hecho” para la parte arquitectura del pago 2
 
-- [ ] `components.json` + al menos **5 primitivos** shadcn en uso real (no solo instalados).
-- [ ] **About** publicado en ambos idiomas y enlazado.
-- [ ] Documento de convenciones: **este archivo** actualizado con rutas finales (`ui/`, alias) si cambiaron durante la implementación.
-- [ ] **Al menos dos** pantallas del inventario F pasan por pulido con el nuevo sistema (además de About).
-- [ ] Build y lint sin errores nuevos relacionados con la migración.
+- [x] `components.json` + al menos **5 primitivos** shadcn en uso real (no solo instalados) — *About + shell usan `card`, `button` / `buttonVariants`; resto disponible para Fase F.*
+- [x] **About** publicado en ambos idiomas y enlazado.
+- [x] Documento de convenciones: **este archivo** actualizado con rutas finales (`ui/`, alias) si cambiaron durante la implementación.
+- [x] **Al menos dos** pantallas del inventario F pasan por pulido con el nuevo sistema (además de About) — *registro, proyectos, detalle, dashboard, portafolio.*
+- [x] Build y lint sin errores nuevos relacionados con la migración.
 
 ---
 
@@ -163,3 +210,8 @@ En cada ítem: **solo** sustitución de primitivos y espaciado/tipografía; **no
 | Fecha | Nota |
 |-------|------|
 | 2026-03-29 | **Fase A completada.** Hallazgos documentados arriba; sin `components.json`; Tailwind v4 CSS-first; pendiente corregir/definir `--foreground` en `globals.css`. |
+| 2026-04-06 | **Fase B completada.** `shadcn init` + UI `button|input|label|textarea|card|separator`; tema y fuentes ajustados; build OK. Siguiente: Fase C (convenciones + decisión `Button` legacy) → Fase E About. |
+| 2026-04-07 | **Fase C completada.** Convenciones y decisión `Button` legacy en §4 (“Convenciones acordadas”); puntero breve en `src/app/components/Button.jsx`. Siguiente: Fase D (shell), luego Fase E (About con `@/components/ui/button`). |
+| 2026-04-08 | **Fases D y E completadas.** Shell: nav/footer/auth con `@/i18n/navigation` + tokens y `buttonVariants`/`Button`; layout `mt-[76px]`. About: `/{locale}/about`, `AboutPage` con `Card` + CTAs, mensajes EN/ES. Pendiente pago 2: **Fase F** (≥2 pantallas) y cierre de checklist §5. |
+| 2026-04-09 | **Fase F (mayoría).** Registro, proyectos, `PropertyCard`, `PropertyDetailsClient`, dashboard y portafolio migrados a `@/components/ui` + `Link` i18n; namespaces `Register` y `Dashboard` en mensajes. |
+| 2026-03-29 | **Fase F — admin.** Clientes admin + páginas `data`/`schema` con `Card` y tokens; errores server con `Card`; `adminFormClasses` para `<select>`; `redirect` localizado en rutas admin. |

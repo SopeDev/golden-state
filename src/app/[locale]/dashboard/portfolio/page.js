@@ -29,12 +29,12 @@ export default async function PortfolioPage() {
 		})
 
 		if (!user) {
-			return <PortfolioClient investments={[]} user={null} />
+			return <PortfolioClient investments={[]} />
 		}
 
-		return <PortfolioClient investments={user.investments} user={user} />
+		return <PortfolioClient investments={user.investments} />
 	} catch (error) {
 		console.error('Error fetching portfolio:', error)
-		return <PortfolioClient investments={[]} user={null} />
+		return <PortfolioClient investments={[]} />
 	}
 } 

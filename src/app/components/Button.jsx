@@ -1,4 +1,5 @@
 'use client'
+// Legacy: new screens and refactors use @/components/ui/button — see docs/FASE_2_ARQUITECTURA_SHADCN.md (Fase C).
 import Link from 'next/link'
 
 export default function Button({
@@ -19,7 +20,7 @@ export default function Button({
 		outlineblue: 'bg-white border border-main-blue text-main-blue hover:bg-main-blue hover:text-white py-2 px-4 rounded transition-colors duration-200 cursor-pointer',
 		outlinegoldfull: 'w-full bg-white border-2 border-main-gold text-main-gold hover:bg-main-gold hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
 		outlinebluefull: 'w-full bg-white border-2 border-main-blue text-main-blue hover:bg-main-blue hover:text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 cursor-pointer',
-		unstyled: '',
+		unstyled: 'cursor-pointer',
 	}
 
 	const styles = `${baseStyles[variant] || ''} ${className}`

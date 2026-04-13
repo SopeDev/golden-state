@@ -28,8 +28,9 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Brand: align shadcn primary with main-blue */
+  --primary: var(--main-blue);
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -65,8 +66,9 @@
   --color-secondary-gold: var(--secondary-gold);
   --color-main-text: var(--main-text);
   --color-secondary-text: var(--secondary-text);
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  /* Match @font-face families in this file (Geist vars optional on layout) */
+  --font-sans: Gotham, ui-sans-serif, system-ui, sans-serif;
+  --font-heading: SenlotSerif, ui-serif, Georgia, serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -169,5 +171,12 @@ body {
   }
   html {
     @apply font-sans;
+  }
+  /* Senlot heading stack site-wide (matches About + shadcn CardTitle) */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading;
   }
 }
