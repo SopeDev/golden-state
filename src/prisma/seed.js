@@ -54,7 +54,7 @@ async function main() {
       unitCount: 4,
       minInvestment: 50000,
       estimatedROI: 4.5,
-      estimatedMonths: 18,
+      estimatedMonths: '18',
       summary: 'Premium residential development in the heart of San Diego. This project features 4 luxury units with modern amenities and stunning ocean views.',
       propertyFacts: {
         lotSize: '0.25 acres',
@@ -88,7 +88,7 @@ async function main() {
       unitCount: 12,
       minInvestment: 100000,
       estimatedROI: 6.2,
-      estimatedMonths: 24,
+      estimatedMonths: '24',
       summary: 'Mixed-use development in downtown Los Angeles featuring 12 residential units with ground-floor retail space.',
       propertyFacts: {
         lotSize: '0.5 acres',

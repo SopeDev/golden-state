@@ -4,6 +4,21 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
+const parseRequiredInt = (value, field) => {
+  const parsed = parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${field} must be a whole number`)
+  }
+  return parsed
+}
+
+const parseRequiredFloat = (value, field) => {
+  const parsed = parseFloat(value)
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${field} must be a valid number`)
+  }
+  return parsed
+}
 
 export async function PUT(request, { params }) {
   try {
@@ -63,10 +78,28 @@ export async function PUT(request, { params }) {
     }
 
     // Check if investmentId or slug already exists (excluding current property)
+    let parsedFields
+    try {
+      parsedFields = {
+        investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
+        price: parseRequiredInt(body.price, 'price'),
+        unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
+        minInvestment: parseRequiredInt(body.minInvestment, 'minInvestment'),
+        estimatedROI: parseRequiredFloat(body.estimatedROI, 'estimatedROI'),
+        estimatedMonths: String(body.estimatedMonths).trim(),
+      }
+    } catch (parseError) {
+      return NextResponse.json({ message: parseError.message }, { status: 400 })
+    }
+
+    if (!parsedFields.estimatedMonths) {
+      return NextResponse.json({ message: 'estimatedMonths is required' }, { status: 400 })
+    }
+
     const duplicateProperty = await prisma.property.findFirst({
       where: {
         OR: [
-          { investmentId: body.investmentId },
+          { investmentId: parsedFields.investmentId },
           { slug: body.slug }
         ],
         NOT: { id }
@@ -84,18 +117,18 @@ export async function PUT(request, { params }) {
     const property = await prisma.property.update({
       where: { id },
       data: {
-        investmentId: body.investmentId,
+        investmentId: parsedFields.investmentId,
         name: body.name,
         slug: body.slug,
         type: body.type,
         city: body.city,
         state: body.state,
         address: body.address,
-        price: body.price,
-        unitCount: body.unitCount,
-        minInvestment: body.minInvestment,
-        estimatedROI: body.estimatedROI,
-        estimatedMonths: body.estimatedMonths,
+        price: parsedFields.price,
+        unitCount: parsedFields.unitCount,
+        minInvestment: parsedFields.minInvestment,
+        estimatedROI: parsedFields.estimatedROI,
+        estimatedMonths: parsedFields.estimatedMonths,
         summary: body.summary,
         propertyFacts: propertyFacts,
         investmentDetails: investmentDetails,

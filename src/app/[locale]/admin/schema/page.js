@@ -41,7 +41,7 @@ export default async function SchemaPage() {
           { name: 'unitCount', type: 'Int', description: 'Number of units' },
           { name: 'minInvestment', type: 'Int', description: 'Minimum investment amount' },
           { name: 'estimatedROI', type: 'Float', description: 'Expected return percentage' },
-          { name: 'estimatedMonths', type: 'Int', description: 'Project timeline in months' },
+          { name: 'estimatedMonths', type: 'String', description: 'Project timeline display value (e.g. 24-36)' },
           { name: 'summary', type: 'String', description: 'Executive summary' },
           { name: 'propertyFacts', type: 'Json', description: 'Technical property details' },
           { name: 'investmentDetails', type: 'Json', description: 'Funding breakdown' },

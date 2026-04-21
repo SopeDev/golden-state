@@ -222,7 +222,7 @@ function UserForm({ user, onSubmit, onCancel, isLoading }) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="user-email">Email Address</Label>
+                <Label htmlFor="user-email" className="text-main-gold">Email Address</Label>
                 <Input
                   id="user-email"
                   type="email"
@@ -234,7 +234,7 @@ function UserForm({ user, onSubmit, onCancel, isLoading }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="user-password">Password {user && '(leave blank to keep current)'}</Label>
+                <Label htmlFor="user-password" className="text-main-gold">Password {user && '(leave blank to keep current)'}</Label>
                 <Input
                   id="user-password"
                   type="password"
@@ -246,7 +246,7 @@ function UserForm({ user, onSubmit, onCancel, isLoading }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="user-type">User Type</Label>
+                <Label htmlFor="user-type" className="text-main-gold">User Type</Label>
                 <select
                   id="user-type"
                   name="type"
@@ -261,7 +261,7 @@ function UserForm({ user, onSubmit, onCancel, isLoading }) {
               </div>
 
               <div className="space-y-2">
-                <Label>Authentication Provider</Label>
+                <Label className="text-main-gold">Authentication Provider</Label>
                 <Input value={formData.provider || 'credentials'} disabled readOnly className="bg-muted" />
                 <p className="text-xs text-muted-foreground">
                   This shows how the user originally signed up and cannot be changed.

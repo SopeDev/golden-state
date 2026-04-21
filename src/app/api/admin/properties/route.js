@@ -4,6 +4,21 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
+const parseRequiredInt = (value, field) => {
+  const parsed = parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${field} must be a whole number`)
+  }
+  return parsed
+}
+
+const parseRequiredFloat = (value, field) => {
+  const parsed = parseFloat(value)
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${field} must be a valid number`)
+  }
+  return parsed
+}
 
 export async function POST(request) {
   try {
@@ -16,15 +31,6 @@ export async function POST(request) {
 
     const body = await request.json()
     
-    // Convert investmentId to integer and validate
-    const investmentId = parseInt(body.investmentId, 10)
-    if (isNaN(investmentId)) {
-      return NextResponse.json(
-        { message: 'Invalid investmentId: must be a number' },
-        { status: 400 }
-      )
-    }
-
     // Validate propertyFacts and investmentDetails as valid JSON objects
     let propertyFacts = body.propertyFacts ?? {}
     let investmentDetails = body.investmentDetails ?? {}
@@ -58,11 +64,29 @@ export async function POST(request) {
       }
     }
 
+    let parsedFields
+    try {
+      parsedFields = {
+        investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
+        price: parseRequiredInt(body.price, 'price'),
+        unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
+        minInvestment: parseRequiredInt(body.minInvestment, 'minInvestment'),
+        estimatedROI: parseRequiredFloat(body.estimatedROI, 'estimatedROI'),
+        estimatedMonths: String(body.estimatedMonths).trim(),
+      }
+    } catch (parseError) {
+      return NextResponse.json({ message: parseError.message }, { status: 400 })
+    }
+
+    if (!parsedFields.estimatedMonths) {
+      return NextResponse.json({ message: 'estimatedMonths is required' }, { status: 400 })
+    }
+
     // Check if investmentId or slug already exists
     const existingProperty = await prisma.property.findFirst({
       where: {
         OR: [
-          { investmentId: investmentId },
+          { investmentId: parsedFields.investmentId },
           { slug: body.slug }
         ]
       }
@@ -78,18 +102,18 @@ export async function POST(request) {
     // Create the property
     const property = await prisma.property.create({
       data: {
-        investmentId: investmentId,
+        investmentId: parsedFields.investmentId,
         name: body.name,
         slug: body.slug,
         type: body.type,
         city: body.city,
         state: body.state,
         address: body.address,
-        price: body.price,
-        unitCount: body.unitCount,
-        minInvestment: body.minInvestment,
-        estimatedROI: body.estimatedROI,
-        estimatedMonths: body.estimatedMonths,
+        price: parsedFields.price,
+        unitCount: parsedFields.unitCount,
+        minInvestment: parsedFields.minInvestment,
+        estimatedROI: parsedFields.estimatedROI,
+        estimatedMonths: parsedFields.estimatedMonths,
         summary: body.summary,
         propertyFacts: propertyFacts,
         investmentDetails: investmentDetails,

@@ -37,7 +37,7 @@ model Property {
   unitCount        Int
   minInvestment    Int
   estimatedROI     Float    // e.g. 4.5 (%)
-  estimatedMonths  Int
+  estimatedMonths  String   // e.g. "24" or "24-36"
 
   summary          String   // Executive summary (markdown or plain text)
   propertyFacts    Json     // JSON blob for technical facts

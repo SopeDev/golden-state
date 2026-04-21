@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -93,8 +93,11 @@ const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ']
 
 export default function ContentAdminClient({ records, fallbackByPage }) {
   const [activePage, setActivePage] = useState('HOME')
+  const [previewLocale, setPreviewLocale] = useState('en')
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState('')
+  const [highlightedFieldId, setHighlightedFieldId] = useState('')
+  const iframeRef = useRef(null)
 
   const recordsMap = useMemo(() => {
     return records.reduce((acc, record) => {
@@ -224,6 +227,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 value={enValue}
                 onChange={(event) => handleFieldChange('en', key, event.target.value)}
                 rows={4}
+                className={highlightedFieldId === `en-${key}` ? 'ring-2 ring-main-gold ring-offset-1' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -233,6 +237,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 value={esValue}
                 onChange={(event) => handleFieldChange('es', key, event.target.value)}
                 rows={4}
+                className={highlightedFieldId === `es-${key}` ? 'ring-2 ring-main-gold ring-offset-1' : ''}
               />
             </div>
           </div>
@@ -250,6 +255,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
               id={`en-${key}`}
               value={enValue}
               onChange={(event) => handleFieldChange('en', key, event.target.value)}
+              className={highlightedFieldId === `en-${key}` ? 'ring-2 ring-main-gold ring-offset-1' : ''}
             />
           </div>
           <div className="space-y-2">
@@ -258,12 +264,59 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
               id={`es-${key}`}
               value={esValue}
               onChange={(event) => handleFieldChange('es', key, event.target.value)}
+              className={highlightedFieldId === `es-${key}` ? 'ring-2 ring-main-gold ring-offset-1' : ''}
             />
           </div>
         </div>
       </div>
     )
   }
+
+  const postPreviewState = () => {
+    if (!iframeRef.current?.contentWindow) return
+    iframeRef.current.contentWindow.postMessage(
+      {
+        type: 'ABOUT_PREVIEW_UPDATE',
+        payload: {
+          locale: previewLocale,
+          contentByLocale: contentByPage.ABOUT || { en: {}, es: {} },
+        },
+      },
+      window.location.origin
+    )
+  }
+
+  useEffect(() => {
+    if (activePage !== 'ABOUT') return
+    postPreviewState()
+  }, [activePage, previewLocale, contentByPage])
+
+  useEffect(() => {
+    const handlePreviewSelect = (event) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'ABOUT_PREVIEW_SELECT') return
+
+      const key = event.data?.payload?.key
+      const locale = event.data?.payload?.locale || previewLocale
+      if (!key) return
+
+      const fieldId = `${locale}-${key}`
+      setHighlightedFieldId(fieldId)
+
+      const target = document.getElementById(fieldId)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        target.focus()
+      }
+
+      window.setTimeout(() => {
+        setHighlightedFieldId((prev) => (prev === fieldId ? '' : prev))
+      }, 1400)
+    }
+
+    window.addEventListener('message', handlePreviewSelect)
+    return () => window.removeEventListener('message', handlePreviewSelect)
+  }, [previewLocale])
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -274,58 +327,104 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
         </p>
       </div>
 
-      <Card className="border-border/80 shadow-md">
-        <CardHeader>
-          <CardTitle>{PAGE_CONFIG[activePage].label} Content</CardTitle>
-          <CardDescription>
-            Manage content by page. Home and FAQ tabs are ready for future fields.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2 border-b border-border pb-4">
-            {PAGE_TABS.map((pageKey) => {
-              const isActive = activePage === pageKey
-              return (
-                <Button
-                  key={pageKey}
-                  type="button"
-                  variant={isActive ? 'default' : 'outline'}
-                  onClick={() => {
-                    setActivePage(pageKey)
-                    setStatus('')
-                  }}
-                  disabled={isLoading}
-                >
-                  {PAGE_CONFIG[pageKey].label}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2 border-b border-border pb-4">
+          {PAGE_TABS.map((pageKey) => {
+            const isActive = activePage === pageKey
+            return (
+              <Button
+                key={pageKey}
+                type="button"
+                variant={isActive ? 'default' : 'outline'}
+                onClick={() => {
+                  setActivePage(pageKey)
+                  setStatus('')
+                }}
+                disabled={isLoading}
+              >
+                {PAGE_CONFIG[pageKey].label}
+              </Button>
+            )
+          })}
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <Card className="border-border/80 shadow-md">
+            <CardHeader>
+              <CardTitle>{PAGE_CONFIG[activePage].label} Content</CardTitle>
+              <CardDescription>
+                Manage content by page. Home and FAQ tabs are ready for future fields.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {orderedKeys.length > 0 ? (
+                  orderedKeys.map((key) => renderField(key))
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="pt-6 text-sm text-muted-foreground">
+                      No editable fields configured yet for {PAGE_CONFIG[activePage].label}.
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+
+              <div className="flex justify-end gap-3 border-t border-border pt-4">
+                <Button type="button" variant="outline" onClick={handleReset} disabled={isLoading}>
+                  Reset
                 </Button>
-              )
-            })}
-          </div>
+                <Button type="button" onClick={handleSave} disabled={isLoading || orderedKeys.length === 0}>
+                  {isLoading ? 'Saving...' : 'Save Content'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-4">
-            {orderedKeys.length > 0 ? (
-              orderedKeys.map((key) => renderField(key))
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="pt-6 text-sm text-muted-foreground">
-                  No editable fields configured yet for {PAGE_CONFIG[activePage].label}.
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-
-          <div className="flex justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={handleReset} disabled={isLoading}>
-              Reset
-            </Button>
-            <Button type="button" onClick={handleSave} disabled={isLoading || orderedKeys.length === 0}>
-              {isLoading ? 'Saving...' : 'Save Content'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Card className="h-fit border-border/80 shadow-md xl:sticky xl:top-24">
+            <CardHeader>
+              <CardTitle>Live Preview</CardTitle>
+              <CardDescription>Draft preview updates instantly before saving.</CardDescription>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={previewLocale === 'en' ? 'default' : 'outline'}
+                  onClick={() => setPreviewLocale('en')}
+                >
+                  EN
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={previewLocale === 'es' ? 'default' : 'outline'}
+                  onClick={() => setPreviewLocale('es')}
+                >
+                  ES
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {activePage === 'ABOUT' ? (
+                <div className="mx-auto h-[70vh] w-full max-w-[390px] overflow-y-auto rounded-xl border border-border bg-background shadow-inner">
+                  <iframe
+                    ref={iframeRef}
+                    title="About mobile preview"
+                    src={`/en/admin/content/preview/about`}
+                    className="h-full w-full border-0"
+                    onLoad={postPreviewState}
+                  />
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  Live preview will appear here once {PAGE_CONFIG[activePage].label} fields are configured.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

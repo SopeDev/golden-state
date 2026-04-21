@@ -2,6 +2,7 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { getServerSession } from "next-auth"
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 import "./globals.css"
 
@@ -24,7 +25,7 @@ export const viewport = {
 
 export default async function RootLayout({ children, params }) {
   const { locale } = await params
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
 
   if (!hasLocale(routing.locales, locale)) {
     notFound()
@@ -36,7 +37,7 @@ export default async function RootLayout({ children, params }) {
         <SessionProvider session={session}>
           <NextIntlClientProvider locale={locale}>
             <main>
-              <NavMenuServer/>
+              <NavMenuServer session={session} />
               <div id="content" className="mt-[76px]">
                 {children}
               </div>

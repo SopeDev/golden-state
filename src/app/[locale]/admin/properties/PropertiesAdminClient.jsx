@@ -215,13 +215,96 @@ export default function PropertiesAdminClient({ properties }) {
 function Field({ label, children }) {
   return (
     <div className="space-y-2">
-      {label && <Label>{label}</Label>}
+      {label && <Label className="text-main-gold">{label}</Label>}
       {children}
     </div>
   )
 }
 
 function PropertyForm({ property, onSubmit, onCancel, isLoading }) {
+  const keyToLabel = (key) => {
+    if (!key) return ''
+    const withSpaces = String(key).replace(/([A-Z])/g, ' $1').replace(/[_-]+/g, ' ')
+    return withSpaces
+      .trim()
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  const labelToKey = (label) => {
+    const cleaned = String(label)
+      .trim()
+      .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+
+    if (!cleaned) return ''
+
+    const parts = cleaned.split(' ')
+    return parts
+      .map((part, index) => {
+        const lower = part.toLowerCase()
+        if (index === 0) return lower
+        return lower.charAt(0).toUpperCase() + lower.slice(1)
+      })
+      .join('')
+  }
+
+  const objectToRows = (value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return [{ id: crypto.randomUUID(), labelEn: '', valueEn: '', labelEs: '', valueEs: '' }]
+    }
+
+    const entries = Object.entries(value)
+    if (!entries.length) {
+      return [{ id: crypto.randomUUID(), labelEn: '', valueEn: '', labelEs: '', valueEs: '' }]
+    }
+
+    return entries.map(([entryKey, entryValue]) => {
+      const fallbackLabel = keyToLabel(entryKey)
+
+      // Backward compatibility: previously value was a plain string.
+      if (entryValue == null || typeof entryValue !== 'object' || Array.isArray(entryValue)) {
+        const legacyValue = entryValue == null ? '' : String(entryValue)
+        return {
+          id: crypto.randomUUID(),
+          labelEn: fallbackLabel,
+          valueEn: legacyValue,
+          labelEs: fallbackLabel,
+          valueEs: legacyValue,
+        }
+      }
+
+      const en = entryValue.en || {}
+      const es = entryValue.es || {}
+      return {
+        id: crypto.randomUUID(),
+        labelEn: en.label || fallbackLabel,
+        valueEn: en.value == null ? '' : String(en.value),
+        labelEs: es.label || fallbackLabel,
+        valueEs: es.value == null ? '' : String(es.value),
+      }
+    })
+  }
+
+  const rowsToObject = (rows) => {
+    return rows.reduce((acc, row) => {
+      const normalizedKey = labelToKey(row.labelEn)
+      if (!normalizedKey) return acc
+      acc[normalizedKey] = {
+        en: {
+          label: row.labelEn?.trim() || keyToLabel(normalizedKey),
+          value: row.valueEn || '',
+        },
+        es: {
+          label: row.labelEs?.trim() || row.labelEn?.trim() || keyToLabel(normalizedKey),
+          value: row.valueEs || '',
+        },
+      }
+      return acc
+    }, {})
+  }
+
   const [formData, setFormData] = useState({
     investmentId: property?.investmentId || '',
     name: property?.name || '',
@@ -236,12 +319,13 @@ function PropertyForm({ property, onSubmit, onCancel, isLoading }) {
     estimatedROI: property?.estimatedROI || '',
     estimatedMonths: property?.estimatedMonths || '',
     summary: property?.summary || '',
-    propertyFacts: property?.propertyFacts ? JSON.stringify(property.propertyFacts, null, 2) : '',
-    investmentDetails: property?.investmentDetails
-      ? JSON.stringify(property.investmentDetails, null, 2)
-      : '',
-    images: property?.images ? property.images.join('\n') : '',
+    images: property?.images || [],
   })
+  const [propertyFactsRows, setPropertyFactsRows] = useState(objectToRows(property?.propertyFacts))
+  const [investmentDetailsRows, setInvestmentDetailsRows] = useState(
+    objectToRows(property?.investmentDetails)
+  )
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -256,12 +340,69 @@ function PropertyForm({ property, onSubmit, onCancel, isLoading }) {
       unitCount: parseInt(formData.unitCount, 10),
       minInvestment: parseInt(formData.minInvestment, 10),
       estimatedROI: parseFloat(formData.estimatedROI),
-      estimatedMonths: parseInt(formData.estimatedMonths, 10),
-      propertyFacts: formData.propertyFacts ? JSON.parse(formData.propertyFacts) : {},
-      investmentDetails: formData.investmentDetails ? JSON.parse(formData.investmentDetails) : {},
-      images: formData.images ? formData.images.split('\n').filter((img) => img.trim()) : [],
+      propertyFacts: rowsToObject(propertyFactsRows),
+      investmentDetails: rowsToObject(investmentDetailsRows),
+      images: formData.images,
     }
     onSubmit(submitData)
+  }
+
+  const handleKeyValueChange = (setter, id, field, value) => {
+    setter((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)))
+  }
+
+  const addKeyValueRow = (setter) => {
+    setter((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), labelEn: '', valueEn: '', labelEs: '', valueEs: '' },
+    ])
+  }
+
+  const removeKeyValueRow = (setter, id) => {
+    setter((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : prev))
+  }
+
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files || [])
+    if (!files.length) return
+
+    setIsUploadingImages(true)
+    try {
+      const payload = new FormData()
+      files.forEach((file) => payload.append('images', file))
+
+      const response = await fetch('/api/admin/uploads/property-images', {
+        method: 'POST',
+        body: payload,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        alert(`Failed to upload images: ${error.message}`)
+        return
+      }
+
+      const data = await response.json()
+      const uploadedUrls = Array.isArray(data.urls) ? data.urls : []
+
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...uploadedUrls],
+      }))
+    } catch (error) {
+      console.error('Error uploading images:', error)
+      alert('Unexpected error while uploading images')
+    } finally {
+      event.target.value = ''
+      setIsUploadingImages(false)
+    }
+  }
+
+  const handleRemoveImage = (imageUrl) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((url) => url !== imageUrl),
+    }))
   }
 
   return (
@@ -354,7 +495,7 @@ function PropertyForm({ property, onSubmit, onCancel, isLoading }) {
               </div>
               <Field label="Timeline (Months)">
                 <Input
-                  type="number"
+                  type="text"
                   name="estimatedMonths"
                   value={formData.estimatedMonths}
                   onChange={handleChange}
@@ -368,34 +509,180 @@ function PropertyForm({ property, onSubmit, onCancel, isLoading }) {
               <Field label="Summary">
                 <Textarea name="summary" value={formData.summary} onChange={handleChange} rows={4} required />
               </Field>
-              <Field label="Property Facts (JSON)">
-                <Textarea
-                  name="propertyFacts"
-                  value={formData.propertyFacts}
-                  onChange={handleChange}
-                  rows={6}
-                  className="font-mono text-xs"
-                  placeholder='{"lotSize": "0.25 acres", "zoning": "R-2", "permits": "In progress"}'
-                />
+              <Field label="Property Facts">
+                <div className="space-y-3">
+                  {propertyFactsRows.map((row) => (
+                    <div key={row.id} className="space-y-2 rounded-md border border-border/60 p-3">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">English Label</Label>
+                          <Input
+                            type="text"
+                            value={row.labelEn}
+                            placeholder="Property Size"
+                            onChange={(e) =>
+                              handleKeyValueChange(setPropertyFactsRows, row.id, 'labelEn', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">English Value</Label>
+                          <Input
+                            type="text"
+                            value={row.valueEn}
+                            placeholder="0.25 acres"
+                            onChange={(e) =>
+                              handleKeyValueChange(setPropertyFactsRows, row.id, 'valueEn', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">Spanish Label</Label>
+                          <Input
+                            type="text"
+                            value={row.labelEs}
+                            placeholder="Tamano de la propiedad"
+                            onChange={(e) =>
+                              handleKeyValueChange(setPropertyFactsRows, row.id, 'labelEs', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">Spanish Value</Label>
+                          <Input
+                            type="text"
+                            value={row.valueEs}
+                            placeholder="0.25 acres"
+                            onChange={(e) =>
+                              handleKeyValueChange(setPropertyFactsRows, row.id, 'valueEs', e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeKeyValueRow(setPropertyFactsRows, row.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => addKeyValueRow(setPropertyFactsRows)}>
+                    + Add Fact
+                  </Button>
+                </div>
               </Field>
-              <Field label="Investment Details (JSON)">
-                <Textarea
-                  name="investmentDetails"
-                  value={formData.investmentDetails}
-                  onChange={handleChange}
-                  rows={6}
-                  className="font-mono text-xs"
-                  placeholder='{"landCost": 1200000, "constructionCost": 2000000, "softCosts": 300000}'
-                />
+              <Field label="Investment Details">
+                <div className="space-y-3">
+                  {investmentDetailsRows.map((row) => (
+                    <div key={row.id} className="space-y-2 rounded-md border border-border/60 p-3">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">English Label</Label>
+                          <Input
+                            type="text"
+                            value={row.labelEn}
+                            placeholder="Land Cost"
+                            onChange={(e) =>
+                              handleKeyValueChange(setInvestmentDetailsRows, row.id, 'labelEn', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">English Value</Label>
+                          <Input
+                            type="text"
+                            value={row.valueEn}
+                            placeholder="1200000"
+                            onChange={(e) =>
+                              handleKeyValueChange(setInvestmentDetailsRows, row.id, 'valueEn', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">Spanish Label</Label>
+                          <Input
+                            type="text"
+                            value={row.labelEs}
+                            placeholder="Costo del terreno"
+                            onChange={(e) =>
+                              handleKeyValueChange(setInvestmentDetailsRows, row.id, 'labelEs', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-main-gold">Spanish Value</Label>
+                          <Input
+                            type="text"
+                            value={row.valueEs}
+                            placeholder="1200000"
+                            onChange={(e) =>
+                              handleKeyValueChange(setInvestmentDetailsRows, row.id, 'valueEs', e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeKeyValueRow(setInvestmentDetailsRows, row.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addKeyValueRow(setInvestmentDetailsRows)}
+                  >
+                    + Add Detail
+                  </Button>
+                </div>
               </Field>
-              <Field label="Image URLs (one per line)">
-                <Textarea
-                  name="images"
-                  value={formData.images}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="/properties/image1.jpg&#10;/properties/image2.jpg"
-                />
+              <Field label="Project Images">
+                <div className="space-y-3 rounded-md border border-border/60 p-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif"
+                      multiple
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImages || isLoading}
+                    />
+                    {isUploadingImages ? (
+                      <span className="text-sm text-muted-foreground">Uploading...</span>
+                    ) : null}
+                  </div>
+
+                  {formData.images.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                      {formData.images.map((imageUrl) => (
+                        <div key={imageUrl} className="space-y-2 rounded border border-border/60 p-2">
+                          <div className="aspect-video overflow-hidden rounded bg-muted">
+                            <img src={imageUrl} alt="Property upload" className="h-full w-full object-cover" />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleRemoveImage(imageUrl)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No images uploaded yet.</p>
+                  )}
+                </div>
               </Field>
             </div>
 

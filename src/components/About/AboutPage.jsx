@@ -1,3 +1,5 @@
+'use client'
+
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
@@ -281,15 +283,20 @@ export default function AboutPage({ content }) {
               {content.reportingTitle}
             </h2>
             <p className="mt-6 leading-relaxed text-muted-foreground">{content.reportingBody}</p>
-            <ol className="relative mt-10 space-y-6 border-l-2 border-main-gold/40 pl-8">
+            <ul className="mt-8 space-y-3">
               {[1, 2, 3].map((n) => (
-                <li key={n} className="relative">
-                  <span className="absolute -left-[calc(48px+0.125rem)] top-1.5 size-3 rounded-full border-2 border-main-gold bg-background" />
-                  <p className="font-medium text-primary">{content[`reportingStep${n}Title`]}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{content[`reportingStep${n}Body`]}</p>
+                <li key={n} className="flex gap-3 text-sm leading-relaxed text-foreground">
+                  <span
+                    className="mt-1.5 size-2 shrink-0 rounded-full bg-main-gold"
+                    aria-hidden
+                  />
+                  <div>
+                    <p className="font-medium text-primary">{content[`reportingStep${n}Title`]}</p>
+                    <p className="mt-1 text-muted-foreground">{content[`reportingStep${n}Body`]}</p>
+                  </div>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
           <div className="w-full min-w-0">
             <div className="relative aspect-square w-full overflow-hidden rounded-xl border-2 border-main-gold/35 shadow-lg lg:sticky lg:top-28">

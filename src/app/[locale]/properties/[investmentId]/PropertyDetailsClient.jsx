@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,32 @@ import {
 
 export default function PropertyDetailsClient({ property }) {
   const t = useTranslations('PropertyDetails')
+  const locale = useLocale()
+  const formatFactLabel = (rawKey) => {
+    return String(rawKey)
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  const getLocalizedEntry = (rawKey, rawValue, preferredLocale) => {
+    // Backward compatibility for legacy shape: { key: "value" }
+    if (rawValue == null || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+      return {
+        label: formatFactLabel(rawKey),
+        value: rawValue == null ? '' : String(rawValue),
+      }
+    }
+
+    const localized = rawValue[preferredLocale] || rawValue.en || rawValue.es || {}
+    return {
+      label: localized.label || formatFactLabel(rawKey),
+      value: localized.value == null ? '' : String(localized.value),
+    }
+  }
 
   if (!property) {
     return (
@@ -106,17 +132,20 @@ export default function PropertyDetailsClient({ property }) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
-                    {Object.entries(property.propertyFacts).map(([key, value]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
-                      >
-                        <span className="font-medium capitalize text-primary">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <span className="text-right text-muted-foreground">{value}</span>
-                      </div>
-                    ))}
+                    {Object.entries(property.propertyFacts).map(([key, value]) => {
+                      const localized = getLocalizedEntry(key, value, locale)
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
+                        >
+                          <span className="font-medium capitalize text-primary">
+                            {localized.label}
+                          </span>
+                          <span className="text-right text-muted-foreground">{localized.value}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -129,19 +158,22 @@ export default function PropertyDetailsClient({ property }) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
-                    {Object.entries(property.investmentDetails).map(([key, value]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
-                      >
-                        <span className="font-medium capitalize text-primary">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <span className="text-right font-semibold text-main-gold">
-                          {typeof value === 'number' ? `$${value.toLocaleString()}` : value}
-                        </span>
-                      </div>
-                    ))}
+                    {Object.entries(property.investmentDetails).map(([key, value]) => {
+                      const localized = getLocalizedEntry(key, value, locale)
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
+                        >
+                          <span className="font-medium capitalize text-primary">
+                            {localized.label}
+                          </span>
+                          <span className="text-right font-semibold text-main-gold">
+                            {localized.value}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
