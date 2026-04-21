@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/admin/properties', label: 'Property Management' },
   { href: '/admin/users', label: 'User Management' },
+  { href: '/admin/content', label: 'Content Management' },
 ]
 
 const navItemsDatabase = [

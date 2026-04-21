@@ -1,16 +1,19 @@
-import { getTranslations } from 'next-intl/server'
 import AboutPage from '@/components/About/AboutPage'
+import { getAboutContent } from '@/lib/pageContent'
 
 export async function generateMetadata({ params }) {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'About' })
+  const aboutContent = await getAboutContent(locale)
 
   return {
-    title: t('metaTitle'),
-    description: t('metaDescription'),
+    title: aboutContent.metaTitle,
+    description: aboutContent.metaDescription,
   }
 }
 
-export default function AboutRoute() {
-  return <AboutPage />
+export default async function AboutRoute({ params }) {
+  const { locale } = await params
+  const aboutContent = await getAboutContent(locale)
+
+  return <AboutPage content={aboutContent} />
 }
