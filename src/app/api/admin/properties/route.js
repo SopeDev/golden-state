@@ -99,6 +99,8 @@ export async function POST(request) {
       )
     }
 
+    const status = ['IN_PROGRESS', 'COMPLETED'].includes(body.status) ? body.status : 'IN_PROGRESS'
+
     // Create the property
     const property = await prisma.property.create({
       data: {
@@ -106,6 +108,7 @@ export async function POST(request) {
         name: body.name,
         slug: body.slug,
         type: body.type,
+        status,
         city: body.city,
         state: body.state,
         address: body.address,

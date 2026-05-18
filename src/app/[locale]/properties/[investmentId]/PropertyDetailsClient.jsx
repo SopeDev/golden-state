@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
 
 export default function PropertyDetailsClient({ property }) {
   const t = useTranslations('PropertyDetails')
@@ -83,13 +84,9 @@ export default function PropertyDetailsClient({ property }) {
             {property.address}, {property.city}, {property.state}
           </p>
           <span
-            className={`mt-4 inline-block rounded-full px-4 py-2 text-sm font-semibold ${
-              property.type === 'BUILD_TO_SELL'
-                ? 'bg-secondary-blue text-white'
-                : 'bg-secondary-gold text-primary'
-            }`}
+            className={`mt-4 inline-block rounded-full px-4 py-2 text-sm font-semibold ${getPropertyTypeBadgeClass(property.type)}`}
           >
-            {property.type === 'BUILD_TO_SELL' ? t('buildToSell') : t('buildToRent')}
+            {t(getPropertyTypeLabelKey(property.type))}
           </span>
         </div>
       </header>

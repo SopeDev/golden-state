@@ -113,6 +113,8 @@ export async function PUT(request, { params }) {
       )
     }
 
+    const status = ['IN_PROGRESS', 'COMPLETED'].includes(body.status) ? body.status : existingProperty.status
+
     // Update the property
     const property = await prisma.property.update({
       where: { id },
@@ -121,6 +123,7 @@ export async function PUT(request, { params }) {
         name: body.name,
         slug: body.slug,
         type: body.type,
+        status,
         city: body.city,
         state: body.state,
         address: body.address,

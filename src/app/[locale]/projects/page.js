@@ -1,16 +1,26 @@
 import { PrismaClient } from '@prisma/client'
+import { getTranslations } from 'next-intl/server'
 import ProjectsClient from './ProjectsClient'
 
 const prisma = new PrismaClient()
 
+export async function generateMetadata({ params }) {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'Projects' })
+
+  return {
+    title: t('headers.all.metaTitle'),
+    description: t('headers.all.metaDescription'),
+  }
+}
+
 async function getProperties() {
   try {
-    const properties = await prisma.property.findMany({
+    return await prisma.property.findMany({
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     })
-    return properties
   } catch (error) {
     console.error('Error fetching properties:', error)
     return []
@@ -22,5 +32,5 @@ async function getProperties() {
 export default async function ProjectsPage() {
   const properties = await getProperties()
 
-  return <ProjectsClient properties={properties} />
-} 
+  return <ProjectsClient properties={properties} headerKey="all" />
+}

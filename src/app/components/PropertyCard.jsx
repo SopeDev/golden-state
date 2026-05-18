@@ -5,9 +5,11 @@ import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
 
 export default function PropertyCard({ property }) {
   const t = useTranslations('Projects')
+  const typeKey = getPropertyTypeLabelKey(property.type)
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
@@ -31,13 +33,9 @@ export default function PropertyCard({ property }) {
       <CardContent className="flex flex-1 flex-col p-6 pt-6">
         <div className="mb-4">
           <span
-            className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-              property.type === 'BUILD_TO_SELL'
-                ? 'bg-secondary-blue text-white'
-                : 'bg-secondary-gold text-primary'
-            }`}
+            className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${getPropertyTypeBadgeClass(property.type)}`}
           >
-            {property.type === 'BUILD_TO_SELL' ? t('buildToSell') : t('buildToRent')}
+            {t(typeKey)}
           </span>
         </div>
 

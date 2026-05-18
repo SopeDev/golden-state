@@ -44,6 +44,8 @@ model Property {
   investmentDetails Json    // JSON blob for funding breakdown
   images           String[] // Array of image URLs (used for carousel)
 
+  status           PropertyStatus @default(IN_PROGRESS)
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   
@@ -54,6 +56,14 @@ model Property {
 enum PropertyType {
   BUILD_TO_SELL
   BUILD_TO_RENT
+  FLIPHOUSE
+  MEX_TO_US
+  US_TO_MEX
+}
+
+enum PropertyStatus {
+  IN_PROGRESS
+  COMPLETED
 }
 
 model Investment {

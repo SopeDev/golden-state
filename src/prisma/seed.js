@@ -107,7 +107,156 @@ async function main() {
       images: [
         '/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-1-HighDefinition.webp'
       ]
-    }
+    },
+    {
+      investmentId: 1003,
+      name: 'Pacific Flip — Claremont Villas',
+      slug: 'pacific-flip-claremont-villas',
+      type: 'FLIPHOUSE',
+      city: 'San Diego',
+      state: 'CA',
+      address: '4100 Clairemont Mesa Blvd, San Diego, CA 92117',
+      price: 2100000,
+      unitCount: 2,
+      minInvestment: 75000,
+      estimatedROI: 5.8,
+      estimatedMonths: '12-18',
+      summary:
+        'Strategic flip opportunity with cosmetic renovation scope and defined resale timeline in an established coastal submarket.',
+      propertyFacts: {
+        acquisitionPrice: '850000',
+        renovationBudget: '425000',
+        strategy: 'Core cosmetic + layout optimization',
+      },
+      investmentDetails: {
+        capitalStack: 'Senior debt + LP equity',
+        exitType: 'Retail resale',
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-2-Large.avif'],
+    },
+    {
+      investmentId: 1004,
+      name: 'CrossBorder Logistics Park',
+      slug: 'crossborder-logistics-park-mex-us',
+      type: 'MEX_TO_US',
+      city: 'San Diego',
+      state: 'CA',
+      address: 'Near Otay Mesa POE, CA',
+      price: 14200000,
+      unitCount: 1,
+      minInvestment: 250000,
+      estimatedROI: 7.1,
+      estimatedMonths: '36-48',
+      summary:
+        'Mexico-to-US corridor industrial exposure with phased leasing and hedged FX assumptions.',
+      propertyFacts: {
+        footprint: '210000 sq ft phase 1',
+        corridor: 'Tijuana–San Diego',
+      },
+      investmentDetails: {
+        lender: 'Relationship banks',
+        sponsorship: 'Operator JV',
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
+    },
+    {
+      investmentId: 1005,
+      name: 'Baja Coastal Hospitality Co-Invest',
+      slug: 'baja-coastal-hospitality-co-invest',
+      type: 'US_TO_MEX',
+      city: 'Rosarito',
+      state: 'BC',
+      address: 'Km 38 Rosarito–Ensenada corridor',
+      price: 6800000,
+      unitCount: 1,
+      minInvestment: 150000,
+      estimatedROI: 6.4,
+      estimatedMonths: '30-42',
+      summary:
+        'US-to-Mexico hospitality repositioning with staged capex and operator-led revenue management.',
+      propertyFacts: {
+        keys: '84 keys',
+        flag: 'Independent boutique',
+      },
+      investmentDetails: {
+        capexPlan: 'Phased',
+        operator: 'Institutional hospitality PM',
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-1-HighDefinition.webp'],
+    },
+    {
+      investmentId: 901,
+      name: 'La Jolla Coastal Townhomes',
+      slug: 'la-jolla-coastal-townhomes',
+      type: 'BUILD_TO_SELL',
+      status: 'COMPLETED',
+      city: 'La Jolla',
+      state: 'CA',
+      address: '7200 Fay Ave, La Jolla, CA 92037',
+      price: 5400000,
+      unitCount: 6,
+      minInvestment: 60000,
+      estimatedROI: 18.4,
+      estimatedMonths: '22',
+      summary:
+        'Six-unit luxury townhome development delivered on schedule and sold out within four months of completion.',
+      propertyFacts: {
+        finalSalePrice: { en: { label: 'Final Sale Price', value: '6,720,000' }, es: { label: 'Precio final de venta', value: '6,720,000' } },
+        timeline: { en: { label: 'Total Timeline', value: '22 months' }, es: { label: 'Tiempo total', value: '22 meses' } },
+      },
+      investmentDetails: {
+        netInvestorReturn: { en: { label: 'Net Investor Return', value: '18.4%' }, es: { label: 'Retorno neto al inversor', value: '18.4%' } },
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-2-Large.avif'],
+    },
+    {
+      investmentId: 902,
+      name: 'Encinitas Coastal Flip Series',
+      slug: 'encinitas-coastal-flip-series',
+      type: 'FLIPHOUSE',
+      status: 'COMPLETED',
+      city: 'Encinitas',
+      state: 'CA',
+      address: '1480 N Coast Hwy 101, Encinitas, CA 92024',
+      price: 1850000,
+      unitCount: 1,
+      minInvestment: 40000,
+      estimatedROI: 14.1,
+      estimatedMonths: '11',
+      summary:
+        'Cosmetic repositioning of a coastal asset with a clean resale exit and tightly managed renovation scope.',
+      propertyFacts: {
+        renovationScope: { en: { label: 'Renovation Scope', value: 'Cosmetic + layout' }, es: { label: 'Alcance de renovación', value: 'Cosmético + distribución' } },
+      },
+      investmentDetails: {
+        netInvestorReturn: { en: { label: 'Net Investor Return', value: '14.1%' }, es: { label: 'Retorno neto al inversor', value: '14.1%' } },
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
+    },
+    {
+      investmentId: 903,
+      name: 'Tijuana Riverfront Logistics',
+      slug: 'tijuana-riverfront-logistics',
+      type: 'MEX_TO_US',
+      status: 'COMPLETED',
+      city: 'Tijuana',
+      state: 'BC',
+      address: 'Zona Río, Tijuana',
+      price: 9800000,
+      unitCount: 1,
+      minInvestment: 120000,
+      estimatedROI: 12.7,
+      estimatedMonths: '34',
+      summary:
+        'Cross-border logistics facility delivered fully leased; long-term anchor tenant secured at delivery.',
+      propertyFacts: {
+        anchorLease: { en: { label: 'Anchor Lease', value: '10-year corporate tenant' }, es: { label: 'Contrato ancla', value: 'Inquilino corporativo a 10 años' } },
+      },
+      investmentDetails: {
+        netInvestorReturn: { en: { label: 'Net Investor Return', value: '12.7%' }, es: { label: 'Retorno neto al inversor', value: '12.7%' } },
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-1-HighDefinition.webp'],
+    },
   ]
 
   for (const propertyData of properties) {

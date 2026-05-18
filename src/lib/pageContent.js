@@ -45,3 +45,99 @@ export const getAboutContent = async (locale) => {
 }
 
 export const getAboutFallbackByLocale = () => ABOUT_FALLBACK
+
+const FAQ_FALLBACK = {
+  en: enMessages.FAQ || {},
+  es: esMessages.FAQ || {},
+}
+
+export const getFaqFallbackByLocale = () => FAQ_FALLBACK
+
+const FAQ_STRUCTURED_KEY_REGEX = /^(?:categoryOrder|category.+Title|item\d+(?:Category|Question|Answer))$/
+
+const HOME_FALLBACK = {
+  en: enMessages.Home || {},
+  es: esMessages.Home || {},
+}
+
+export const getHomeFallbackByLocale = () => HOME_FALLBACK
+
+export const getHomeContent = async (locale) => {
+  const normalizedLocale = normalizeLocale(locale)
+  const fallback = HOME_FALLBACK[normalizedLocale] || HOME_FALLBACK.en
+
+  try {
+    const record = await prisma.pageContent.findUnique({
+      where: {
+        pageKey_locale: {
+          pageKey: 'HOME',
+          locale: normalizedLocale,
+        },
+      },
+    })
+
+    if (!record?.content || typeof record.content !== 'object' || Array.isArray(record.content)) {
+      return fallback
+    }
+
+    return {
+      ...fallback,
+      ...record.content,
+    }
+  } catch (error) {
+    console.error('Error loading Home content:', error)
+    return fallback
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+export const getFaqContent = async (locale) => {
+  const normalizedLocale = normalizeLocale(locale)
+  const fallback = FAQ_FALLBACK[normalizedLocale] || FAQ_FALLBACK.en
+
+  try {
+    const record = await prisma.pageContent.findUnique({
+      where: {
+        pageKey_locale: {
+          pageKey: 'FAQ',
+          locale: normalizedLocale,
+        },
+      },
+    })
+
+    if (!record?.content || typeof record.content !== 'object' || Array.isArray(record.content)) {
+      return fallback
+    }
+
+    // When the admin has saved FAQ content with an explicit categoryOrder,
+    // treat the saved record as authoritative for categories and items
+    // (otherwise deleted categories/questions would leak back from the
+    // bundled JSON fallback). Static fields still fall back to the JSON
+    // bundle for missing values.
+    const savedHasOrder = typeof record.content.categoryOrder === 'string'
+
+    if (savedHasOrder) {
+      const fallbackStatic = {}
+      Object.entries(fallback).forEach(([key, value]) => {
+        if (!FAQ_STRUCTURED_KEY_REGEX.test(key)) {
+          fallbackStatic[key] = value
+        }
+      })
+      return {
+        ...fallbackStatic,
+        ...record.content,
+      }
+    }
+
+    return {
+      ...fallback,
+      ...record.content,
+    }
+  } catch (error) {
+    console.error('Error loading FAQ content:', error)
+    return fallback
+  } finally {
+    await prisma.$disconnect()
+  }
+}

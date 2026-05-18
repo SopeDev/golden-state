@@ -11,12 +11,27 @@ const localeLabels = { en: 'EN', es: 'ES' }
 
 const localeAriaKey = { en: 'langEnglish', es: 'langSpanish' }
 
-export default function LocaleToggle({ className }) {
+const VARIANT_CLASSES = {
+  light: {
+    separator: 'text-muted-foreground/30 dark:text-muted-foreground/40',
+    active: 'text-primary',
+    inactive: 'text-muted-foreground/45 hover:text-secondary-blue dark:text-muted-foreground/55',
+  },
+  dark: {
+    separator: 'text-primary-foreground/30',
+    active: 'text-main-gold',
+    inactive: 'text-primary-foreground/60 hover:text-primary-foreground',
+  },
+}
+
+export default function LocaleToggle({ className, variant = 'light' }) {
   const t = useTranslations('Navbar')
   const pathname = usePathname()
   const router = useRouter()
   const params = useParams()
   const currentLocale = useLocale()
+
+  const styles = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.light
 
   const switchLocale = (targetLocale) => {
     if (targetLocale === currentLocale) return
@@ -39,7 +54,7 @@ export default function LocaleToggle({ className }) {
           <span key={loc} className="inline-flex items-center">
             {index > 0 && (
               <span
-                className="px-1.5 text-muted-foreground/30 select-none dark:text-muted-foreground/40"
+                className={cn('px-1.5 select-none', styles.separator)}
                 aria-hidden
               >
                 /
@@ -53,9 +68,7 @@ export default function LocaleToggle({ className }) {
               className={cn(
                 'cursor-pointer border-0 bg-transparent px-0.5 py-1 font-medium transition-colors',
                 'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                active
-                  ? 'text-primary'
-                  : 'text-muted-foreground/45 hover:text-secondary-blue dark:text-muted-foreground/55'
+                active ? styles.active : styles.inactive
               )}
             >
               {localeLabels[loc]}

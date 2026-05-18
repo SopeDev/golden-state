@@ -4,7 +4,11 @@ import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import AdminNav from '../components/AdminNav'
 import ContentAdminClient from './ContentAdminClient'
-import { getAboutFallbackByLocale } from '@/lib/pageContent'
+import {
+  getAboutFallbackByLocale,
+  getFaqFallbackByLocale,
+  getHomeFallbackByLocale,
+} from '@/lib/pageContent'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const prisma = new PrismaClient()
@@ -27,9 +31,9 @@ export default async function ContentAdminPage() {
     })
 
     const fallbackByPage = {
-      HOME: { en: {}, es: {} },
+      HOME: getHomeFallbackByLocale(),
       ABOUT: getAboutFallbackByLocale(),
-      FAQ: { en: {}, es: {} },
+      FAQ: getFaqFallbackByLocale(),
     }
 
     return (

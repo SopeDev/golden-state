@@ -33,7 +33,7 @@ export default async function SchemaPage() {
           { name: 'investmentId', type: 'Int', description: 'User-facing incremental ID' },
           { name: 'name', type: 'String', description: 'Property name/title' },
           { name: 'slug', type: 'String', description: 'URL-friendly identifier' },
-          { name: 'type', type: 'PropertyType', description: 'BUILD_TO_SELL or BUILD_TO_RENT' },
+          { name: 'type', type: 'PropertyType', description: 'Project category (see PropertyType enum)' },
           { name: 'city', type: 'String', description: 'Property city' },
           { name: 'state', type: 'String', description: 'Property state' },
           { name: 'address', type: 'String', description: 'Full property address' },
@@ -46,6 +46,7 @@ export default async function SchemaPage() {
           { name: 'propertyFacts', type: 'Json', description: 'Technical property details' },
           { name: 'investmentDetails', type: 'Json', description: 'Funding breakdown' },
           { name: 'images', type: 'String[]', description: 'Array of image URLs' },
+          { name: 'status', type: 'PropertyStatus', description: 'Lifecycle (defaults to IN_PROGRESS; COMPLETED records appear in home Track Record)' },
           { name: 'createdAt', type: 'DateTime', description: 'Record creation date' },
           { name: 'updatedAt', type: 'DateTime', description: 'Last update timestamp' },
         ],
@@ -71,7 +72,11 @@ export default async function SchemaPage() {
       },
       {
         name: 'PropertyType',
-        values: ['BUILD_TO_SELL', 'BUILD_TO_RENT'],
+        values: ['BUILD_TO_SELL', 'BUILD_TO_RENT', 'FLIPHOUSE', 'MEX_TO_US', 'US_TO_MEX'],
+      },
+      {
+        name: 'PropertyStatus',
+        values: ['IN_PROGRESS', 'COMPLETED'],
       },
     ],
   }
