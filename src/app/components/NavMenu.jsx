@@ -1,9 +1,11 @@
 'use client'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
 import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
 
@@ -15,10 +17,15 @@ const PROJECT_TYPE_LINKS = [
   { href: '/projects/us-to-mex', projectsLabelKey: 'usToMex' },
 ]
 
-export default function NavMenu({ session }) {
+export default function NavMenu({ session: serverSession }) {
   const t = useTranslations('Navbar')
   const tProjects = useTranslations('Projects')
   const [menuOpen, setMenuOpen] = useState(false)
+  const { data: clientSession } = useSession()
+  const user = clientSession?.user ?? serverSession?.user
+  const dashboardHref = user ? '/dashboard' : '/login'
+  const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
+  const myAccountHref = user ? '/dashboard/account' : '/login'
 
   const projectDropdownLinks = [
     { href: '/projects', text: t('allProjects') },
@@ -70,13 +77,14 @@ export default function NavMenu({ session }) {
                 {t('contact')}
               </Link>
             </li>
-            {session?.user && (
+            {user && (
               <DropdownNavItem
                 label="account"
                 t={t}
                 links={[
-                  { href: '/dashboard', label: 'dashboard' },
-                  { href: '/dashboard/portfolio', label: 'portfolio' },
+                  { href: dashboardHref, label: 'dashboard' },
+                  { href: portfolioHref, label: 'portfolio' },
+                  { href: myAccountHref, label: 'myAccount' },
                 ]}
               />
             )}
@@ -84,7 +92,7 @@ export default function NavMenu({ session }) {
         </nav>
 
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          {session?.user?.type === 'ADMIN' && (
+          {user?.type === 'ADMIN' && (
             <Link
               href="/admin/data"
               className={cn(
@@ -147,15 +155,18 @@ export default function NavMenu({ session }) {
               </div>
             </Link>
           ))}
-          {session?.user && (
+          {user && (
             <>
               <hr />
               <span className="text-lg">{t('account')}</span>
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)}>
+              <Link href={dashboardHref} onClick={() => setMenuOpen(false)}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('dashboard')}</div>
               </Link>
-              <Link href="/dashboard/portfolio" onClick={() => setMenuOpen(false)}>
+              <Link href={portfolioHref} onClick={() => setMenuOpen(false)}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('portfolio')}</div>
+              </Link>
+              <Link href={myAccountHref} onClick={() => setMenuOpen(false)}>
+                <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('myAccount')}</div>
               </Link>
             </>
           )}

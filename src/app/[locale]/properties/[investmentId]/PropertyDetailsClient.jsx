@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import InvestNowButton from '@/components/invest/InvestNowButton'
 
 export default function PropertyDetailsClient({ property }) {
   const t = useTranslations('PropertyDetails')
@@ -45,7 +46,7 @@ export default function PropertyDetailsClient({ property }) {
 
   if (!property) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="flex items-center justify-center bg-background px-4 py-24">
         <Card className="max-w-md border-border/80 text-center shadow-md">
           <CardHeader>
             <CardTitle className="font-heading text-2xl text-primary">{t('propertyNotFound')}</CardTitle>
@@ -62,7 +63,7 @@ export default function PropertyDetailsClient({ property }) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background">
       <header className="bg-primary py-12 text-primary-foreground md:py-16">
         <div className="container mx-auto px-4">
           <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -209,9 +210,7 @@ export default function PropertyDetailsClient({ property }) {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/30">
-                <Button type="button" variant="gold" size="cta" className="w-full">
-                  {t('investNow')}
-                </Button>
+                <InvestNowButton propertyId={property.investmentId} />
                 <Button
                   type="button"
                   variant="outline"

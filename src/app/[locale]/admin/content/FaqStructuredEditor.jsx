@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +29,8 @@ export default function FaqStructuredEditor({
   onMoveQuestion,
   onQuestionFieldChange,
 }) {
+  const t = useTranslations('Admin.content.faq')
+  const tc = useTranslations('Admin.common')
   const highlightRing = (id) =>
     highlightedFieldId === id ? 'ring-2 ring-main-gold ring-offset-1' : ''
   const categories = structure?.categories || []
@@ -36,21 +39,19 @@ export default function FaqStructuredEditor({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-heading text-lg font-semibold text-primary">Categories &amp; questions</h3>
-          <p className="text-sm text-muted-foreground">
-            Add or remove categories and questions. Each entry supports English and Spanish.
-          </p>
+          <h3 className="font-heading text-lg font-semibold text-primary">{t('heading')}</h3>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <Button type="button" size="sm" onClick={onAddCategory} className="gap-1.5">
           <Plus className="size-4" aria-hidden />
-          Add category
+          {t('addCategory')}
         </Button>
       </div>
 
       {categories.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            No categories yet. Click <span className="font-medium">Add category</span> to create the first one.
+            {t('emptyCategories')}
           </CardContent>
         </Card>
       ) : (
@@ -74,7 +75,7 @@ export default function FaqStructuredEditor({
                       variant="outline"
                       disabled={isFirst}
                       onClick={() => onMoveCategory(category.id, 'up')}
-                      aria-label="Move category up"
+                      aria-label={t('moveCategoryUp')}
                     >
                       <ChevronUp className="size-4" aria-hidden />
                     </Button>
@@ -84,7 +85,7 @@ export default function FaqStructuredEditor({
                       variant="outline"
                       disabled={isLast}
                       onClick={() => onMoveCategory(category.id, 'down')}
-                      aria-label="Move category down"
+                      aria-label={t('moveCategoryDown')}
                     >
                       <ChevronDown className="size-4" aria-hidden />
                     </Button>
@@ -94,13 +95,13 @@ export default function FaqStructuredEditor({
                       variant="outline"
                       className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => {
-                        if (window.confirm(`Remove category "${previewLabel}" and all of its questions?`)) {
+                        if (window.confirm(t('confirmRemoveCategory', { name: previewLabel }))) {
                           onRemoveCategory(category.id)
                         }
                       }}
                     >
                       <Trash2 className="size-4" aria-hidden />
-                      Remove
+                      {t('remove')}
                     </Button>
                   </div>
                 </CardHeader>
@@ -112,13 +113,19 @@ export default function FaqStructuredEditor({
                       return (
                         <div key={loc} className="space-y-2">
                           <Label className={labelClass} htmlFor={id}>
-                            Category title ({loc === 'en' ? 'English' : 'Spanish'})
+                            {t('categoryTitle', {
+                              locale: loc === 'en' ? tc('english') : tc('spanish'),
+                            })}
                           </Label>
                           <Input
                             id={id}
                             value={(loc === 'en' ? category.title?.en : category.title?.es) || ''}
                             onChange={(event) => onCategoryTitleChange(category.id, loc, event.target.value)}
-                            placeholder={loc === 'en' ? 'e.g. Investing' : 'p. ej. Inversión'}
+                            placeholder={
+                              loc === 'en'
+                                ? t('categoryTitlePlaceholderEn')
+                                : t('categoryTitlePlaceholderEs')
+                            }
                             className={highlightRing(id)}
                           />
                         </div>
@@ -129,7 +136,7 @@ export default function FaqStructuredEditor({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-primary">
-                        Questions ({category.questions?.length || 0})
+                        {t('questionsCount', { count: category.questions?.length || 0 })}
                       </p>
                       <Button
                         type="button"
@@ -139,13 +146,13 @@ export default function FaqStructuredEditor({
                         onClick={() => onAddQuestion(category.id)}
                       >
                         <Plus className="size-4" aria-hidden />
-                        Add question
+                        {t('addQuestion')}
                       </Button>
                     </div>
 
                     {(category.questions || []).length === 0 ? (
                       <div className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-                        No questions in this category yet.
+                        {t('noQuestions')}
                       </div>
                     ) : (
                       <ul className="space-y-3">
@@ -159,7 +166,7 @@ export default function FaqStructuredEditor({
                             >
                               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Question {qIndex + 1}
+                                  {t('questionNumber', { number: qIndex + 1 })}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <Button
@@ -168,7 +175,7 @@ export default function FaqStructuredEditor({
                                     variant="outline"
                                     disabled={isFirstQ}
                                     onClick={() => onMoveQuestion(category.id, qIndex, 'up')}
-                                    aria-label="Move question up"
+                                    aria-label={t('moveQuestionUp')}
                                   >
                                     <ChevronUp className="size-4" aria-hidden />
                                   </Button>
@@ -178,7 +185,7 @@ export default function FaqStructuredEditor({
                                     variant="outline"
                                     disabled={isLastQ}
                                     onClick={() => onMoveQuestion(category.id, qIndex, 'down')}
-                                    aria-label="Move question down"
+                                    aria-label={t('moveQuestionDown')}
                                   >
                                     <ChevronDown className="size-4" aria-hidden />
                                   </Button>
@@ -187,11 +194,14 @@ export default function FaqStructuredEditor({
                                     size="icon"
                                     variant="outline"
                                     className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                    aria-label="Remove question"
+                                    aria-label={t('removeQuestion')}
                                     onClick={() => {
                                       if (
                                         window.confirm(
-                                          `Remove question ${qIndex + 1} from "${previewLabel}"?`
+                                          t('confirmRemoveQuestion', {
+                                            number: qIndex + 1,
+                                            name: previewLabel,
+                                          })
                                         )
                                       ) {
                                         onRemoveQuestion(category.id, qIndex)
@@ -205,10 +215,10 @@ export default function FaqStructuredEditor({
 
                               <div className="grid gap-4 md:grid-cols-2">
                                 {[
-                                  { field: 'question', locale: 'en', long: false, labelText: 'Question (English)' },
-                                  { field: 'question', locale: 'es', long: false, labelText: 'Question (Spanish)' },
-                                  { field: 'answer', locale: 'en', long: true, labelText: 'Answer (English)' },
-                                  { field: 'answer', locale: 'es', long: true, labelText: 'Answer (Spanish)' },
+                                  { field: 'question', locale: 'en', long: false, labelKey: 'questionEn' },
+                                  { field: 'question', locale: 'es', long: false, labelKey: 'questionEs' },
+                                  { field: 'answer', locale: 'en', long: true, labelKey: 'answerEn' },
+                                  { field: 'answer', locale: 'es', long: true, labelKey: 'answerEs' },
                                 ].map((cfg) => {
                                   const id = faqInputId({
                                     kind: 'question',
@@ -222,7 +232,7 @@ export default function FaqStructuredEditor({
                                   return (
                                     <div key={`${cfg.field}-${cfg.locale}`} className="space-y-2">
                                       <Label className={labelClass} htmlFor={id}>
-                                        {cfg.labelText}
+                                        {t(cfg.labelKey)}
                                       </Label>
                                       <Control
                                         id={id}

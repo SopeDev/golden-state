@@ -20,7 +20,7 @@ export default function PortfolioClient({ investments }) {
       : 0
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background">
       <header className="bg-primary py-12 text-primary-foreground md:py-16">
         <div className="container mx-auto px-4">
           <Link

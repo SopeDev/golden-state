@@ -1,11 +1,24 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
+import {
+  formatProjectTypesForDisplay,
+  INVESTMENT_RANGE_LABELS,
+} from '@/lib/auth/investorProfileOptions'
+import {
+  adminAccountStatusLabel,
+  adminAccreditedStatusLabel,
+  adminUserTypeLabel,
+} from '@/lib/admin/adminLabels'
+import { cn } from '@/lib/utils'
+import InvestorDocumentReviewGrid from '@/components/invest/InvestorDocumentReviewGrid'
+import { getFieldLabelKeyForKind, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 
 const buildInitialState = (user) => ({
   email: user?.email || '',
@@ -14,6 +27,60 @@ const buildInitialState = (user) => ({
   provider: user?.provider || 'credentials',
 })
 
+const PROFILE_FIELD_KEYS = [
+  'fullName',
+  'phone',
+  'referralSource',
+  'investmentRange',
+  'investmentGoals',
+  'projectTypes',
+  'experience',
+  'background',
+]
+
+const formatProfileValue = (key, profile, tRegister) => {
+  if (key === 'projectTypes') {
+    return formatProjectTypesForDisplay(profile.projectTypes)
+  }
+  const value = profile[key]
+  if (!value) return null
+  if (key === 'investmentRange') {
+    try {
+      return tRegister(`range_${value}`)
+    } catch {
+      return INVESTMENT_RANGE_LABELS[value] || String(value)
+    }
+  }
+  if (key === 'experience') {
+    try {
+      return tRegister(`experience_${value}`)
+    } catch {
+      return String(value).replace(/_/g, ' ')
+    }
+  }
+  return String(value)
+}
+
+const statusPill = (value, tone = 'neutral', label) => {
+  const tones = {
+    neutral: 'bg-muted text-muted-foreground',
+    warn: 'bg-amber-400/30 text-amber-950 dark:bg-amber-500/25 dark:text-amber-100',
+    ok: 'bg-green-600/15 text-green-800 dark:text-green-400',
+    bad: 'bg-destructive/15 text-destructive',
+    info: 'bg-blue-600/15 text-blue-800 dark:text-blue-300',
+  }
+  return (
+    <span
+      className={cn(
+        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        tones[tone]
+      )}
+    >
+      {label ?? value?.replace(/_/g, ' ')?.toUpperCase() ?? '—'}
+    </span>
+  )
+}
+
 export default function UserEditor({
   user,
   isCreating,
@@ -21,12 +88,21 @@ export default function UserEditor({
   onSubmit,
   onCancel,
   onDelete,
+  onUserUpdated,
 }) {
+  const t = useTranslations('Admin')
+  const tRegister = useTranslations('Register')
+  const tInvest = useTranslations('Invest')
   const initialState = useMemo(() => buildInitialState(user), [user])
   const [formData, setFormData] = useState(initialState)
+  const [reviewNote, setReviewNote] = useState('')
+  const [selectedResubmitKinds, setSelectedResubmitKinds] = useState([])
+  const [actionLoading, setActionLoading] = useState(false)
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialState(user))
+    setReviewNote('')
+    setSelectedResubmitKinds([])
   }, [user])
 
   useEffect(() => {
@@ -64,18 +140,63 @@ export default function UserEditor({
     onSubmit(submitData)
   }
 
-  const headingPrefix = isCreating ? 'Create New User' : 'Edit User'
+  const runStatusAction = async (endpoint, action, extra = {}) => {
+    if (!user?.id) return
+    setActionLoading(true)
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, note: reviewNote || undefined, ...extra }),
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        alert(error.error || error.message || t('common.actionFailed'))
+        return
+      }
+      const updated = await response.json()
+      onUserUpdated?.(updated)
+      setReviewNote('')
+      setSelectedResubmitKinds([])
+    } catch (error) {
+      console.error('Status action error:', error)
+      alert(t('common.actionFailed'))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const headingPrefix = isCreating ? t('users.createTitle') : t('users.editTitle')
+  const profile = user?.profile && typeof user.profile === 'object' ? user.profile : null
+  const documents = user?.investorDocuments || []
+  const canApproveAccount = user?.accountStatus !== 'ACTIVE'
+  const canRejectAccount = user?.accountStatus !== 'REJECTED'
+  const hasSubmittedAccreditationDocs = documents.length > 0
+  const canApproveAccredited =
+    user?.accountStatus === 'ACTIVE' &&
+    hasSubmittedAccreditationDocs &&
+    user?.accreditedStatus !== 'APPROVED'
+  const canRejectAccredited =
+    user?.accountStatus === 'ACTIVE' &&
+    (user?.accreditedStatus === 'APPROVED' ||
+      (user?.accreditedStatus === 'PENDING_REVIEW' && hasSubmittedAccreditationDocs))
+  const pendingResubmitKinds = parseResubmitKinds(user?.accreditationResubmitKinds)
+
+  const toggleResubmitKind = (kind) => {
+    setSelectedResubmitKinds((prev) =>
+      prev.includes(kind) ? prev.filter((value) => value !== kind) : [...prev, kind]
+    )
+  }
 
   return (
     <Card className="border-border/80 shadow-md">
       <CardHeader className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <CardTitle className="font-heading text-2xl text-primary">
-            {headingPrefix}
-          </CardTitle>
+          <CardTitle className="font-heading text-2xl text-primary">{headingPrefix}</CardTitle>
           {user && !isCreating ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              ID #{user.id} · {user.provider || 'credentials'}
+              {t('users.userMeta', { id: user.id, provider: user.provider || t('common.credentials') })}
             </p>
           ) : null}
         </div>
@@ -86,19 +207,208 @@ export default function UserEditor({
             size="sm"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDelete?.(user.id)}
-            disabled={isLoading}
+            disabled={isLoading || actionLoading}
           >
-            Delete user
+            {t('common.deleteUser')}
           </Button>
         ) : null}
       </CardHeader>
 
-      <CardContent className="pt-6">
+      <CardContent className="space-y-8 pt-6">
+        {user && !isCreating && user.type === 'INVESTOR' ? (
+          <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+                {t('users.accountStatusLabel')}
+              </span>
+              {statusPill(
+                user.accountStatus,
+                user.accountStatus === 'ACTIVE'
+                  ? 'ok'
+                  : user.accountStatus === 'REJECTED'
+                    ? 'bad'
+                    : user.accountStatus === 'PENDING_ADMIN'
+                      ? 'warn'
+                      : 'info',
+                adminAccountStatusLabel(t, user.accountStatus)
+              )}
+              <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+                {t('users.accreditedStatusLabel')}
+              </span>
+              {statusPill(
+                user.accreditedStatus,
+                user.accreditedStatus === 'APPROVED'
+                  ? 'ok'
+                  : user.accreditedStatus === 'REJECTED'
+                    ? 'bad'
+                    : user.accreditedStatus === 'PENDING_REVIEW'
+                      ? 'info'
+                      : 'neutral',
+                adminAccreditedStatusLabel(t, user.accreditedStatus)
+              )}
+            </div>
+            {user.accreditedReviewNote ? (
+              <p className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-main-gold">{t('users.reviewNoteCurrent')}:</span>{' '}
+                {user.accreditedReviewNote}
+              </p>
+            ) : null}
+            {canApproveAccount || canRejectAccount ? (
+              <div className="space-y-2">
+                {user.accountStatus === 'REJECTED' || user.accountStatus === 'ACTIVE' ? (
+                  <p className="text-xs text-muted-foreground">{t('users.accountActionsHelp')}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  {canApproveAccount ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={actionLoading}
+                      onClick={() => runStatusAction('account-status', 'approve')}
+                    >
+                      {t('users.approveAccount')}
+                    </Button>
+                  ) : null}
+                  {canRejectAccount ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      disabled={actionLoading}
+                      onClick={() => runStatusAction('account-status', 'reject')}
+                    >
+                      {t('users.rejectAccount')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {documents.length > 0 ? (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-primary">{t('users.uploadedDocuments')}</h3>
+                <InvestorDocumentReviewGrid
+                  documents={documents}
+                  t={tInvest}
+                  viewLabel={t('common.view')}
+                  missingLabel={t('users.documentNotUploaded')}
+                  closeLabel={t('common.close')}
+                  openInNewTabLabel={t('common.openInNewTab')}
+                  previewUnavailableLabel={t('common.previewUnavailable')}
+                  selectable={user.accreditedStatus === 'PENDING_REVIEW'}
+                  selectedKinds={selectedResubmitKinds}
+                  onToggleKind={toggleResubmitKind}
+                  selectLabel={t('users.resubmitSelectDocument')}
+                />
+                {user.accreditedStatus === 'PENDING_REVIEW' ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="w-full text-xs text-muted-foreground">{t('users.resubmitSelectHelp')}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading || selectedResubmitKinds.length === 0}
+                      onClick={() =>
+                        runStatusAction('accredited-status', 'request_resubmit', {
+                          resubmitKinds: selectedResubmitKinds,
+                        })
+                      }
+                    >
+                      {t('users.requestDocumentResubmit')}
+                    </Button>
+                  </div>
+                ) : null}
+                {pendingResubmitKinds.length > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t('users.awaitingResubmitKinds', {
+                      kinds: pendingResubmitKinds
+                        .map((kind) => tInvest(getFieldLabelKeyForKind(kind) || kind))
+                        .join(', '),
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {canApproveAccredited || canRejectAccredited ? (
+              <div className="space-y-2">
+                {canApproveAccredited &&
+                (user.accreditedStatus === 'REJECTED' || user.accreditedStatus === 'NOT_STARTED') ? (
+                  <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
+                ) : null}
+                {canRejectAccredited && user.accreditedStatus === 'APPROVED' ? (
+                  <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  {canApproveAccredited ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={actionLoading}
+                      onClick={() => runStatusAction('accredited-status', 'approve')}
+                    >
+                      {t('users.approveAccredited')}
+                    </Button>
+                  ) : null}
+                  {canRejectAccredited ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      disabled={actionLoading}
+                      onClick={() => runStatusAction('accredited-status', 'reject')}
+                    >
+                      {t('users.rejectAccredited')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-1">
+              <Label htmlFor="review-note" className="text-main-gold text-xs">
+                {t('users.reviewNote')}
+              </Label>
+              <Input
+                id="review-note"
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                placeholder={t('users.reviewNotePlaceholder')}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {profile && !isCreating ? (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-primary">{t('users.questionnaire')}</h3>
+            <dl className="grid gap-2 text-sm md:grid-cols-2">
+              {PROFILE_FIELD_KEYS.map((key) => {
+                const display = formatProfileValue(key, profile, tRegister)
+                if (!display) return null
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      'rounded-md border border-border/60 bg-background px-3 py-2',
+                      (key === 'investmentGoals' || key === 'background') && 'md:col-span-2'
+                    )}
+                  >
+                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t(`users.profile.${key}`)}
+                    </dt>
+                    <dd className="mt-1 text-foreground whitespace-pre-wrap">{display}</dd>
+                  </div>
+                )
+              })}
+            </dl>
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="user-email" className="text-main-gold">
-                Email Address
+                {t('users.emailAddress')}
               </Label>
               <Input
                 id="user-email"
@@ -112,7 +422,8 @@ export default function UserEditor({
 
             <div className="space-y-2">
               <Label htmlFor="user-password" className="text-main-gold">
-                Password {user && !isCreating ? '(leave blank to keep current)' : ''}
+                {t('users.password')}{' '}
+                {user && !isCreating ? t('users.passwordKeepHint') : ''}
               </Label>
               <Input
                 id="user-password"
@@ -121,13 +432,15 @@ export default function UserEditor({
                 value={formData.password}
                 onChange={handleChange}
                 required={isCreating}
-                placeholder={isCreating ? 'Set initial password' : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}
+                placeholder={
+                  isCreating ? t('users.passwordPlaceholderNew') : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
+                }
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="user-type" className="text-main-gold">
-                User Type
+                {t('users.userType')}
               </Label>
               <select
                 id="user-type"
@@ -137,28 +450,31 @@ export default function UserEditor({
                 className={adminSelectClassName()}
                 required
               >
-                <option value="INVESTOR">Investor</option>
-                <option value="ADMIN">Admin</option>
+                <option value="INVESTOR">{adminUserTypeLabel(t, 'INVESTOR')}</option>
+                <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
               </select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-main-gold">Authentication Provider</Label>
-              <Input value={formData.provider || 'credentials'} disabled readOnly className="bg-muted" />
-              <p className="text-xs text-muted-foreground">
-                This shows how the user originally signed up and cannot be changed.
-              </p>
+              <Label className="text-main-gold">{t('users.authProvider')}</Label>
+              <Input
+                value={formData.provider || t('common.credentials')}
+                disabled
+                readOnly
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">{t('users.authProviderHint')}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">
               {isDirty ? (
-                <span className="text-main-gold">Unsaved changes</span>
+                <span className="text-main-gold">{t('common.unsavedChanges')}</span>
               ) : isCreating ? (
-                'Fill out the form, then create.'
+                t('common.fillFormThenCreate')
               ) : (
-                'No unsaved changes.'
+                t('common.noUnsavedChanges')
               )}
             </p>
             <div className="flex flex-wrap justify-end gap-3">
@@ -166,12 +482,16 @@ export default function UserEditor({
                 type="button"
                 variant="outline"
                 onClick={handleCancelClick}
-                disabled={isLoading || (!isCreating && !isDirty)}
+                disabled={isLoading || actionLoading || (!isCreating && !isDirty)}
               >
-                {isCreating ? 'Cancel' : 'Discard changes'}
+                {isCreating ? t('common.cancel') : t('common.discardChanges')}
               </Button>
-              <Button type="submit" disabled={isLoading || (!isCreating && !isDirty)}>
-                {isLoading ? 'Saving...' : isCreating ? 'Create user' : 'Save changes'}
+              <Button type="submit" disabled={isLoading || actionLoading || (!isCreating && !isDirty)}>
+                {isLoading
+                  ? t('common.saving')
+                  : isCreating
+                    ? t('users.createUser')
+                    : t('common.saveChanges')}
               </Button>
             </div>
           </div>

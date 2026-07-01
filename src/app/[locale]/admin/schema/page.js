@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
@@ -5,10 +6,11 @@ import AdminNav from '../components/AdminNav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function SchemaPage() {
+  const t = await getTranslations('Admin.schema')
   const session = await getServerSession(authOptions)
 
   if (!session || session.user?.type !== 'ADMIN') {
-    redirect('/')
+    await redirect('/')
   }
 
   const schema = {
@@ -93,18 +95,16 @@ export default async function SchemaPage() {
     'inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background">
       <AdminNav />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Database Schema</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl">
-            Complete database structure for the Golden State investment platform.
-          </p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">{t('title')}</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl">{t('subtitle')}</p>
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-foreground mb-4">Database Models</h2>
+          <h2 className="text-2xl font-semibold text-foreground mb-4">{t('modelsHeading')}</h2>
           <div className="grid gap-6">
             {schema.models.map((model) => (
               <Card key={model.name}>
@@ -113,11 +113,11 @@ export default async function SchemaPage() {
                     <CardTitle className="text-lg">{model.name}</CardTitle>
                     <CardDescription className="mt-1">{model.description}</CardDescription>
                   </div>
-                  <span className={modelBadgeClass}>Model</span>
+                  <span className={modelBadgeClass}>{t('modelBadge')}</span>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h4 className="mb-2 font-medium text-foreground">Fields</h4>
+                    <h4 className="mb-2 font-medium text-foreground">{t('fieldsHeading')}</h4>
                     <div className="grid gap-2">
                       {model.fields.map((field) => (
                         <div
@@ -134,7 +134,7 @@ export default async function SchemaPage() {
 
                   {model.relations.length > 0 && (
                     <div>
-                      <h4 className="mb-2 font-medium text-foreground">Relations</h4>
+                      <h4 className="mb-2 font-medium text-foreground">{t('relationsHeading')}</h4>
                       <div className="flex flex-wrap gap-2">
                         {model.relations.map((relation) => (
                           <span key={relation} className={relationChipClass}>
@@ -151,13 +151,13 @@ export default async function SchemaPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-semibold text-foreground mb-4">Enums</h2>
+          <h2 className="text-2xl font-semibold text-foreground mb-4">{t('enumsHeading')}</h2>
           <div className="grid gap-4">
             {schema.enums.map((enumItem) => (
               <Card key={enumItem.name}>
                 <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b pb-4">
                   <CardTitle className="text-lg">{enumItem.name}</CardTitle>
-                  <span className={enumBadgeClass}>Enum</span>
+                  <span className={enumBadgeClass}>{t('enumBadge')}</span>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">

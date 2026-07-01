@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -117,11 +118,11 @@ const ABOUT_KEY_ORDER = [
 
 const HOME_SECTIONS = [
   {
-    label: 'Page metadata',
+    labelKey: 'metadata',
     keys: ['metaTitle', 'metaDescription'],
   },
   {
-    label: '1. Hero',
+    labelKey: 'hero',
     keys: [
       'heroEyebrow',
       'heroTitle',
@@ -137,7 +138,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '2. Social proof — stats bar',
+    labelKey: 'statsBar',
     keys: [
       'statsKicker',
       'statsTitle',
@@ -152,11 +153,11 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '3. What is real estate syndication',
+    labelKey: 'whatIs',
     keys: ['whatIsKicker', 'whatIsTitle', 'whatIsBody1', 'whatIsBody2', 'whatIsBody3'],
   },
   {
-    label: '4. Why investors choose Golden State',
+    labelKey: 'whyUs',
     keys: [
       'whyUsKicker',
       'whyUsTitle',
@@ -167,7 +168,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '5. Investment strategies / types',
+    labelKey: 'strategies',
     keys: [
       'strategiesKicker',
       'strategiesTitle',
@@ -193,7 +194,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '6. Live investment opportunities',
+    labelKey: 'live',
     keys: [
       'liveKicker',
       'liveTitle',
@@ -206,7 +207,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '7. How it works',
+    labelKey: 'howItWorks',
     keys: [
       'howKicker',
       'howTitle',
@@ -231,7 +232,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '8. 10 reasons to invest with us',
+    labelKey: 'reasons',
     keys: [
       'reasonsKicker',
       'reasonsTitle',
@@ -240,7 +241,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '9. Completed deal highlights',
+    labelKey: 'track',
     keys: [
       'trackKicker',
       'trackTitle',
@@ -252,7 +253,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '10. Why add real estate to your portfolio',
+    labelKey: 'portfolio',
     keys: [
       'portfolioKicker',
       'portfolioTitle',
@@ -275,7 +276,7 @@ const HOME_SECTIONS = [
     ],
   },
   {
-    label: '11. Final CTA',
+    labelKey: 'finalCta',
     keys: ['finalCtaKicker', 'finalCtaTitle', 'finalCtaBody', 'finalCtaPrimary', 'finalCtaSecondary'],
   },
 ]
@@ -319,6 +320,8 @@ const FAQ_STRUCTURED_KEY_REGEX = /^(?:categoryOrder|category.+Title|item\d+(?:Ca
 const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ']
 
 export default function ContentAdminClient({ records, fallbackByPage }) {
+  const t = useTranslations('Admin.content')
+  const tc = useTranslations('Admin.common')
   const [activePage, setActivePage] = useState('HOME')
   const [previewLocale, setPreviewLocale] = useState('en')
   const [isLoading, setIsLoading] = useState(false)
@@ -453,7 +456,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
 
       if (!responseEn.ok) {
         const error = await responseEn.json()
-        setStatus(`English save failed: ${error.message}`)
+        setStatus(t('saveFailedEn', { message: error.message }))
         return
       }
 
@@ -469,11 +472,11 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
 
       if (!responseEs.ok) {
         const error = await responseEs.json()
-        setStatus(`Spanish save failed: ${error.message}`)
+        setStatus(t('saveFailedEs', { message: error.message }))
         return
       }
 
-      setStatus(`Saved ${PAGE_CONFIG[activePage].label} content for English and Spanish`)
+      setStatus(t('savedBothLocales', { page: t(`tabs.${activePage}`) }))
     } catch (error) {
       console.error('Error saving content:', error)
       setStatus('Unexpected error while saving')
@@ -493,7 +496,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
           <Label className="mb-3 block font-mono text-xs text-muted-foreground">{key}</Label>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor={`en-${key}`}>English (en)</Label>
+              <Label htmlFor={`en-${key}`}>{tc('english')}</Label>
               <Textarea
                 id={`en-${key}`}
                 value={enValue}
@@ -503,7 +506,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`es-${key}`}>Spanish (es)</Label>
+              <Label htmlFor={`es-${key}`}>{tc('spanish')}</Label>
               <Textarea
                 id={`es-${key}`}
                 value={esValue}
@@ -522,7 +525,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
         <Label className="mb-3 block font-mono text-xs text-muted-foreground">{key}</Label>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`en-${key}`}>English (en)</Label>
+            <Label htmlFor={`en-${key}`}>{tc('english')}</Label>
             <Input
               id={`en-${key}`}
               value={enValue}
@@ -531,7 +534,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`es-${key}`}>Spanish (es)</Label>
+            <Label htmlFor={`es-${key}`}>{tc('spanish')}</Label>
             <Input
               id={`es-${key}`}
               value={esValue}
@@ -613,10 +616,8 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="font-heading text-4xl font-semibold text-primary">Content Management</h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Edit static page copy without code changes. Choose a page tab to edit Home, About, or FAQ content.
-        </p>
+        <h1 className="font-heading text-4xl font-semibold text-primary">{t('title')}</h1>
+        <p className="mt-2 max-w-3xl text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <div className="space-y-4">
@@ -634,7 +635,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 }}
                 disabled={isLoading}
               >
-                {PAGE_CONFIG[pageKey].label}
+                {t(`tabs.${pageKey}`)}
               </Button>
             )
           })}
@@ -643,10 +644,8 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <Card className="border-border/80 shadow-md">
             <CardHeader>
-              <CardTitle>{PAGE_CONFIG[activePage].label} Content</CardTitle>
-              <CardDescription>
-                Manage content by page. Home and FAQ tabs are ready for future fields.
-              </CardDescription>
+              <CardTitle>{t('pageContent', { page: t(`tabs.${activePage}`) })}</CardTitle>
+              <CardDescription>{t('pageDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {activeSections ? (
@@ -655,9 +654,9 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                     const sectionKeys = section.keys.filter((key) => orderedKeys.includes(key))
                     if (sectionKeys.length === 0) return null
                     return (
-                      <div key={section.label} className="space-y-3">
+                      <div key={section.labelKey} className="space-y-3">
                         <h3 className="font-heading text-base font-semibold uppercase tracking-wide text-main-gold">
-                          {section.label}
+                          {t(`homeSections.${section.labelKey}`)}
                         </h3>
                         <div className="space-y-4">
                           {sectionKeys.map((key) => renderField(key))}
@@ -672,7 +671,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                     return (
                       <div className="space-y-3">
                         <h3 className="font-heading text-base font-semibold uppercase tracking-wide text-muted-foreground">
-                          Other fields
+                          {t('otherFields')}
                         </h3>
                         <div className="space-y-4">
                           {extras.map((key) => renderField(key))}
@@ -688,7 +687,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                   ) : activePage === 'FAQ' ? null : (
                     <Card className="border-dashed">
                       <CardContent className="pt-6 text-sm text-muted-foreground">
-                        No editable fields configured yet for {PAGE_CONFIG[activePage].label}.
+                        {t('noFieldsYet', { page: t(`tabs.${activePage}`) })}
                       </CardContent>
                     </Card>
                   )}
@@ -709,7 +708,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
 
               <div className="flex justify-end gap-3 border-t border-border pt-4">
                 <Button type="button" variant="outline" onClick={handleReset} disabled={isLoading}>
-                  Reset
+                  {t('reset')}
                 </Button>
                 <Button
                   type="button"
@@ -718,7 +717,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                     isLoading || (orderedKeys.length === 0 && activePage !== 'FAQ')
                   }
                 >
-                  {isLoading ? 'Saving...' : 'Save Content'}
+                  {isLoading ? t('savingContent') : t('saveContent')}
                 </Button>
               </div>
             </CardContent>
@@ -726,8 +725,8 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
 
           <Card className="h-fit border-border/80 shadow-md xl:sticky xl:top-24">
             <CardHeader>
-              <CardTitle>Live Preview</CardTitle>
-              <CardDescription>Draft preview updates instantly before saving.</CardDescription>
+              <CardTitle>{t('livePreviewTitle')}</CardTitle>
+              <CardDescription>{t('previewDesc')}</CardDescription>
               <div className="flex gap-2 pt-2">
                 <Button
                   type="button"
@@ -735,7 +734,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                   variant={previewLocale === 'en' ? 'default' : 'outline'}
                   onClick={() => setPreviewLocale('en')}
                 >
-                  EN
+                  {t('previewEn')}
                 </Button>
                 <Button
                   type="button"
@@ -743,7 +742,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                   variant={previewLocale === 'es' ? 'default' : 'outline'}
                   onClick={() => setPreviewLocale('es')}
                 >
-                  ES
+                  {t('previewEs')}
                 </Button>
               </div>
             </CardHeader>
@@ -753,7 +752,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                   <iframe
                     key={activePage}
                     ref={iframeRef}
-                    title={`${PAGE_CONFIG[activePage].label} mobile preview`}
+                    title={t('previewIframeTitle', { page: t(`tabs.${activePage}`) })}
                     src={PREVIEW_CONFIG[activePage].src}
                     className="h-full w-full border-0"
                     onLoad={postPreviewState}
@@ -761,7 +760,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  Live preview will appear here once {PAGE_CONFIG[activePage].label} fields are configured.
+                  {t('previewEmpty', { page: t(`tabs.${activePage}`) })}
                 </div>
               )}
             </CardContent>

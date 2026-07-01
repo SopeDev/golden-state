@@ -44,7 +44,7 @@ function AboutHeroCopy({ content }) {
 
 export default function AboutPage({ content }) {
   return (
-    <div className="bg-background text-foreground">
+    <div className="flex-1 bg-background text-foreground">
       {/* Hero — full-bleed skyline + overlay */}
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">

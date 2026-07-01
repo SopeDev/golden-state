@@ -12,13 +12,18 @@ async function main() {
   
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@goldenstate.com' },
-    update: {},
+    update: {
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+    },
     create: {
       email: 'admin@goldenstate.com',
       password: hashedAdminPassword,
       type: 'ADMIN',
-      provider: 'credentials'
-    }
+      provider: 'credentials',
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+    },
   })
 
   console.log('✅ Admin user created:', adminUser.email)
@@ -29,13 +34,44 @@ async function main() {
   
   const investorUser = await prisma.user.upsert({
     where: { email: 'investor@example.com' },
-    update: {},
+    update: {
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      adminApprovedAt: new Date(),
+      accreditedStatus: 'APPROVED',
+      profile: {
+        fullName: 'Sample Investor',
+        phone: '+1 619 555 0100',
+        investmentGoals: 'Long-term income and appreciation across California and Baja.',
+        experience: 'experienced',
+        investmentRange: '100k_250k',
+        projectTypes: ['BUILD_TO_RENT', 'FLIPHOUSE'],
+        referralSource: 'Referral',
+        background: 'Seed account for local development.',
+        completedAt: new Date().toISOString(),
+      },
+    },
     create: {
       email: 'investor@example.com',
       password: hashedInvestorPassword,
       type: 'INVESTOR',
-      provider: 'credentials'
-    }
+      provider: 'credentials',
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      adminApprovedAt: new Date(),
+      accreditedStatus: 'APPROVED',
+      profile: {
+        fullName: 'Sample Investor',
+        phone: '+1 619 555 0100',
+        investmentGoals: 'Long-term income and appreciation across California and Baja.',
+        experience: 'experienced',
+        investmentRange: '100k_250k',
+        projectTypes: ['BUILD_TO_RENT', 'FLIPHOUSE'],
+        referralSource: 'Referral',
+        background: 'Seed account for local development.',
+        completedAt: new Date().toISOString(),
+      },
+    },
   })
 
   console.log('✅ Investor user created:', investorUser.email)

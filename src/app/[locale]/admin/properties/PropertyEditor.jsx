@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
-import { PROPERTY_TYPE_ADMIN_LABEL } from '@/lib/propertyTypeUi'
+import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
 
 const PROPERTY_TYPE_OPTIONS = [
   'BUILD_TO_SELL',
@@ -18,10 +19,7 @@ const PROPERTY_TYPE_OPTIONS = [
   'US_TO_MEX',
 ]
 
-const PROPERTY_STATUS_OPTIONS = [
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'COMPLETED', label: 'Completed' },
-]
+const PROPERTY_STATUS_VALUES = ['IN_PROGRESS', 'COMPLETED']
 
 const keyToLabel = (key) => {
   if (!key) return ''
@@ -145,11 +143,13 @@ function Field({ label, children, htmlFor }) {
 }
 
 function KeyValueRow({ row, onChange, onRemove, placeholders }) {
+  const te = useTranslations('Admin.properties.editor')
+  const tc = useTranslations('Admin.common')
   return (
     <div className="space-y-2 rounded-md border border-border/60 bg-card/40 p-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="space-y-1">
-          <Label className="text-xs text-main-gold">English Label</Label>
+          <Label className="text-xs text-main-gold">{te('labelEn')}</Label>
           <Input
             value={row.labelEn}
             placeholder={placeholders.labelEn}
@@ -157,7 +157,7 @@ function KeyValueRow({ row, onChange, onRemove, placeholders }) {
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-main-gold">English Value</Label>
+          <Label className="text-xs text-main-gold">{te('valueEn')}</Label>
           <Input
             value={row.valueEn}
             placeholder={placeholders.valueEn}
@@ -165,7 +165,7 @@ function KeyValueRow({ row, onChange, onRemove, placeholders }) {
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-main-gold">Spanish Label</Label>
+          <Label className="text-xs text-main-gold">{te('labelEs')}</Label>
           <Input
             value={row.labelEs}
             placeholder={placeholders.labelEs}
@@ -173,7 +173,7 @@ function KeyValueRow({ row, onChange, onRemove, placeholders }) {
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-main-gold">Spanish Value</Label>
+          <Label className="text-xs text-main-gold">{te('valueEs')}</Label>
           <Input
             value={row.valueEs}
             placeholder={placeholders.valueEs}
@@ -190,7 +190,7 @@ function KeyValueRow({ row, onChange, onRemove, placeholders }) {
           onClick={onRemove}
         >
           <Trash2 className="size-4" aria-hidden />
-          Remove
+          {te('removeRow')}
         </Button>
       </div>
     </div>
@@ -205,6 +205,10 @@ export default function PropertyEditor({
   onCancel,
   onDelete,
 }) {
+  const t = useTranslations('Admin.properties.editor')
+  const tc = useTranslations('Admin.common')
+  const tf = useTranslations('Admin.filter')
+  const tProjects = useTranslations('Projects')
   const [formData, setFormData] = useState(() => buildInitialFormData(property))
   const [propertyFactsRows, setPropertyFactsRows] = useState(() =>
     objectToRows(property?.propertyFacts)
@@ -289,7 +293,7 @@ export default function PropertyEditor({
       }))
     } catch (error) {
       console.error('Error uploading images:', error)
-      alert('Unexpected error while uploading images')
+      alert(t('uploadError'))
     } finally {
       event.target.value = ''
       setIsUploadingImages(false)
@@ -332,7 +336,7 @@ export default function PropertyEditor({
       <CardHeader className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <CardTitle className="font-heading text-2xl text-primary">
-            {isCreating ? 'Create New Property' : 'Edit Property'}
+            {isCreating ? t('createTitle') : t('editTitle')}
           </CardTitle>
           {property && !isCreating ? (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -350,7 +354,7 @@ export default function PropertyEditor({
             disabled={isLoading}
           >
             <Trash2 className="size-4" aria-hidden />
-            Delete property
+            {t('deleteProperty')}
           </Button>
         ) : null}
       </CardHeader>
@@ -358,9 +362,9 @@ export default function PropertyEditor({
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-8">
           <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">Basic Information</h3>
+            <h3 className="font-heading text-lg font-semibold text-primary">{t('basicInfo')}</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Investment ID" htmlFor="prop-investmentId">
+              <Field label={t('investmentId')} htmlFor="prop-investmentId">
                 <Input
                   id="prop-investmentId"
                   type="number"
@@ -370,7 +374,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Property Type" htmlFor="prop-type">
+              <Field label={t('propertyType')} htmlFor="prop-type">
                 <select
                   id="prop-type"
                   name="type"
@@ -381,12 +385,12 @@ export default function PropertyEditor({
                 >
                   {PROPERTY_TYPE_OPTIONS.map((value) => (
                     <option key={value} value={value}>
-                      {PROPERTY_TYPE_ADMIN_LABEL[value] || value}
+                      {tProjects(getPropertyTypeLabelKey(value))}
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field label="Status" htmlFor="prop-status">
+              <Field label={t('status')} htmlFor="prop-status">
                 <select
                   id="prop-status"
                   name="status"
@@ -395,17 +399,15 @@ export default function PropertyEditor({
                   className={adminSelectClassName()}
                   required
                 >
-                  {PROPERTY_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  {PROPERTY_STATUS_VALUES.map((value) => (
+                    <option key={value} value={value}>
+                      {value === 'IN_PROGRESS' ? tf('inProgress') : tf('completed')}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  Completed projects appear in the home page Track Record section.
-                </p>
+                <p className="text-xs text-muted-foreground">{t('statusHint')}</p>
               </Field>
-              <Field label="Property Name" htmlFor="prop-name">
+              <Field label={t('propertyName')} htmlFor="prop-name">
                 <Input
                   id="prop-name"
                   type="text"
@@ -415,7 +417,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Slug (URL-friendly name)" htmlFor="prop-slug">
+              <Field label={t('slug')} htmlFor="prop-slug">
                 <Input
                   id="prop-slug"
                   type="text"
@@ -429,9 +431,9 @@ export default function PropertyEditor({
           </section>
 
           <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">Location</h3>
+            <h3 className="font-heading text-lg font-semibold text-primary">{t('locationSection')}</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label="City" htmlFor="prop-city">
+              <Field label={t('city')} htmlFor="prop-city">
                 <Input
                   id="prop-city"
                   type="text"
@@ -441,7 +443,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="State" htmlFor="prop-state">
+              <Field label={t('state')} htmlFor="prop-state">
                 <Input
                   id="prop-state"
                   type="text"
@@ -451,7 +453,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Full Address" htmlFor="prop-address">
+              <Field label={t('address')} htmlFor="prop-address">
                 <Input
                   id="prop-address"
                   type="text"
@@ -465,9 +467,9 @@ export default function PropertyEditor({
           </section>
 
           <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">Financial Information</h3>
+            <h3 className="font-heading text-lg font-semibold text-primary">{t('financialInfo')}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <Field label="Total Price ($)" htmlFor="prop-price">
+              <Field label={t('totalPrice')} htmlFor="prop-price">
                 <Input
                   id="prop-price"
                   type="number"
@@ -477,7 +479,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Unit Count" htmlFor="prop-unitCount">
+              <Field label={t('unitCount')} htmlFor="prop-unitCount">
                 <Input
                   id="prop-unitCount"
                   type="number"
@@ -487,7 +489,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Min Investment ($)" htmlFor="prop-minInvestment">
+              <Field label={t('minInvestment')} htmlFor="prop-minInvestment">
                 <Input
                   id="prop-minInvestment"
                   type="number"
@@ -497,7 +499,7 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label="Estimated ROI (%)" htmlFor="prop-estimatedROI">
+              <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI">
                 <Input
                   id="prop-estimatedROI"
                   type="number"
@@ -509,7 +511,7 @@ export default function PropertyEditor({
                 />
               </Field>
             </div>
-            <Field label="Timeline (Months)" htmlFor="prop-estimatedMonths">
+            <Field label={t('timelineMonths')} htmlFor="prop-estimatedMonths">
               <Input
                 id="prop-estimatedMonths"
                 type="text"
@@ -517,14 +519,14 @@ export default function PropertyEditor({
                 value={formData.estimatedMonths}
                 onChange={handleChange}
                 required
-                placeholder="e.g. 24 or 24-36"
+                placeholder={t('timelinePlaceholder')}
               />
             </Field>
           </section>
 
           <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">Content</h3>
-            <Field label="Summary" htmlFor="prop-summary">
+            <h3 className="font-heading text-lg font-semibold text-primary">{t('contentSection')}</h3>
+            <Field label={t('summary')} htmlFor="prop-summary">
               <Textarea
                 id="prop-summary"
                 name="summary"
@@ -535,17 +537,17 @@ export default function PropertyEditor({
               />
             </Field>
 
-            <Field label="Property Facts">
+            <Field label={t('propertyFacts')}>
               <div className="space-y-3">
                 {propertyFactsRows.map((row) => (
                   <KeyValueRow
                     key={row.id}
                     row={row}
                     placeholders={{
-                      labelEn: 'Property Size',
-                      valueEn: '0.25 acres',
-                      labelEs: 'Tamaño de la propiedad',
-                      valueEs: '0.25 acres',
+                      labelEn: t('placeholderSizeEn'),
+                      valueEn: t('placeholderSizeValue'),
+                      labelEs: t('placeholderSizeEs'),
+                      valueEs: t('placeholderSizeValue'),
                     }}
                     onChange={(field, value) =>
                       handleKeyValueChange(setPropertyFactsRows, row.id, field, value)
@@ -561,21 +563,21 @@ export default function PropertyEditor({
                   onClick={() => addKeyValueRow(setPropertyFactsRows)}
                 >
                   <Plus className="size-4" aria-hidden />
-                  Add fact
+                  {t('addFact')}
                 </Button>
               </div>
             </Field>
 
-            <Field label="Investment Details">
+            <Field label={t('investmentDetails')}>
               <div className="space-y-3">
                 {investmentDetailsRows.map((row) => (
                   <KeyValueRow
                     key={row.id}
                     row={row}
                     placeholders={{
-                      labelEn: 'Land Cost',
+                      labelEn: t('placeholderLandEn'),
                       valueEn: '1200000',
-                      labelEs: 'Costo del terreno',
+                      labelEs: t('placeholderLandEs'),
                       valueEs: '1200000',
                     }}
                     onChange={(field, value) =>
@@ -592,12 +594,12 @@ export default function PropertyEditor({
                   onClick={() => addKeyValueRow(setInvestmentDetailsRows)}
                 >
                   <Plus className="size-4" aria-hidden />
-                  Add detail
+                  {t('addDetail')}
                 </Button>
               </div>
             </Field>
 
-            <Field label="Project Images">
+            <Field label={t('projectImages')}>
               <div className="space-y-3 rounded-md border border-border/60 p-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <Input
@@ -608,7 +610,7 @@ export default function PropertyEditor({
                     disabled={isUploadingImages || isLoading}
                   />
                   {isUploadingImages ? (
-                    <span className="text-sm text-muted-foreground">Uploading...</span>
+                    <span className="text-sm text-muted-foreground">{t('uploading')}</span>
                   ) : null}
                 </div>
 
@@ -617,7 +619,7 @@ export default function PropertyEditor({
                     {formData.images.map((imageUrl) => (
                       <div key={imageUrl} className="space-y-2 rounded border border-border/60 p-2">
                         <div className="aspect-video overflow-hidden rounded bg-muted">
-                          <img src={imageUrl} alt="Property upload" className="h-full w-full object-cover" />
+                          <img src={imageUrl} alt={t('imageAlt')} className="h-full w-full object-cover" />
                         </div>
                         <Button
                           type="button"
@@ -627,13 +629,13 @@ export default function PropertyEditor({
                           onClick={() => handleRemoveImage(imageUrl)}
                         >
                           <Trash2 className="size-4" aria-hidden />
-                          Remove
+                          {t('removeImage')}
                         </Button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No images uploaded yet.</p>
+                  <p className="text-sm text-muted-foreground">{t('noImages')}</p>
                 )}
               </div>
             </Field>
@@ -642,11 +644,11 @@ export default function PropertyEditor({
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">
               {isDirty ? (
-                <span className="text-main-gold">Unsaved changes</span>
+                <span className="text-main-gold">{tc('unsavedChanges')}</span>
               ) : isCreating ? (
-                'Fill out the form, then create.'
+                tc('fillFormThenCreate')
               ) : (
-                'No unsaved changes.'
+                tc('noUnsavedChanges')
               )}
             </p>
             <div className="flex flex-wrap justify-end gap-3">
@@ -656,10 +658,10 @@ export default function PropertyEditor({
                 onClick={handleCancelClick}
                 disabled={isLoading || (!isCreating && !isDirty)}
               >
-                {isCreating ? 'Cancel' : 'Discard changes'}
+                {isCreating ? tc('cancel') : tc('discardChanges')}
               </Button>
               <Button type="submit" disabled={isLoading || (!isCreating && !isDirty)}>
-                {isLoading ? 'Saving...' : isCreating ? 'Create property' : 'Save changes'}
+                {isLoading ? tc('saving') : isCreating ? t('createProperty') : tc('saveChanges')}
               </Button>
             </div>
           </div>

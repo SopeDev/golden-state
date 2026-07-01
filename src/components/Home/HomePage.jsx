@@ -846,7 +846,7 @@ function HomeFinalCta({ content }) {
 
 export default function HomePage({ content, liveOpportunities = [], completedDeals = [] }) {
   return (
-    <div className="bg-background text-foreground">
+    <div className="flex-1 bg-background text-foreground">
       <HomeHero content={content} statsLayout={HOME_STATS_LAYOUT} />
       <HomeStats content={content} layout={HOME_STATS_LAYOUT} />
       <HomeWhatIs content={content} />

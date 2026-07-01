@@ -1,26 +1,32 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { adminAccountStatusLabel, adminUserTypeLabel } from '@/lib/admin/adminLabels'
+import { getAccountStatusBadgeClass } from '@/lib/auth/userStatus'
 import { cn } from '@/lib/utils'
 import UserEditor from './UserEditor'
 
-const formatDate = (date) =>
-  new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-
 export default function UsersAdminClient({ users }) {
+  const t = useTranslations('Admin')
+  const locale = useLocale()
+
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
   const [usersList, setUsersList] = useState(users)
   const [selectedId, setSelectedId] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
 
   const selectedUser = useMemo(
     () => usersList.find((u) => u.id === selectedId) || null,
@@ -28,15 +34,25 @@ export default function UsersAdminClient({ users }) {
   )
 
   const filteredUsers = useMemo(() => {
-    if (!query.trim()) return usersList
+    let list = usersList
+    if (statusFilter === 'PENDING_ADMIN') {
+      list = list.filter((u) => u.accountStatus === 'PENDING_ADMIN')
+    } else if (statusFilter === 'PENDING_EMAIL') {
+      list = list.filter((u) => u.accountStatus === 'PENDING_EMAIL')
+    } else if (statusFilter === 'ACCREDITATION') {
+      list = list.filter((u) => u.accreditedStatus === 'PENDING_REVIEW')
+    } else if (statusFilter === 'ACTIVE') {
+      list = list.filter((u) => u.accountStatus === 'ACTIVE')
+    }
+    if (!query.trim()) return list
     const q = query.trim().toLowerCase()
-    return usersList.filter(
+    return list.filter(
       (user) =>
         user.email?.toLowerCase().includes(q) ||
         String(user.id).includes(q) ||
         user.type?.toLowerCase().includes(q)
     )
-  }, [usersList, query])
+  }, [usersList, query, statusFilter])
 
   const editorVisible = isCreating || selectedUser
 
@@ -63,7 +79,7 @@ export default function UsersAdminClient({ users }) {
   }
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return
+    if (!confirm(t('common.confirmDeleteUser'))) return
 
     setIsLoading(true)
     try {
@@ -80,14 +96,19 @@ export default function UsersAdminClient({ users }) {
         }
       } else {
         const error = await response.json()
-        alert(`Failed to delete user: ${error.message}`)
+        alert(t('common.failedUpdateUser', { message: error.message }))
       }
     } catch (error) {
       console.error('Error deleting user:', error)
-      alert('Error deleting user')
+      alert(t('common.errorDeleteUser'))
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleUserUpdated = (updatedUser) => {
+    setUsersList((prev) => prev.map((u) => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u)))
+    window.dispatchEvent(new CustomEvent('admin-pending-count-changed'))
   }
 
   const handleFormSubmit = async (formData) => {
@@ -116,11 +137,15 @@ export default function UsersAdminClient({ users }) {
         }
       } else {
         const error = await response.json()
-        alert(`Failed to ${isEdit ? 'update' : 'create'} user: ${error.message}`)
+        alert(
+          isEdit
+            ? t('common.failedUpdateUser', { message: error.message })
+            : t('common.failedCreateUser', { message: error.message })
+        )
       }
     } catch (error) {
       console.error('Error saving user:', error)
-      alert('Error saving user')
+      alert(t('common.errorSaveUser'))
     } finally {
       setIsLoading(false)
     }
@@ -130,10 +155,8 @@ export default function UsersAdminClient({ users }) {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-heading text-4xl font-semibold text-primary">User Management</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Pick a user from the list to edit, or create a new one.
-          </p>
+          <h1 className="font-heading text-4xl font-semibold text-primary">{t('users.title')}</h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">{t('users.subtitle')}</p>
         </div>
       </div>
 
@@ -146,10 +169,12 @@ export default function UsersAdminClient({ users }) {
         >
           <CardHeader className="space-y-3 border-b border-border/60 pb-4">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base text-primary">Users · {usersList.length}</CardTitle>
+              <CardTitle className="text-base text-primary">
+                {t('users.listTitle', { count: usersList.length })}
+              </CardTitle>
               <Button type="button" size="sm" onClick={handleNewUser} className="gap-1.5">
                 <Plus className="size-4" aria-hidden />
-                New
+                {t('common.new')}
               </Button>
             </div>
             <div className="relative">
@@ -157,15 +182,38 @@ export default function UsersAdminClient({ users }) {
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by email, id, or type"
+                placeholder={t('common.searchUsers')}
                 className="pl-8"
               />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'ALL', label: t('common.all') },
+                { id: 'PENDING_EMAIL', label: t('filter.email') },
+                { id: 'PENDING_ADMIN', label: t('filter.approval') },
+                { id: 'ACCREDITATION', label: t('filter.accredited') },
+                { id: 'ACTIVE', label: t('filter.active') },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setStatusFilter(chip.id)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors',
+                    statusFilter === chip.id
+                      ? 'border-main-gold bg-main-gold/15 text-main-gold'
+                      : 'border-border text-muted-foreground hover:border-main-gold/40'
+                  )}
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
             {filteredUsers.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                {query ? 'No users match your search.' : 'No users yet.'}
+                {query ? t('common.noUsersSearch') : t('common.noUsersYet')}
               </p>
             ) : (
               <ul>
@@ -191,19 +239,36 @@ export default function UsersAdminClient({ users }) {
                                 : 'bg-green-600/15 text-green-800 dark:text-green-400'
                             )}
                           >
-                            {user.type}
+                            {adminUserTypeLabel(t, user.type)}
                           </span>
                         </div>
                         <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground">
                           <span>
-                            #{user.id} · {user.provider || 'credentials'}
+                            #{user.id} · {user.provider || t('common.credentials')}
                           </span>
                           <span className="shrink-0">
-                            {user._count?.investments || 0} inv.
+                            {t('common.investmentsShort', { count: user._count?.investments || 0 })}
                           </span>
                         </div>
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {user.type === 'INVESTOR' && user.accountStatus ? (
+                            <span
+                              className={cn(
+                                'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase',
+                                getAccountStatusBadgeClass(user.accountStatus)
+                              )}
+                            >
+                              {adminAccountStatusLabel(t, user.accountStatus)}
+                            </span>
+                          ) : null}
+                          {user.type === 'INVESTOR' && user.accreditedStatus === 'PENDING_REVIEW' ? (
+                            <span className="rounded-full bg-main-gold/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-main-gold">
+                              {t('common.accReviewShort')}
+                            </span>
+                          ) : null}
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Joined {formatDate(user.createdAt)}
+                          {t('common.joined', { date: formatDate(user.createdAt) })}
                         </div>
                       </button>
                     </li>
@@ -218,7 +283,7 @@ export default function UsersAdminClient({ users }) {
           <div className="mb-3 flex items-center lg:hidden">
             <Button type="button" variant="ghost" size="sm" onClick={handleBackToList} className="gap-1.5">
               <ArrowLeft className="size-4" aria-hidden />
-              Back to users
+              {t('common.backToUsers')}
             </Button>
           </div>
 
@@ -231,14 +296,15 @@ export default function UsersAdminClient({ users }) {
               onSubmit={handleFormSubmit}
               onCancel={handleCancel}
               onDelete={handleDeleteUser}
+              onUserUpdated={handleUserUpdated}
             />
           ) : (
             <Card className="border-dashed">
               <CardContent className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-6 py-10 text-center text-sm text-muted-foreground">
-                <p>Select a user from the list to view and edit their details.</p>
+                <p>{t('common.selectUserHint')}</p>
                 <Button type="button" size="sm" onClick={handleNewUser} className="gap-1.5">
                   <Plus className="size-4" aria-hidden />
-                  Create new user
+                  {t('common.createNewUser')}
                 </Button>
               </CardContent>
             </Card>

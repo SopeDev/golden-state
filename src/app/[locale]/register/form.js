@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import { Link, useRouter } from '@/i18n/navigation'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -13,32 +14,73 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import RequiredLabel from '@/components/ui/RequiredLabel'
+import GoogleIcon from '@/components/GoogleIcon/GoogleIcon'
 
 export default function Form() {
   const t = useTranslations('Register')
+  const locale = useLocale()
+  const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
+    setFormError('')
+    setErrors({})
+
+    const formData = new FormData(e.currentTarget)
+    const email = String(formData.get('email') || '').trim()
+    const password = String(formData.get('password') || '')
+    const confirmPassword = String(formData.get('confirmPassword') || '')
+
     try {
-      const formData = new FormData(e.currentTarget)
-      await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.get('email'),
-          password: formData.get('password'),
-        }),
+        body: JSON.stringify({ email, password, confirmPassword, locale }),
       })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        if (data.errors) {
+          const nextErrors = { ...data.errors }
+          if (nextErrors.email === 'email_taken') delete nextErrors.email
+          setErrors(nextErrors)
+        }
+        const messageKey =
+          data.message === 'Email already registered'
+            ? 'errorEmailTaken'
+            : data.message === 'Email delivery failed'
+              ? 'errorEmailDelivery'
+              : 'errorGeneric'
+        setFormError(t(messageKey))
+        return
+      }
+
+      const signInResult = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        setFormError(t('errorGeneric'))
+        return
+      }
+
+      router.push('/register/check-email')
+      router.refresh()
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 px-4 py-16">
+    <div className="flex-1 bg-muted/30 px-4 py-16">
       <Card className="mx-auto w-full max-w-md border-border/80 shadow-md">
         <CardHeader>
           <CardTitle className="font-heading text-2xl text-primary">{t('title')}</CardTitle>
@@ -46,8 +88,13 @@ export default function Form() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {formError ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </p>
+            ) : null}
             <div className="space-y-2">
-              <Label htmlFor="register-email">{t('email')}</Label>
+              <RequiredLabel htmlFor="register-email">{t('email')}</RequiredLabel>
               <Input
                 id="register-email"
                 name="email"
@@ -55,26 +102,58 @@ export default function Form() {
                 autoComplete="email"
                 required
               />
+              {errors.email ? (
+                <p className="text-xs text-destructive">
+                  {errors.email === 'email_taken' ? t('errorEmailTaken') : t('errorInvalidEmail')}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="register-password">{t('password')}</Label>
+              <RequiredLabel htmlFor="register-password">{t('password')}</RequiredLabel>
               <Input
                 id="register-password"
                 name="password"
                 type="password"
                 autoComplete="new-password"
                 required
+                minLength={8}
               />
+              {errors.password ? (
+                <p className="text-xs text-destructive">{t('errorPasswordShort')}</p>
+              ) : null}
             </div>
+            <div className="space-y-2">
+              <RequiredLabel htmlFor="register-confirm">{t('confirmPassword')}</RequiredLabel>
+              <Input
+                id="register-confirm"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+              />
+              {errors.confirmPassword ? (
+                <p className="text-xs text-destructive">{t('errorPasswordMismatch')}</p>
+              ) : null}
+            </div>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? t('submitting') : t('submit')}
+            </Button>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 border-t border-border bg-muted/30">
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {t('submit')}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => signIn('google', { callbackUrl: '/account/complete-profile' })}
+            >
+              <GoogleIcon className="size-5 shrink-0" />
+              {t('googleSignUp')}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               {t('signInHint')}{' '}
               <Link
-                href="/api/auth/signin"
+                href="/login"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 {t('signInLink')}

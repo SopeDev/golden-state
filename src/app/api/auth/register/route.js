@@ -1,27 +1,60 @@
 import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
-
 import { PrismaClient } from '@prisma/client'
+import { validateAccountRegistration } from '@/lib/auth/registerValidation'
+import { generateSecureToken, verificationExpiry } from '@/lib/auth/tokens'
+import { sendVerificationEmail } from '@/lib/email/mailer'
+
 const prisma = new PrismaClient()
 
 export async function POST(request) {
-	try {
-		const { email, password } = await request.json()
-		//validate email and password
+  try {
+    const body = await request.json()
+    const locale = body.locale === 'es' ? 'es' : 'en'
+    const result = validateAccountRegistration(body)
 
-		const hashedPassword = await hash(password, 10)
+    if (!result.ok) {
+      return NextResponse.json({ message: 'Validation failed', errors: result.errors }, { status: 400 })
+    }
 
-		const newUser = await prisma.user.create({
-			data: {
-				email,
-				password: hashedPassword
-			}
-		})
+    const { email, password } = result.data
 
-		console.log({email, password})
-	} catch(e) {
-		console.log({e})
-	}
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return NextResponse.json(
+        { message: 'Email already registered', errors: { email: 'email_taken' } },
+        { status: 409 }
+      )
+    }
 
-	return NextResponse.json({ message: 'success' })
+    const hashedPassword = await hash(password, 10)
+    const token = generateSecureToken()
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        type: 'INVESTOR',
+        provider: 'credentials',
+        accountStatus: 'PENDING_EMAIL',
+        emailVerificationToken: token,
+        emailVerificationExpires: verificationExpiry(),
+      },
+    })
+
+    try {
+      await sendVerificationEmail({ to: email, token, locale })
+    } catch (emailError) {
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
+      console.error('Register verification email failed:', emailError)
+      return NextResponse.json({ message: 'Email delivery failed' }, { status: 503 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('Register error:', error)
+    return NextResponse.json({ message: 'Registration failed' }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
+  }
 }

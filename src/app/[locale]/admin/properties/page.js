@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
@@ -9,11 +10,12 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 const prisma = new PrismaClient()
 
 export default async function PropertiesAdminPage() {
+  const t = await getTranslations('Admin.properties')
   const session = await getServerSession(authOptions)
   
   // Redirect if not authenticated as admin
   if (!session || session.user?.type !== 'ADMIN') {
-    redirect('/')
+    await redirect('/')
   }
 
   try {
@@ -22,7 +24,7 @@ export default async function PropertiesAdminPage() {
     })
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <PropertiesAdminClient properties={properties} />
       </div>
@@ -30,13 +32,13 @@ export default async function PropertiesAdminPage() {
   } catch (error) {
     console.error('Error fetching properties:', error)
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Error Loading Properties</CardTitle>
-              <CardDescription>Failed to load properties. Please try again.</CardDescription>
+              <CardTitle>{t('loadErrorTitle')}</CardTitle>
+              <CardDescription>{t('loadErrorDesc')}</CardDescription>
             </CardHeader>
           </Card>
         </div>

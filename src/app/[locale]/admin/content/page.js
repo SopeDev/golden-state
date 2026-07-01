@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
@@ -14,10 +15,11 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 const prisma = new PrismaClient()
 
 export default async function ContentAdminPage() {
+  const t = await getTranslations('Admin.content')
   const session = await getServerSession(authOptions)
 
   if (!session || session.user?.type !== 'ADMIN') {
-    redirect('/')
+    await redirect('/')
   }
 
   try {
@@ -37,7 +39,7 @@ export default async function ContentAdminPage() {
     }
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <ContentAdminClient records={records} fallbackByPage={fallbackByPage} />
       </div>
@@ -45,13 +47,13 @@ export default async function ContentAdminPage() {
   } catch (error) {
     console.error('Error fetching page content:', error)
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Error Loading Content</CardTitle>
-              <CardDescription>Failed to load content records. Please try again.</CardDescription>
+              <CardTitle>{t('loadErrorTitle')}</CardTitle>
+              <CardDescription>{t('loadErrorDesc')}</CardDescription>
             </CardHeader>
           </Card>
         </div>

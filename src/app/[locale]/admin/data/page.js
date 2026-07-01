@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from 'next-intl/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
@@ -11,10 +12,13 @@ const badgeClass =
   'inline-flex items-center rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground'
 
 export default async function DataPage() {
+  const t = await getTranslations('Admin.data')
+  const locale = await getLocale()
+  const dateLocale = locale === 'es' ? 'es-ES' : 'en-US'
   const session = await getServerSession(authOptions)
 
   if (!session || session.user?.type !== 'ADMIN') {
-    redirect('/')
+    await redirect('/')
   }
 
   try {
@@ -44,7 +48,7 @@ export default async function DataPage() {
     ])
 
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat(dateLocale, {
         style: 'currency',
         currency: 'USD',
         minimumFractionDigits: 0,
@@ -53,7 +57,7 @@ export default async function DataPage() {
     }
 
     const formatDate = (date) => {
-      return new Date(date).toLocaleDateString('en-US', {
+      return new Date(date).toLocaleDateString(dateLocale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -61,19 +65,17 @@ export default async function DataPage() {
     }
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">Database Records</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Live data from the Golden State investment platform database.
-            </p>
+            <h1 className="text-4xl font-bold text-foreground mb-2">{t('title')}</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl">{t('subtitle')}</p>
           </div>
 
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">
-              Properties ({properties.length})
+              {t('propertiesSection', { count: properties.length })}
             </h2>
             <div className="grid gap-4">
               {properties.map((property) => (
@@ -86,26 +88,26 @@ export default async function DataPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <p className="font-medium text-foreground">Investment ID</p>
+                      <p className="font-medium text-foreground">{t('investmentId')}</p>
                       <p className="text-muted-foreground">#{property.investmentId}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Location</p>
+                      <p className="font-medium text-foreground">{t('location')}</p>
                       <p className="text-muted-foreground">
                         {property.city}, {property.state}
                       </p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Min Investment</p>
+                      <p className="font-medium text-foreground">{t('minInvestment')}</p>
                       <p className="text-amber-600 dark:text-amber-400">{formatCurrency(property.minInvestment)}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Est. ROI</p>
+                      <p className="font-medium text-foreground">{t('estimatedRoi')}</p>
                       <p className="text-amber-600 dark:text-amber-400">{property.estimatedROI}%</p>
                     </div>
                   </CardContent>
                   <div className="px-4 pb-4 text-xs text-muted-foreground">
-                    Created: {formatDate(property.createdAt)}
+                    {t('created')}: {formatDate(property.createdAt)}
                   </div>
                 </Card>
               ))}
@@ -113,7 +115,9 @@ export default async function DataPage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">Users ({users.length})</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">
+              {t('usersSection', { count: users.length })}
+            </h2>
             <div className="grid gap-4">
               {users.map((user) => (
                 <Card key={user.id}>
@@ -123,19 +127,19 @@ export default async function DataPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                     <div>
-                      <p className="font-medium text-foreground">User ID</p>
+                      <p className="font-medium text-foreground">{t('userId')}</p>
                       <p className="text-muted-foreground">#{user.id}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Provider</p>
+                      <p className="font-medium text-foreground">{t('provider')}</p>
                       <p className="text-muted-foreground">{user.provider || 'credentials'}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Investments</p>
+                      <p className="font-medium text-foreground">{t('investments')}</p>
                       <p className="text-amber-600 dark:text-amber-400">{user._count.investments}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Joined</p>
+                      <p className="font-medium text-foreground">{t('joined')}</p>
                       <p className="text-muted-foreground">{formatDate(user.createdAt)}</p>
                     </div>
                   </CardContent>
@@ -146,7 +150,7 @@ export default async function DataPage() {
 
           <div>
             <h2 className="text-2xl font-semibold text-foreground mb-4">
-              Investments ({investments.length})
+              {t('investmentsSection', { count: investments.length })}
             </h2>
             <div className="grid gap-4">
               {investments.map((investment) => (
@@ -159,15 +163,15 @@ export default async function DataPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                     <div>
-                      <p className="font-medium text-foreground">Investment ID</p>
+                      <p className="font-medium text-foreground">{t('investmentId')}</p>
                       <p className="text-muted-foreground">{investment.id}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Property</p>
+                      <p className="font-medium text-foreground">{t('property')}</p>
                       <p className="text-muted-foreground">{investment.property.name}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Date</p>
+                      <p className="font-medium text-foreground">{t('date')}</p>
                       <p className="text-muted-foreground">{formatDate(investment.createdAt)}</p>
                     </div>
                   </CardContent>
@@ -180,14 +184,15 @@ export default async function DataPage() {
     )
   } catch (error) {
     console.error('Error fetching data:', error)
+    const tErr = await getTranslations('Admin.data')
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex-1 bg-background">
         <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Database Error</CardTitle>
-              <CardDescription>Unable to fetch database records.</CardDescription>
+              <CardTitle>{tErr('loadErrorTitle')}</CardTitle>
+              <CardDescription>{tErr('loadErrorDesc')}</CardDescription>
             </CardHeader>
           </Card>
         </div>

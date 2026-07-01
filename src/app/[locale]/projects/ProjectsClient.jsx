@@ -10,7 +10,7 @@ export default function ProjectsClient({ properties, headerKey = 'all' }) {
   const subtitle = t(`headers.${headerKey}.subtitle`)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background">
       <section className="border-b border-border bg-muted/20">
         <div className="container mx-auto px-4 py-12 md:py-16">
           <h1 className="font-heading text-4xl font-semibold text-primary md:text-5xl">{title}</h1>

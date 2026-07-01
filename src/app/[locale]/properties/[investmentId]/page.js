@@ -4,7 +4,7 @@ import PropertyDetailsClient from './PropertyDetailsClient';
 const prisma = new PrismaClient();
 
 export default async function PropertyDetailsPage({ params }) {
-  const { investmentId } = params;
+  const { investmentId } = await params
   
   try {
     // Fetch the specific property by investmentId

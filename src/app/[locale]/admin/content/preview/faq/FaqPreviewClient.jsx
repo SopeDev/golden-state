@@ -125,7 +125,7 @@ export default function FaqPreviewClient() {
       ref={containerRef}
       onClickCapture={handlePreviewClickCapture}
       onClick={handlePreviewClick}
-      className="min-h-screen bg-background"
+      className="flex-1 bg-background"
     >
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">

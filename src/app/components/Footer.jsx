@@ -27,8 +27,7 @@ export default function Footer() {
               <img src="/logo.png" alt="Golden State" className="mb-4 h-12" />
             </div>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
-              Golden State Capital Management specializes in premium real estate opportunities across California,
-              offering investors access to carefully curated properties and development projects.
+              {t('description')}
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-primary-foreground/80 transition-colors hover:text-primary-foreground">

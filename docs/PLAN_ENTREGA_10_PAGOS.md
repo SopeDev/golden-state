@@ -9,8 +9,8 @@ todos:
     content: "Landing bilingüe; idioma por ubicación; FAQ y contacto con formulario; menú y pie sin enlaces rotos; terminados vs en desarrollo si aplica"
     status: pending
   - id: payment-4
-    content: Registro e inicio de sesión listos para producción (correo y/o aprobación del admin)
-    status: pending
+    content: "Registro e inicio de sesión producción: verificación por correo, aprobación admin, Mi cuenta, inversionista acreditado (doble entrada), correos transaccionales"
+    status: in_progress
   - id: payment-5
     content: Estado del proyecto, porcentaje de avance y fechas en la web y en el panel admin
     status: pending
@@ -73,15 +73,18 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 
 - **Listado de proyectos** (`/projects`) — galería alimentada por base de datos.
 - **Ficha de propiedad / proyecto** (`/properties/[id]`) — detalle por `investmentId`.
-- **Registro** (`/register`) — **formulario placeholder**; falta experiencia de **onboarding** completa (**pago 4** en este plan).
-- **Inicio de sesión** — NextAuth (credenciales y, si está configurado, Google); flujo estándar de sesión.
-- **Tablero del inversionista** (`/dashboard`) — entrada mínima al área privada.
-- **Portafolio** (`/dashboard/portfolio`) — listado de inversiones del usuario y totales (aparte del tablero resumen).
+- **Registro** (`/register`) — alta con correo/contraseña o Google; cuestionario en **completar perfil** (**pago 4**, en curso).
+- **Inicio de sesión** — NextAuth (credenciales y Google); reglas por estado de cuenta (`PENDING_EMAIL`, `PENDING_ADMIN`, `ACTIVE`, `REJECTED`).
+- **Onboarding inversionista** — verificar correo, completar perfil, pendiente de aprobación, cuenta rechazada (**pago 4**, mayormente hecho).
+- **Tablero del inversionista** (`/dashboard`) — entrada al área privada (activos aprobados).
+- **Portafolio** (`/dashboard/portfolio`) — listado de inversiones del usuario (gated).
+- **Mi cuenta** (`/dashboard/account`) — perfil, seguridad, estado de acreditación (**pago 4**, pendiente).
+- **Flujo invertir / acreditación** — desde ficha de proyecto y desde Mi cuenta (**pago 4**, parcial).
 - **Inicio del sitio** (`/`) bajo `/{locale}` — contenido en plantilla; la **landing definitiva** y el resto de **sitio informativo** van en **pagos 2 y 3** según este calendario.
 
 **Administración**
 
-- **Usuarios / inversionistas** — alta, edición y baja desde el panel admin + API.
+- **Usuarios / inversionistas** — alta, edición, **aprobación o rechazo de cuenta**, **revisión de documentos de acreditación** (**pago 4**).
 - **Propiedades / proyectos** — alta, edición y baja desde el panel admin + API (imágenes hoy como URLs en formulario; archivos reales en **pago 6**).
 - **Vista de datos** (`/admin/data`) — resumen legible de propiedades, usuarios e inversiones existentes en BD (no sustituye herramientas de **asignación de inversiones** del **pago 7**).
 - **Esquema / documentación interna** (`/admin/schema`) — referencia del modelo de datos para el equipo.
@@ -89,7 +92,7 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 **Detrás de escena**
 
 - **PostgreSQL + Prisma** — modelos `User`, `Property`, `Investment` y relaciones.
-- Rutas API de **registro**, **admin/usuarios** y **admin/propiedades**.
+- Rutas API de **registro**, **verificación de correo**, **perfil inversionista**, **acreditación**, **admin/usuarios** y **admin/propiedades**.
 
 **Qué todavía no hay como producto (y está en pagos posteriores del plan)**
 
@@ -113,7 +116,7 @@ El **inventario superior** ya refleja lo construido; puede **cambiar de forma y 
 - **Base de implementación:** alinear el front con **shadcn**, **Magic MCP** y las **reglas de Cursor** del proyecto (**pago 2**).
 - **Idioma (por ubicación):** además de la selección manual que ya existe, el comportamiento de **idioma sugerido según ubicación** (**pago 3**, junto con la landing).
 - **Publicación, analítica y visibilidad en buscadores y redes:** **Google Analytics** u otra herramienta de **métricas**, **títulos y descripción**, **SEO** y **vista al compartir** en redes, en el marco del **cierre de publicación** (**pago 10**).
-- **Registro:** formulario y proceso de alta **pulidos** y acordes a “validación por correo o por administrador”.
+- **Registro y acceso:** formulario, verificación por correo, aprobación del administrador, **Mi cuenta** (perfil, contraseña, acreditación), correos transaccionales — **pago 4** (ver detalle en [PAGO_4_PLAN.md](PAGO_4_PLAN.md)).
 - **Seguimiento del proyecto:** **estado** (planeación, desarrollo, completado), **porcentaje de avance** y **fechas** visibles para el inversionista.
 - **Archivos reales:** subida de **documentos** (no solo textos en formulario) y **descargas** seguras desde el portafolio o la ficha del proyecto.
 - **Operación de inversiones:** desde el admin, **asignar** un proyecto a un inversionista y **registrar o editar montos** sin depender solo de datos de prueba.
@@ -163,16 +166,47 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 
 ---
 
-### Pago 4 — Registro e inicio de sesión de nivel producción
+### Pago 4 — Registro, activación e inversionista acreditado
+
+**Estado:** en curso. Plan técnico detallado: [PAGO_4_PLAN.md](PAGO_4_PLAN.md).
 
 **Qué entregamos**
 
-- Formulario de registro **completo**: mensajes claros, validaciones y experiencia de usuario profesional.
-- Flujo de **validación** acordado: por **correo electrónico** o **aprobación del administrador** antes de que un inversionista opere (o la combinación que definamos).
+- Registro **completo** (correo/contraseña y Google): validaciones, mensajes claros, experiencia bilingüe (EN/ES).
+- Flujo de **activación**: verificar correo → completar cuestionario de perfil → **aprobación del administrador** antes del tablero y portafolio.
+- Páginas de estado: correo pendiente, perfil incompleto, **cuenta en revisión**, **cuenta no aprobada** (sin motivo; enlace a contacto).
+- **Correos transaccionales** con marca: verificación, restablecer contraseña, cuenta aprobada; aviso al admin cuando un perfil queda pendiente.
+- **Tablero y portafolio** accesibles solo para cuentas `ACTIVE`; protección en middleware y navegación.
+- **Inversionista acreditado:** subida de documentos y autocertificación; revisión en panel admin; dos puntos de entrada:
+  - **Invertir** en la ficha de un proyecto.
+  - **Mi cuenta** → iniciar o consultar el proceso de acreditación.
+- **Mi cuenta** (`/dashboard/account`): datos básicos editables, cambio de contraseña (usuarios con credenciales), estado y documentos de acreditación.
+- Recuperación de contraseña (olvidé / restablecer) para usuarios no autenticados.
+
+**Qué ya está hecho (resumen)**
+
+- Onboarding completo, rechazo de cuenta, correos principales, OAuth Google, flujo de inversión desde proyecto (subida de docs), revisión admin de cuenta y acreditación, sincronización de sesión en tiempo real.
+
+**Qué falta para cerrar el pago 4**
+
+- Pantalla **Mi cuenta** y APIs de perfil / cambio de contraseña.
+- Página de acreditación **desde Mi cuenta** (formulario compartido con el flujo por proyecto).
+- Enlaces en tablero y menú; pulido de estados de **Invertir** según `accreditedStatus`.
+- QA en staging y despliegue de migraciones.
+
+**Qué queda para pagos posteriores (no es pago 4)**
+
+| Tema | Pago |
+|------|------|
+| Almacenamiento seguro de documentos y descargas firmadas | 6 |
+| Avance % y estado de proyectos en fichas y portafolio | 5 |
+| Depósito bancario, confirmación manual y creación real de inversiones | 7 |
+| Centro de notificaciones y correos de avances de proyecto | 8 |
+| Historial de pagos al inversionista y base de reinversión | 9 |
 
 **Qué verán ustedes**
 
-Un proceso de alta e ingreso **confiable** y alineado con lo descrito en la cotización.
+Un proceso de alta e ingreso **confiable**, un área **Mi cuenta** para gestionar lo esencial, y un camino claro para convertirse en **inversionista acreditado** antes de operar con dinero (operación real en **pago 7**).
 
 ---
 
@@ -268,7 +302,7 @@ El sitio **medible** para el público y **presentado de forma profesional** en b
 ## Cómo se agrupan las entregas (visión por etapas de la cotización original)
 
 - **Pagos 2 y 3:** **Fase 1** en sitio visible (**pago 2:** **Quiénes somos**, pulido de lo existente, base shadcn/Magic/reglas Cursor; **pago 3:** landing, **FAQ**, **contacto**, menú y pie **sin enlaces rotos**, terminados/en desarrollo, idioma por ubicación).
-- **Pagos 4 a 7:** núcleo de la **Fase 2** (acceso seguro, avance de proyectos, archivos, operación de inversiones y depósitos).
+- **Pagos 4 a 7:** núcleo de la **Fase 2** (acceso seguro, **Mi cuenta y acreditación**, avance de proyectos, archivos, operación de inversiones y depósitos).
 - **Pagos 8 y 9:** **comunicación** y **visibilidad financiera** (notificaciones, historial, base de reinversión).
 - **Pago 10:** **cotización / extensión de Fase 1** en su parte de **analítica**: mediciones y metadatos de **lanzamiento**, junto con el cierre orientado a **publicación**.
 
@@ -291,7 +325,7 @@ flowchart LR
   subgraph pendiente [Pagos2_al_10]
     E[Quienes_somos_pulido_arch]
     F[Landing_FAQ_contacto_nav_idioma]
-    G[Registro_produccion]
+    G[Registro_activacion_mi_cuenta_acreditacion]
     H[Estado_y_avance]
     I[Archivos_y_descargas]
     J[Inversiones_y_depositos]

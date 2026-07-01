@@ -7,7 +7,7 @@ export default async function AboutPreviewPage() {
   const session = await getServerSession(authOptions)
 
   if (!session || session.user?.type !== 'ADMIN') {
-    redirect('/')
+    await redirect('/')
   }
 
   return <AboutPreviewClient />
