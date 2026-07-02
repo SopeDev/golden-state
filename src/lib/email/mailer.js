@@ -35,9 +35,6 @@ const getTransactionalFrom = () => {
 
 const getSmtpUser = () => process.env.SMTP_USER?.trim() || ''
 
-const getReplyTo = () =>
-  process.env.EMAIL_REPLY_TO?.trim() || 'admin@goldenstatecapitalmgt.com'
-
 const getLogoAttachment = () => {
   const logoPath = path.join(process.cwd(), 'public', 'logo.png')
 
@@ -83,7 +80,7 @@ const createTransport = () => {
   })
 }
 
-export async function sendEmail({ to, subject, html, text, replyTo }) {
+export async function sendEmail({ to, subject, html, text }) {
   const transport = createTransport()
   const smtpConfigured = Boolean(process.env.SMTP_HOST?.trim())
 
@@ -105,12 +102,10 @@ export async function sendEmail({ to, subject, html, text, replyTo }) {
   const logoAttachment = html ? getLogoAttachment() : null
   const smtpUser = getSmtpUser()
   const from = getTransactionalFrom()
-  const resolvedReplyTo = replyTo === undefined ? getReplyTo() : replyTo
 
   const result = await transport.sendMail({
     from,
     sender: smtpUser || undefined,
-    replyTo: resolvedReplyTo || undefined,
     to,
     subject,
     html,
@@ -122,7 +117,6 @@ export async function sendEmail({ to, subject, html, text, replyTo }) {
     to,
     subject,
     from,
-    replyTo: resolvedReplyTo || undefined,
     sender: smtpUser || undefined,
     messageId: result.messageId,
     response: result.response,
