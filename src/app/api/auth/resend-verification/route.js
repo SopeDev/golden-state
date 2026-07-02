@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { generateSecureToken, verificationExpiry } from '@/lib/auth/tokens'
 import { sendVerificationEmail, verificationEmailLink } from '@/lib/email/mailer'
 
@@ -7,13 +9,14 @@ const prisma = new PrismaClient()
 
 export async function POST(request) {
   try {
-    const body = await request.json()
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-    const locale = body.locale === 'es' ? 'es' : 'en'
-
-    if (!email) {
-      return NextResponse.json({ message: 'Email required' }, { status: 400 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+
+    const body = await request.json()
+    const locale = body.locale === 'es' ? 'es' : 'en'
+    const email = session.user.email.trim().toLowerCase()
 
     const user = await prisma.user.findUnique({ where: { email } })
 
