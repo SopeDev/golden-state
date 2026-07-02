@@ -24,7 +24,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href={`/login?callbackUrl=/properties/${propertyId}/invest`}
         className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
       >
-        {t('loginToInvest')}
+        {t('investNow')}
       </Link>
     )
   }
@@ -37,7 +37,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href="/dashboard"
         className={cn(buttonVariants({ variant: 'outline', size: 'cta' }), 'w-full', className)}
       >
-        {t('pendingAccount')}
+        {t('investNow')}
       </Link>
     )
   }
@@ -48,7 +48,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href={`/properties/${propertyId}/invest`}
         className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
       >
-        {t('needsAccreditation')}
+        {t('investNow')}
       </Link>
     )
   }
@@ -58,7 +58,7 @@ export default function InvestNowButton({ propertyId, className }) {
       href={`/properties/${propertyId}/invest`}
       className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
     >
-      Invest Now
+      {t('investNow')}
     </Link>
   )
 }
