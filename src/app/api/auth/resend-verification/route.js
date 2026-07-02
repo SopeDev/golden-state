@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { generateSecureToken, verificationExpiry } from '@/lib/auth/tokens'
-import { sendVerificationEmail } from '@/lib/email/mailer'
+import { sendVerificationEmail, verificationEmailLink } from '@/lib/email/mailer'
 
 const prisma = new PrismaClient()
 
@@ -17,6 +17,8 @@ export async function POST(request) {
 
     const user = await prisma.user.findUnique({ where: { email } })
 
+    let devVerificationLink
+
     if (user?.provider === 'credentials' && !user.emailVerifiedAt) {
       const token = generateSecureToken()
       await prisma.user.update({
@@ -27,9 +29,15 @@ export async function POST(request) {
         },
       })
       await sendVerificationEmail({ to: email, token, locale })
+      if (process.env.NODE_ENV === 'development') {
+        devVerificationLink = verificationEmailLink(token, locale)
+      }
     }
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({
+      ok: true,
+      ...(devVerificationLink ? { devVerificationLink } : {}),
+    })
   } catch (error) {
     console.error('Resend verification error:', error)
     return NextResponse.json({ message: 'Failed' }, { status: 500 })

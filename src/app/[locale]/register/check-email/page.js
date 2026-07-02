@@ -18,6 +18,7 @@ export default function CheckEmailPage() {
 
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [devVerificationLink, setDevVerificationLink] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -32,13 +33,18 @@ export default function CheckEmailPage() {
     if (!targetEmail) return
 
     setSubmitting(true)
+    setDevVerificationLink('')
     try {
-      await fetch('/api/auth/resend-verification', {
+      const res = await fetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: targetEmail, locale }),
       })
+      const data = await res.json().catch(() => ({}))
       setSent(true)
+      if (data.devVerificationLink) {
+        setDevVerificationLink(data.devVerificationLink)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -95,6 +101,19 @@ export default function CheckEmailPage() {
                   email: isSignedIn ? sessionEmail : email.trim(),
                 })}
               </p>
+            ) : null}
+
+            {devVerificationLink ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium text-foreground">{t('checkEmailDevLinkTitle')}</p>
+                <p className="mt-1 text-muted-foreground">{t('checkEmailDevLinkDesc')}</p>
+                <a
+                  href={devVerificationLink}
+                  className="mt-2 block break-all text-main-gold hover:underline"
+                >
+                  {t('checkEmailDevLinkCta')}
+                </a>
+              </div>
             ) : null}
           </form>
 

@@ -14,8 +14,24 @@ import {
 const getBaseUrl = () =>
   process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000'
 
-const getFrom = () =>
-  process.env.EMAIL_FROM || 'Golden State Capital <no-reply@goldenstatecapitalmgt.com>'
+const NO_REPLY_ADDRESS = 'no-reply@goldenstatecapitalmgt.com'
+const DEFAULT_FROM = `Golden State Capital <${NO_REPLY_ADDRESS}>`
+
+/** Investor-facing and admin-alert mail always sends from no-reply@. */
+const getTransactionalFrom = () => {
+  const configured = process.env.EMAIL_FROM?.trim()
+  if (configured && configured.toLowerCase().includes(NO_REPLY_ADDRESS)) {
+    return configured
+  }
+
+  if (configured) {
+    console.warn(
+      `[email] EMAIL_FROM must use ${NO_REPLY_ADDRESS} — ignoring misconfigured value`
+    )
+  }
+
+  return DEFAULT_FROM
+}
 
 const getSmtpUser = () => process.env.SMTP_USER?.trim() || ''
 
@@ -67,7 +83,7 @@ const createTransport = () => {
   })
 }
 
-export async function sendEmail({ to, subject, html, text }) {
+export async function sendEmail({ to, subject, html, text, replyTo }) {
   const transport = createTransport()
   const smtpConfigured = Boolean(process.env.SMTP_HOST?.trim())
 
@@ -88,11 +104,13 @@ export async function sendEmail({ to, subject, html, text }) {
 
   const logoAttachment = html ? getLogoAttachment() : null
   const smtpUser = getSmtpUser()
+  const from = getTransactionalFrom()
+  const resolvedReplyTo = replyTo === undefined ? getReplyTo() : replyTo
 
   const result = await transport.sendMail({
-    from: getFrom(),
+    from,
     sender: smtpUser || undefined,
-    replyTo: getReplyTo(),
+    replyTo: resolvedReplyTo || undefined,
     to,
     subject,
     html,
@@ -103,7 +121,8 @@ export async function sendEmail({ to, subject, html, text }) {
   console.info('[email] sent', {
     to,
     subject,
-    from: getFrom(),
+    from,
+    replyTo: resolvedReplyTo || undefined,
     sender: smtpUser || undefined,
     messageId: result.messageId,
     response: result.response,
