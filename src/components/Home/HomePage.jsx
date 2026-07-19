@@ -746,7 +746,7 @@ function HomeTrackRecord({ content, completedDeals }) {
       {content.trackCta ? (
         <div className="mt-10 flex justify-center">
           <Link
-            href="/projects"
+            href="/projects/completed"
             className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'border-primary/30')}
           >
             {content.trackCta}
