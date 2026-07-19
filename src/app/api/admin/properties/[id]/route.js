@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { PrismaClient } from '@prisma/client'
+import { resolvePropertyProgressFields } from '@/lib/propertyStatusUi'
 
 const prisma = new PrismaClient()
 const parseRequiredInt = (value, field) => {
@@ -79,6 +80,7 @@ export async function PUT(request, { params }) {
 
     // Check if investmentId or slug already exists (excluding current property)
     let parsedFields
+    let progressFields
     try {
       parsedFields = {
         investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
@@ -88,6 +90,7 @@ export async function PUT(request, { params }) {
         estimatedROI: parseRequiredFloat(body.estimatedROI, 'estimatedROI'),
         estimatedMonths: String(body.estimatedMonths).trim(),
       }
+      progressFields = resolvePropertyProgressFields(body, existingProperty)
     } catch (parseError) {
       return NextResponse.json({ message: parseError.message }, { status: 400 })
     }
@@ -113,8 +116,6 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const status = ['IN_PROGRESS', 'COMPLETED'].includes(body.status) ? body.status : existingProperty.status
-
     // Update the property
     const property = await prisma.property.update({
       where: { id },
@@ -123,7 +124,11 @@ export async function PUT(request, { params }) {
         name: body.name,
         slug: body.slug,
         type: body.type,
-        status,
+        status: progressFields.status,
+        progressPercent: progressFields.progressPercent,
+        startDate: progressFields.startDate,
+        targetCompletionDate: progressFields.targetCompletionDate,
+        completedAt: progressFields.completedAt,
         city: body.city,
         state: body.state,
         address: body.address,

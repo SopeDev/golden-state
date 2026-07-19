@@ -7,9 +7,49 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { adminAccountStatusLabel, adminUserTypeLabel } from '@/lib/admin/adminLabels'
-import { getAccountStatusBadgeClass } from '@/lib/auth/userStatus'
+import {
+  getAccountStatusBadgeClass,
+  getAccreditedStatusBadgeClass,
+} from '@/lib/auth/userStatus'
 import { cn } from '@/lib/utils'
 import UserEditor from './UserEditor'
+
+const filterChipClass = (active) =>
+  cn(
+    'cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
+    active
+      ? 'border-main-gold bg-main-gold/15 text-main-gold'
+      : 'border-border text-muted-foreground hover:text-primary'
+  )
+
+/** Sidebar badge for investors: account status, or accreditation overlay when ACTIVE. */
+function getInvestorListBadge(user, t) {
+  if (user.accountStatus !== 'ACTIVE') {
+    return {
+      label: adminAccountStatusLabel(t, user.accountStatus),
+      className: getAccountStatusBadgeClass(user.accountStatus),
+    }
+  }
+
+  if (user.accreditedStatus === 'APPROVED') {
+    return {
+      label: t('filter.accredited'),
+      className: getAccreditedStatusBadgeClass('APPROVED'),
+    }
+  }
+
+  if (user.accreditedStatus === 'PENDING_REVIEW') {
+    return {
+      label: t('filter.pendingAccreditation'),
+      className: getAccreditedStatusBadgeClass('PENDING_REVIEW'),
+    }
+  }
+
+  return {
+    label: t('filter.active'),
+    className: getAccountStatusBadgeClass('ACTIVE'),
+  }
+}
 
 export default function UsersAdminClient({ users }) {
   const t = useTranslations('Admin')
@@ -21,12 +61,29 @@ export default function UsersAdminClient({ users }) {
       month: 'short',
       day: 'numeric',
     })
+
+  const ACCOUNT_STATUS_FILTERS = [
+    { id: 'ALL', label: t('common.all') },
+    { id: 'PENDING_EMAIL', label: t('filter.email') },
+    { id: 'PENDING_ADMIN', label: t('filter.approval') },
+    { id: 'ACTIVE', label: t('filter.active') },
+    { id: 'REJECTED', label: t('filter.rejected') },
+  ]
+
+  const ACCREDITATION_FILTERS = [
+    { id: 'ALL', label: t('common.all') },
+    { id: 'NOT_ACCREDITED', label: t('filter.notAccredited') },
+    { id: 'PENDING_REVIEW', label: t('filter.pending') },
+    { id: 'APPROVED', label: t('filter.accredited') },
+  ]
+
   const [usersList, setUsersList] = useState(users)
   const [selectedId, setSelectedId] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [accountStatusFilter, setAccountStatusFilter] = useState('ALL')
+  const [accreditationFilter, setAccreditationFilter] = useState('ALL')
 
   const selectedUser = useMemo(
     () => usersList.find((u) => u.id === selectedId) || null,
@@ -35,14 +92,25 @@ export default function UsersAdminClient({ users }) {
 
   const filteredUsers = useMemo(() => {
     let list = usersList
-    if (statusFilter === 'PENDING_ADMIN') {
-      list = list.filter((u) => u.accountStatus === 'PENDING_ADMIN')
-    } else if (statusFilter === 'PENDING_EMAIL') {
-      list = list.filter((u) => u.accountStatus === 'PENDING_EMAIL')
-    } else if (statusFilter === 'ACCREDITATION') {
-      list = list.filter((u) => u.accreditedStatus === 'PENDING_REVIEW')
-    } else if (statusFilter === 'ACTIVE') {
-      list = list.filter((u) => u.accountStatus === 'ACTIVE')
+    if (accountStatusFilter !== 'ALL') {
+      list = list.filter(
+        (u) => u.type === 'INVESTOR' && u.accountStatus === accountStatusFilter
+      )
+    }
+    if (accreditationFilter === 'PENDING_REVIEW') {
+      list = list.filter(
+        (u) => u.type === 'INVESTOR' && u.accreditedStatus === 'PENDING_REVIEW'
+      )
+    } else if (accreditationFilter === 'APPROVED') {
+      list = list.filter(
+        (u) => u.type === 'INVESTOR' && u.accreditedStatus === 'APPROVED'
+      )
+    } else if (accreditationFilter === 'NOT_ACCREDITED') {
+      list = list.filter(
+        (u) =>
+          u.type === 'INVESTOR' &&
+          (u.accreditedStatus === 'NOT_STARTED' || u.accreditedStatus === 'REJECTED')
+      )
     }
     if (!query.trim()) return list
     const q = query.trim().toLowerCase()
@@ -52,7 +120,7 @@ export default function UsersAdminClient({ users }) {
         String(user.id).includes(q) ||
         user.type?.toLowerCase().includes(q)
     )
-  }, [usersList, query, statusFilter])
+  }, [usersList, query, accountStatusFilter, accreditationFilter])
 
   const editorVisible = isCreating || selectedUser
 
@@ -186,28 +254,41 @@ export default function UsersAdminClient({ users }) {
                 className="pl-8"
               />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { id: 'ALL', label: t('common.all') },
-                { id: 'PENDING_EMAIL', label: t('filter.email') },
-                { id: 'PENDING_ADMIN', label: t('filter.approval') },
-                { id: 'ACCREDITATION', label: t('filter.accredited') },
-                { id: 'ACTIVE', label: t('filter.active') },
-              ].map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setStatusFilter(chip.id)}
-                  className={cn(
-                    'rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors',
-                    statusFilter === chip.id
-                      ? 'border-main-gold bg-main-gold/15 text-main-gold'
-                      : 'border-border text-muted-foreground hover:border-main-gold/40'
-                  )}
-                >
-                  {chip.label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('filter.accountStatus')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ACCOUNT_STATUS_FILTERS.map((chip) => (
+                    <button
+                      key={`account-${chip.id}`}
+                      type="button"
+                      onClick={() => setAccountStatusFilter(chip.id)}
+                      className={filterChipClass(accountStatusFilter === chip.id)}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5 border-t border-border/60 pt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('filter.accreditation')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ACCREDITATION_FILTERS.map((chip) => (
+                    <button
+                      key={`accreditation-${chip.id}`}
+                      type="button"
+                      onClick={() => setAccreditationFilter(chip.id)}
+                      className={filterChipClass(accreditationFilter === chip.id)}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
@@ -219,57 +300,42 @@ export default function UsersAdminClient({ users }) {
               <ul>
                 {filteredUsers.map((user) => {
                   const isActive = !isCreating && user.id === selectedId
+                  const isAdmin = user.type === 'ADMIN'
+                  const badge = isAdmin
+                    ? null
+                    : getInvestorListBadge(user, t)
                   return (
                     <li key={user.id}>
                       <button
                         type="button"
                         onClick={() => handleSelectUser(user.id)}
                         className={cn(
-                          'flex w-full flex-col items-start gap-1 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
+                          'flex w-full cursor-pointer items-start justify-between gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
                           isActive && 'border-l-main-gold bg-main-gold/10'
                         )}
                       >
-                        <div className="flex w-full items-center justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-primary">{user.email}</span>
+                        <div className="min-w-0 space-y-1">
+                          <span className="block truncate text-sm font-medium text-primary">
+                            {user.email}
+                          </span>
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            #{user.id} · {t('common.joined', { date: formatDate(user.createdAt) })}
+                          </span>
+                        </div>
+                        {isAdmin ? (
+                          <span className="shrink-0 self-center rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {adminUserTypeLabel(t, 'ADMIN')}
+                          </span>
+                        ) : (
                           <span
                             className={cn(
-                              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                              user.type === 'ADMIN'
-                                ? 'bg-destructive/15 text-destructive'
-                                : 'bg-green-600/15 text-green-800 dark:text-green-400'
+                              'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                              badge.className
                             )}
                           >
-                            {adminUserTypeLabel(t, user.type)}
+                            {badge.label}
                           </span>
-                        </div>
-                        <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground">
-                          <span>
-                            #{user.id} · {user.provider || t('common.credentials')}
-                          </span>
-                          <span className="shrink-0">
-                            {t('common.investmentsShort', { count: user._count?.investments || 0 })}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 pt-0.5">
-                          {user.type === 'INVESTOR' && user.accountStatus ? (
-                            <span
-                              className={cn(
-                                'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase',
-                                getAccountStatusBadgeClass(user.accountStatus)
-                              )}
-                            >
-                              {adminAccountStatusLabel(t, user.accountStatus)}
-                            </span>
-                          ) : null}
-                          {user.type === 'INVESTOR' && user.accreditedStatus === 'PENDING_REVIEW' ? (
-                            <span className="rounded-full bg-main-gold/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-main-gold">
-                              {t('common.accReviewShort')}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {t('common.joined', { date: formatDate(user.createdAt) })}
-                        </div>
+                        )}
                       </button>
                     </li>
                   )

@@ -10,10 +10,10 @@ todos:
     status: pending
   - id: payment-4
     content: "Registro e inicio de sesión producción: verificación por correo, aprobación admin, Mi cuenta, inversionista acreditado (doble entrada), correos transaccionales"
-    status: in_progress
+    status: completed
   - id: payment-5
     content: Estado del proyecto, porcentaje de avance y fechas en la web y en el panel admin
-    status: pending
+    status: in_progress
   - id: payment-6
     content: Subida real de imágenes y documentos; descarga segura para inversionistas
     status: pending

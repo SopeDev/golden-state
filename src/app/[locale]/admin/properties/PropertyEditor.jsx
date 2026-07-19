@@ -9,7 +9,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
+import AdminFormField from '@/components/admin/AdminFormField'
+import AdminFormSection from '@/components/admin/AdminFormSection'
+import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
+import {
+  formatFormattedInteger,
+  looksLikeIntegerString,
+  parseFormattedInteger,
+} from '@/lib/admin/numberFormat'
 import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import {
+  PROPERTY_STATUS_VALUES,
+  getPropertyStatusLabelKey,
+  toDateInputValue,
+} from '@/lib/propertyStatusUi'
 
 const PROPERTY_TYPE_OPTIONS = [
   'BUILD_TO_SELL',
@@ -18,8 +31,6 @@ const PROPERTY_TYPE_OPTIONS = [
   'MEX_TO_US',
   'US_TO_MEX',
 ]
-
-const PROPERTY_STATUS_VALUES = ['IN_PROGRESS', 'COMPLETED']
 
 const keyToLabel = (key) => {
   if (!key) return ''
@@ -117,6 +128,11 @@ const buildInitialFormData = (property) => ({
   slug: property?.slug || '',
   type: property?.type || 'BUILD_TO_SELL',
   status: property?.status || 'IN_PROGRESS',
+  progressPercent:
+    property?.progressPercent ?? (property?.status === 'COMPLETED' ? 100 : 0),
+  startDate: toDateInputValue(property?.startDate),
+  targetCompletionDate: toDateInputValue(property?.targetCompletionDate),
+  completedAt: toDateInputValue(property?.completedAt),
   city: property?.city || '',
   state: property?.state || '',
   address: property?.address || '',
@@ -129,59 +145,88 @@ const buildInitialFormData = (property) => ({
   images: property?.images || [],
 })
 
-function Field({ label, children, htmlFor }) {
+function Field({ label, children, htmlFor, emphasis = false, hint }) {
   return (
-    <div className="space-y-2">
-      {label ? (
-        <Label htmlFor={htmlFor} className="text-main-gold">
-          {label}
-        </Label>
-      ) : null}
+    <AdminFormField label={label} htmlFor={htmlFor} emphasis={emphasis} hint={hint}>
       {children}
-    </div>
+    </AdminFormField>
+  )
+}
+
+function KeyValueLocaleInput({ value, onChange, placeholder, formatAsInteger = false }) {
+  const displayValue =
+    formatAsInteger && looksLikeIntegerString(value)
+      ? formatFormattedInteger(value)
+      : value
+
+  const handleChange = (event) => {
+    const nextValue =
+      formatAsInteger && looksLikeIntegerString(event.target.value)
+        ? parseFormattedInteger(event.target.value)
+        : event.target.value
+    onChange(nextValue)
+  }
+
+  return (
+    <Input value={displayValue} placeholder={placeholder} onChange={handleChange} />
   )
 }
 
 function KeyValueRow({ row, onChange, onRemove, placeholders }) {
   const te = useTranslations('Admin.properties.editor')
-  const tc = useTranslations('Admin.common')
   return (
-    <div className="space-y-2 rounded-md border border-border/60 bg-card/40 p-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="space-y-1">
-          <Label className="text-xs text-main-gold">{te('labelEn')}</Label>
-          <Input
-            value={row.labelEn}
-            placeholder={placeholders.labelEn}
-            onChange={(event) => onChange('labelEn', event.target.value)}
-          />
+    <div className="py-5 first:pt-0">
+      <div className="grid gap-5 md:grid-cols-2 md:gap-8">
+        <div className="space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            English
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-medium text-muted-foreground">{te('labelEn')}</Label>
+              <Input
+                value={row.labelEn}
+                placeholder={placeholders.labelEn}
+                onChange={(event) => onChange('labelEn', event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-medium text-muted-foreground">{te('valueEn')}</Label>
+              <KeyValueLocaleInput
+                value={row.valueEn}
+                placeholder={placeholders.valueEn}
+                formatAsInteger
+                onChange={(value) => onChange('valueEn', value)}
+              />
+            </div>
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-main-gold">{te('valueEn')}</Label>
-          <Input
-            value={row.valueEn}
-            placeholder={placeholders.valueEn}
-            onChange={(event) => onChange('valueEn', event.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-main-gold">{te('labelEs')}</Label>
-          <Input
-            value={row.labelEs}
-            placeholder={placeholders.labelEs}
-            onChange={(event) => onChange('labelEs', event.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-main-gold">{te('valueEs')}</Label>
-          <Input
-            value={row.valueEs}
-            placeholder={placeholders.valueEs}
-            onChange={(event) => onChange('valueEs', event.target.value)}
-          />
+        <div className="space-y-3 md:border-l md:border-border/60 md:pl-8">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Español
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-medium text-muted-foreground">{te('labelEs')}</Label>
+              <Input
+                value={row.labelEs}
+                placeholder={placeholders.labelEs}
+                onChange={(event) => onChange('labelEs', event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-medium text-muted-foreground">{te('valueEs')}</Label>
+              <KeyValueLocaleInput
+                value={row.valueEs}
+                placeholder={placeholders.valueEs}
+                formatAsInteger
+                onChange={(value) => onChange('valueEs', value)}
+              />
+            </div>
+          </div>
         </div>
       </div>
-      <div className="flex justify-end">
+      <div className="mt-4 flex justify-end">
         <Button
           type="button"
           variant="outline"
@@ -320,6 +365,10 @@ export default function PropertyEditor({
     const submitData = {
       ...formData,
       status: formData.status || 'IN_PROGRESS',
+      progressPercent: parseInt(formData.progressPercent, 10) || 0,
+      startDate: formData.startDate || null,
+      targetCompletionDate: formData.targetCompletionDate || null,
+      completedAt: formData.completedAt || null,
       price: parseInt(formData.price, 10),
       unitCount: parseInt(formData.unitCount, 10),
       minInvestment: parseInt(formData.minInvestment, 10),
@@ -360,9 +409,8 @@ export default function PropertyEditor({
       </CardHeader>
 
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">{t('basicInfo')}</h3>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <AdminFormSection title={t('basicInfo')}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label={t('investmentId')} htmlFor="prop-investmentId">
                 <Input
@@ -401,11 +449,50 @@ export default function PropertyEditor({
                 >
                   {PROPERTY_STATUS_VALUES.map((value) => (
                     <option key={value} value={value}>
-                      {value === 'IN_PROGRESS' ? tf('inProgress') : tf('completed')}
+                      {tf(getPropertyStatusLabelKey(value))}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">{t('statusHint')}</p>
+              </Field>
+              <Field label={t('progressPercent')} htmlFor="prop-progress">
+                <Input
+                  id="prop-progress"
+                  type="number"
+                  name="progressPercent"
+                  min="0"
+                  max="100"
+                  value={formData.progressPercent}
+                  onChange={handleChange}
+                  required
+                />
+              </Field>
+              <Field label={t('startDate')} htmlFor="prop-start-date">
+                <Input
+                  id="prop-start-date"
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                />
+              </Field>
+              <Field label={t('targetCompletionDate')} htmlFor="prop-target-date">
+                <Input
+                  id="prop-target-date"
+                  type="date"
+                  name="targetCompletionDate"
+                  value={formData.targetCompletionDate}
+                  onChange={handleChange}
+                />
+              </Field>
+              <Field label={t('completedAt')} htmlFor="prop-completed-at">
+                <Input
+                  id="prop-completed-at"
+                  type="date"
+                  name="completedAt"
+                  value={formData.completedAt}
+                  onChange={handleChange}
+                />
               </Field>
               <Field label={t('propertyName')} htmlFor="prop-name">
                 <Input
@@ -428,10 +515,9 @@ export default function PropertyEditor({
                 />
               </Field>
             </div>
-          </section>
+          </AdminFormSection>
 
-          <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">{t('locationSection')}</h3>
+          <AdminFormSection title={t('locationSection')}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Field label={t('city')} htmlFor="prop-city">
                 <Input
@@ -464,15 +550,13 @@ export default function PropertyEditor({
                 />
               </Field>
             </div>
-          </section>
+          </AdminFormSection>
 
-          <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">{t('financialInfo')}</h3>
+          <AdminFormSection title={t('financialInfo')}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <Field label={t('totalPrice')} htmlFor="prop-price">
-                <Input
+              <Field label={t('totalPrice')} htmlFor="prop-price" emphasis>
+                <AdminFormattedNumberInput
                   id="prop-price"
-                  type="number"
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
@@ -489,17 +573,16 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label={t('minInvestment')} htmlFor="prop-minInvestment">
-                <Input
+              <Field label={t('minInvestment')} htmlFor="prop-minInvestment" emphasis>
+                <AdminFormattedNumberInput
                   id="prop-minInvestment"
-                  type="number"
                   name="minInvestment"
                   value={formData.minInvestment}
                   onChange={handleChange}
                   required
                 />
               </Field>
-              <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI">
+              <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI" emphasis>
                 <Input
                   id="prop-estimatedROI"
                   type="number"
@@ -522,10 +605,9 @@ export default function PropertyEditor({
                 placeholder={t('timelinePlaceholder')}
               />
             </Field>
-          </section>
+          </AdminFormSection>
 
-          <section className="space-y-4">
-            <h3 className="font-heading text-lg font-semibold text-primary">{t('contentSection')}</h3>
+          <AdminFormSection title={t('contentSection')}>
             <Field label={t('summary')} htmlFor="prop-summary">
               <Textarea
                 id="prop-summary"
@@ -538,7 +620,7 @@ export default function PropertyEditor({
             </Field>
 
             <Field label={t('propertyFacts')}>
-              <div className="space-y-3">
+              <div className="divide-y divide-border/60">
                 {propertyFactsRows.map((row) => (
                   <KeyValueRow
                     key={row.id}
@@ -555,6 +637,7 @@ export default function PropertyEditor({
                     onRemove={() => removeKeyValueRow(setPropertyFactsRows, row.id)}
                   />
                 ))}
+                <div className="pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -565,11 +648,12 @@ export default function PropertyEditor({
                   <Plus className="size-4" aria-hidden />
                   {t('addFact')}
                 </Button>
+                </div>
               </div>
             </Field>
 
             <Field label={t('investmentDetails')}>
-              <div className="space-y-3">
+              <div className="divide-y divide-border/60">
                 {investmentDetailsRows.map((row) => (
                   <KeyValueRow
                     key={row.id}
@@ -586,6 +670,7 @@ export default function PropertyEditor({
                     onRemove={() => removeKeyValueRow(setInvestmentDetailsRows, row.id)}
                   />
                 ))}
+                <div className="pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -596,6 +681,7 @@ export default function PropertyEditor({
                   <Plus className="size-4" aria-hidden />
                   {t('addDetail')}
                 </Button>
+                </div>
               </div>
             </Field>
 
@@ -639,7 +725,7 @@ export default function PropertyEditor({
                 )}
               </div>
             </Field>
-          </section>
+          </AdminFormSection>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">

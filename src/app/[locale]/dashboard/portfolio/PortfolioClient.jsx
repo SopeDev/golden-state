@@ -6,6 +6,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
 export default function PortfolioClient({ investments }) {
   const t = useTranslations('Portfolio')
@@ -155,6 +156,11 @@ export default function PortfolioClient({ investments }) {
                           {t('timeline')}: {investment.property.estimatedMonths} {t('months')}
                         </span>
                       </div>
+                      <PropertyProgressSummary
+                        property={investment.property}
+                        className="mt-4 max-w-md"
+                        compact
+                      />
                     </div>
 
                     <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end lg:flex-col lg:items-end">

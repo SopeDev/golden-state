@@ -1,41 +1,61 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import {
+  getPropertyStatusBadgeClass,
+  getPropertyStatusLabelKey,
+} from '@/lib/propertyStatusUi'
 import PropertyEditor from './PropertyEditor'
+
+const PROPERTY_TYPE_VALUES = [
+  'BUILD_TO_SELL',
+  'BUILD_TO_RENT',
+  'FLIPHOUSE',
+  'MEX_TO_US',
+  'US_TO_MEX',
+]
+
+const filterChipClass = (active) =>
+  cn(
+    'cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
+    active
+      ? 'border-main-gold bg-main-gold/15 text-main-gold'
+      : 'border-border text-muted-foreground hover:text-primary'
+  )
 
 export default function PropertiesAdminClient({ properties }) {
   const t = useTranslations('Admin')
   const tProjects = useTranslations('Projects')
-  const locale = useLocale()
-
-  const formatCurrency = (amount) => {
-    if (amount == null || amount === '') return '—'
-    return new Intl.NumberFormat(locale === 'es' ? 'es-ES' : 'en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Number(amount))
-  }
 
   const STATUS_FILTERS = [
     { id: 'ALL', label: t('common.all') },
+    { id: 'PLANNING', label: t('filter.planning') },
     { id: 'IN_PROGRESS', label: t('filter.inProgress') },
     { id: 'COMPLETED', label: t('filter.completed') },
   ]
+
+  const TYPE_FILTERS = [
+    { id: 'ALL', label: t('common.all') },
+    ...PROPERTY_TYPE_VALUES.map((type) => ({
+      id: type,
+      label: tProjects(getPropertyTypeLabelKey(type)),
+    })),
+  ]
+
   const [propertiesList, setPropertiesList] = useState(properties)
   const [selectedId, setSelectedId] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [typeFilter, setTypeFilter] = useState('ALL')
 
   const selectedProperty = useMemo(
     () => propertiesList.find((p) => p.id === selectedId) || null,
@@ -46,6 +66,9 @@ export default function PropertiesAdminClient({ properties }) {
     let list = propertiesList
     if (statusFilter !== 'ALL') {
       list = list.filter((property) => (property.status || 'IN_PROGRESS') === statusFilter)
+    }
+    if (typeFilter !== 'ALL') {
+      list = list.filter((property) => property.type === typeFilter)
     }
     if (!query.trim()) return list
     const q = query.trim().toLowerCase()
@@ -58,7 +81,7 @@ export default function PropertiesAdminClient({ properties }) {
         String(property.investmentId).includes(q) ||
         property.type?.toLowerCase().includes(q)
     )
-  }, [propertiesList, query, statusFilter])
+  }, [propertiesList, query, statusFilter, typeFilter])
 
   const editorVisible = isCreating || selectedProperty
 
@@ -185,22 +208,41 @@ export default function PropertiesAdminClient({ properties }) {
                 className="pl-8"
               />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {STATUS_FILTERS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setStatusFilter(option.id)}
-                  className={cn(
-                    'rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
-                    statusFilter === option.id
-                      ? 'border-main-gold bg-main-gold/15 text-main-gold'
-                      : 'border-border text-muted-foreground hover:text-primary'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('filter.status')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUS_FILTERS.map((option) => (
+                    <button
+                      key={`status-${option.id}`}
+                      type="button"
+                      onClick={() => setStatusFilter(option.id)}
+                      className={filterChipClass(statusFilter === option.id)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5 border-t border-border/60 pt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('filter.type')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TYPE_FILTERS.map((option) => (
+                    <button
+                      key={`type-${option.id}`}
+                      type="button"
+                      onClick={() => setTypeFilter(option.id)}
+                      className={filterChipClass(typeFilter === option.id)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
@@ -212,55 +254,33 @@ export default function PropertiesAdminClient({ properties }) {
               <ul>
                 {filteredProperties.map((property) => {
                   const isActive = !isCreating && property.id === selectedId
+                  const status = property.status || 'IN_PROGRESS'
                   return (
                     <li key={property.id}>
                       <button
                         type="button"
                         onClick={() => handleSelectProperty(property.id)}
                         className={cn(
-                          'flex w-full flex-col items-start gap-1 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
+                          'flex w-full cursor-pointer items-start justify-between gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
                           isActive && 'border-l-main-gold bg-main-gold/10'
                         )}
                       >
-                        <div className="flex w-full items-start justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-primary">{property.name}</span>
-                          <span
-                            className={cn(
-                              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                              getPropertyTypeBadgeClass(property.type)
-                            )}
-                          >
-                            {tProjects(getPropertyTypeLabelKey(property.type))}
+                        <div className="min-w-0 space-y-1">
+                          <span className="block truncate text-sm font-medium text-primary">
+                            {property.name}
                           </span>
-                        </div>
-                        <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground">
-                          <span>
+                          <span className="block truncate text-[11px] text-muted-foreground">
                             #{property.investmentId} · {property.city}, {property.state}
                           </span>
-                          <span className="shrink-0 font-semibold text-main-gold">
-                            {formatCurrency(property.price)}
-                          </span>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>
-                            {t('properties.roiMonths', {
-                              roi: property.estimatedROI,
-                              months: property.estimatedMonths,
-                            })}
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                              (property.status || 'IN_PROGRESS') === 'COMPLETED'
-                                ? 'bg-green-600/15 text-green-800 dark:text-green-400'
-                                : 'bg-secondary-blue/15 text-secondary-blue'
-                            )}
-                          >
-                            {(property.status || 'IN_PROGRESS') === 'COMPLETED'
-                              ? t('filter.completed')
-                              : t('filter.inProgress')}
-                          </span>
-                        </div>
+                        <span
+                          className={cn(
+                            'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            getPropertyStatusBadgeClass(status)
+                          )}
+                        >
+                          {t(`filter.${getPropertyStatusLabelKey(status)}`)}
+                        </span>
                       </button>
                     </li>
                   )

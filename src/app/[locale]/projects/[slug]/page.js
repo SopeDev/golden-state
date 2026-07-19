@@ -2,7 +2,13 @@ import { PrismaClient } from '@prisma/client'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from '../ProjectsClient'
-import { isValidProjectFilterSlug, slugToHeaderKey, slugToPropertyType } from '@/lib/projectTypes'
+import {
+  ACTIVE_PROPERTY_STATUSES,
+  isCompletedProjectsSlug,
+  isValidProjectFilterSlug,
+  slugToHeaderKey,
+  slugToPropertyType,
+} from '@/lib/projectTypes'
 
 const prisma = new PrismaClient()
 
@@ -29,15 +35,25 @@ export default async function ProjectsByTypePage({ params }) {
     notFound()
   }
 
-  const propertyType = slugToPropertyType[slug]
   const headerKey = slugToHeaderKey[slug]
 
   let properties = []
   try {
-    properties = await prisma.property.findMany({
-      where: { type: propertyType },
-      orderBy: { createdAt: 'desc' },
-    })
+    if (isCompletedProjectsSlug(slug)) {
+      properties = await prisma.property.findMany({
+        where: { status: 'COMPLETED' },
+        orderBy: { updatedAt: 'desc' },
+      })
+    } else {
+      const propertyType = slugToPropertyType[slug]
+      properties = await prisma.property.findMany({
+        where: {
+          type: propertyType,
+          status: { in: ACTIVE_PROPERTY_STATUSES },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
   } catch (error) {
     console.error('Error fetching properties:', error)
   } finally {

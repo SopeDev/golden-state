@@ -250,10 +250,11 @@
     "fliphouse": "Fliphouses",
     "mexToUs": "MEX to US",
     "usToMex": "US to MEX",
+    "completed": "Completed",
     "headers": {
       "all": {
         "title": "Our Projects",
-        "subtitle": "Discover our curated selection of premium real estate investment opportunities across California.",
+        "subtitle": "Discover our curated selection of active real estate investment opportunities across California.",
         "metaTitle": "Projects | Golden State Capital Management",
         "metaDescription": "Browse active Golden State real estate investment opportunities across California."
       },
@@ -286,6 +287,12 @@
         "subtitle": "Cross-border opportunities centered on United States-to-Mexico capital deployment.",
         "metaTitle": "US to Mexico Projects | Golden State Capital Management",
         "metaDescription": "Explore US to Mexico investment opportunities with Golden State Capital Management."
+      },
+      "completed": {
+        "title": "Completed projects",
+        "subtitle": "A track record of delivered deals — sold, leased, or otherwise exited.",
+        "metaTitle": "Completed Projects | Golden State Capital Management",
+        "metaDescription": "Browse Golden State Capital Management’s completed real estate investment projects."
       }
     },
     "price": "Price",
@@ -294,7 +301,20 @@
     "estRoi": "Est. ROI",
     "timeline": "Estimated Timeline",
     "months": "months",
-    "summary": "Summary"
+    "summary": "Summary",
+    "progress": "Progress",
+    "progressPercent": "{percent}% complete",
+    "statusLabel": "Status",
+    "estimatedDuration": "Estimated duration",
+    "estimatedDurationValue": "{months} months",
+    "startDate": "Start",
+    "targetCompletion": "Target completion",
+    "completedAt": "Completed",
+    "status": {
+      "planning": "Planning",
+      "inProgress": "In progress",
+      "completed": "Completed"
+    }
   },
   "PropertyDetails": {
     "backToProjects": "← Back to Projects",
@@ -322,7 +342,8 @@
     "needHelp": "Need Help?",
     "needHelpDesc": "Our investment team is here to answer your questions about this property.",
     "contactTeam": "Contact Investment Team",
-    "months": "months"
+    "months": "months",
+    "projectProgress": "Project progress"
   },
   "Register": {
     "title": "Create an account",
@@ -398,6 +419,8 @@
     "subtitle": "Access your investor dashboard and investment opportunities.",
     "email": "Email",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "forgotLink": "Forgot password?",
     "submit": "Sign in",
     "submitting": "Signing in…",
@@ -482,6 +505,7 @@
     "registerToInvest": "Create an account",
     "pendingAccount": "Your account is not active yet.",
     "needsAccreditation": "Complete accredited investor verification to invest.",
+    "investNow": "Invest Now",
     "uploadFailed": "Upload failed. Please try again.",
     "backToProperty": "Back to {property}",
     "viewAccount": "View my account"
@@ -713,6 +737,7 @@
       "searchUsers": "Search by email, id, or type",
       "searchProperties": "Search name, city, type, id",
       "all": "All",
+      "allTypes": "All types",
       "cancel": "Cancel",
       "discardChanges": "Discard changes",
       "saveChanges": "Save changes",
@@ -771,7 +796,17 @@
       "email": "Email",
       "approval": "Approval",
       "accredited": "Accredited",
+      "notAccredited": "Not accredited",
+      "pending": "Pending",
+      "pendingAccreditation": "Pending accreditation",
+      "pendingReview": "Pending review",
       "active": "Active",
+      "rejected": "Rejected",
+      "accountStatus": "Account status",
+      "accreditation": "Accreditation",
+      "status": "Status",
+      "type": "Type",
+      "planning": "Planning",
       "inProgress": "In progress",
       "completed": "Completed"
     },
@@ -797,6 +832,8 @@
       "requestDocumentResubmit": "Request document resubmit",
       "awaitingResubmitKinds": "Awaiting resubmit for: {kinds}",
       "reviewNotePlaceholder": "Internal note for rejections",
+      "reviewSectionTitle": "Review & accreditation",
+      "accountDetailsSectionTitle": "Account details",
       "questionnaire": "Questionnaire",
       "uploadedDocuments": "Uploaded documents",
       "documentNotUploaded": "Not uploaded",
@@ -839,7 +876,11 @@
         "investmentId": "Investment ID",
         "propertyType": "Property Type",
         "status": "Status",
-        "statusHint": "Completed projects appear in the home page Track Record section.",
+        "statusHint": "Completed projects appear in the home page Track Record. Planning and in-progress appear in live opportunities.",
+        "progressPercent": "Progress (%)",
+        "startDate": "Start date",
+        "targetCompletionDate": "Target completion date",
+        "completedAt": "Completed date",
         "propertyName": "Property Name",
         "slug": "Slug (URL-friendly name)",
         "city": "City",

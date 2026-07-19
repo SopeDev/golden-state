@@ -123,7 +123,11 @@ model Property {
   investmentDetails Json
   images            String[]
 
-  status PropertyStatus @default(IN_PROGRESS)
+  status               PropertyStatus @default(IN_PROGRESS)
+  progressPercent      Int            @default(0)
+  startDate            DateTime?
+  targetCompletionDate DateTime?
+  completedAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -141,6 +145,7 @@ enum PropertyType {
 }
 
 enum PropertyStatus {
+  PLANNING
   IN_PROGRESS
   COMPLETED
 }

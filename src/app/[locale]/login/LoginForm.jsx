@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -36,6 +37,7 @@ export default function LoginForm() {
   const callbackUrl = searchParams.get('callbackUrl') || ''
   const [submitting, setSubmitting] = useState(false)
   const [errorKey, setErrorKey] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleCredentials = async (e) => {
     e.preventDefault()
@@ -90,13 +92,29 @@ export default function LoginForm() {
             </div>
             <div className="space-y-2">
               <RequiredLabel htmlFor="login-password">{t('password')}</RequiredLabel>
-              <Input
-                id="login-password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  className="pr-9"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex cursor-pointer items-center px-2.5 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" aria-hidden />
+                  ) : (
+                    <Eye className="size-4" aria-hidden />
+                  )}
+                </button>
+              </div>
               <Link href="/forgot-password" className="inline-block text-xs text-primary hover:underline">
                 {t('forgotLink')}
               </Link>

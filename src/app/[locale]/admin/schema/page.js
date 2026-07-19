@@ -48,7 +48,11 @@ export default async function SchemaPage() {
           { name: 'propertyFacts', type: 'Json', description: 'Technical property details' },
           { name: 'investmentDetails', type: 'Json', description: 'Funding breakdown' },
           { name: 'images', type: 'String[]', description: 'Array of image URLs' },
-          { name: 'status', type: 'PropertyStatus', description: 'Lifecycle (defaults to IN_PROGRESS; COMPLETED records appear in home Track Record)' },
+          { name: 'status', type: 'PropertyStatus', description: 'Lifecycle: PLANNING, IN_PROGRESS (default), COMPLETED (Track Record)' },
+          { name: 'progressPercent', type: 'Int', description: '0–100 project completion percentage' },
+          { name: 'startDate', type: 'DateTime?', description: 'Optional project start date' },
+          { name: 'targetCompletionDate', type: 'DateTime?', description: 'Optional target completion date' },
+          { name: 'completedAt', type: 'DateTime?', description: 'Optional actual completion date' },
           { name: 'createdAt', type: 'DateTime', description: 'Record creation date' },
           { name: 'updatedAt', type: 'DateTime', description: 'Last update timestamp' },
         ],
@@ -78,7 +82,7 @@ export default async function SchemaPage() {
       },
       {
         name: 'PropertyStatus',
-        values: ['IN_PROGRESS', 'COMPLETED'],
+        values: ['PLANNING', 'IN_PROGRESS', 'COMPLETED'],
       },
     ],
   }

@@ -16,14 +16,22 @@ export default function DropdownNavItem({ label, links = [], t }) {
         </svg>
       </div>
 
-      <div className="pointer-events-none absolute left-0 z-50 flex min-w-[150px] w-max flex-col rounded bg-card py-5 text-card-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-        {links.map((link, index) => (
-          <Link key={index} href={link.href}>
-            <div className="px-4 py-2 text-secondary-blue hover:bg-muted">
-              {link.text != null ? link.text : t ? t(link.label) : link.label}
-            </div>
-          </Link>
-        ))}
+      <div className="pointer-events-none absolute left-0 z-50 flex min-w-[150px] w-max flex-col rounded bg-card py-1 text-card-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+        {links.map((link, index) =>
+          link.divider ? (
+            <div
+              key={`divider-${index}`}
+              className="border-t border-border"
+              role="separator"
+            />
+          ) : (
+            <Link key={link.href || index} href={link.href}>
+              <div className="px-4 py-1.5 text-secondary-blue hover:bg-muted">
+                {link.text != null ? link.text : t ? t(link.label) : link.label}
+              </div>
+            </Link>
+          )
+        )}
       </div>
     </li>
   )

@@ -22,7 +22,7 @@ async function loadHomeData() {
   try {
     const [liveOpportunities, completedDeals] = await Promise.all([
       prisma.property.findMany({
-        where: { status: 'IN_PROGRESS' },
+        where: { status: { in: ['PLANNING', 'IN_PROGRESS'] } },
         orderBy: { createdAt: 'desc' },
         take: LIVE_LIMIT,
       }),

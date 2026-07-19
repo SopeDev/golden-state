@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
 import InvestNowButton from '@/components/invest/InvestNowButton'
+import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
 export default function PropertyDetailsClient({ property }) {
   const t = useTranslations('PropertyDetails')
@@ -184,6 +185,7 @@ export default function PropertyDetailsClient({ property }) {
                 <CardTitle className="font-heading text-xl text-primary">{t('investmentDetails')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <PropertyProgressSummary property={property} variant="tile" showDuration />
                 <div className="rounded-lg bg-muted/50 p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('totalPrice')}</p>
                   <p className="text-2xl font-semibold text-primary">${property.price.toLocaleString()}</p>
@@ -201,12 +203,6 @@ export default function PropertyDetailsClient({ property }) {
                 <div className="rounded-lg bg-muted/50 p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('estimatedRoi')}</p>
                   <p className="text-2xl font-semibold text-main-gold">{property.estimatedROI}%</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t('timeline')}</p>
-                  <p className="text-2xl font-semibold text-primary">
-                    {property.estimatedMonths} {t('months')}
-                  </p>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/30">

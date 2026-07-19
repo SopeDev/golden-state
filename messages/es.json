@@ -250,10 +250,11 @@
     "fliphouse": "Fliphouses",
     "mexToUs": "MEX a EE. UU.",
     "usToMex": "EE. UU. a MEX",
+    "completed": "Completados",
     "headers": {
       "all": {
         "title": "Nuestros Proyectos",
-        "subtitle": "Descubre nuestra selección curada de oportunidades de inversión inmobiliaria premium en California.",
+        "subtitle": "Descubre nuestra selección curada de oportunidades de inversión inmobiliaria activas en California.",
         "metaTitle": "Proyectos | Golden State Capital Management",
         "metaDescription": "Explora oportunidades activas de inversión inmobiliaria de Golden State en California."
       },
@@ -286,6 +287,12 @@
         "subtitle": "Oportunidades transfronterizas con foco Estados Unidos–México.",
         "metaTitle": "EE. UU. a México | Golden State Capital Management",
         "metaDescription": "Explora inversiones Estados Unidos a México con Golden State Capital Management."
+      },
+      "completed": {
+        "title": "Proyectos completados",
+        "subtitle": "Historial de operaciones entregadas — vendidas, arrendadas o cerradas.",
+        "metaTitle": "Proyectos completados | Golden State Capital Management",
+        "metaDescription": "Explora los proyectos inmobiliarios completados de Golden State Capital Management."
       }
     },
     "price": "Precio",
@@ -294,7 +301,20 @@
     "estRoi": "ROI Est.",
     "timeline": "Tiempo de Entrega Estimado",
     "months": "meses",
-    "summary": "Resumen"
+    "summary": "Resumen",
+    "progress": "Avance",
+    "progressPercent": "{percent}% completado",
+    "statusLabel": "Estado",
+    "estimatedDuration": "Duración estimada",
+    "estimatedDurationValue": "{months} meses",
+    "startDate": "Inicio",
+    "targetCompletion": "Meta de finalización",
+    "completedAt": "Completado",
+    "status": {
+      "planning": "Planeación",
+      "inProgress": "En curso",
+      "completed": "Completado"
+    }
   },
   "PropertyDetails": {
     "backToProjects": "← Volver a Proyectos",
@@ -322,7 +342,8 @@
     "needHelp": "¿Necesitas Ayuda?",
     "needHelpDesc": "Nuestro equipo de inversión está aquí para responder tus preguntas sobre esta propiedad.",
     "contactTeam": "Contactar Equipo de Inversión",
-    "months": "meses"
+    "months": "meses",
+    "projectProgress": "Avance del proyecto"
   },
   "Register": {
     "title": "Crear una cuenta",
@@ -398,6 +419,8 @@
     "subtitle": "Accede a tu panel de inversionista y oportunidades de inversión.",
     "email": "Correo electrónico",
     "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
     "forgotLink": "¿Olvidaste tu contraseña?",
     "submit": "Iniciar sesión",
     "submitting": "Iniciando sesión…",
@@ -482,6 +505,7 @@
     "registerToInvest": "Crear cuenta",
     "pendingAccount": "Tu cuenta aún no está activa.",
     "needsAccreditation": "Completa la verificación de inversionista acreditado para invertir.",
+    "investNow": "Invertir Ahora",
     "uploadFailed": "Error al subir. Inténtalo de nuevo.",
     "backToProperty": "Volver a {property}",
     "viewAccount": "Ver mi cuenta"
@@ -713,6 +737,7 @@
       "searchUsers": "Buscar por correo, id o tipo",
       "searchProperties": "Buscar nombre, ciudad, tipo, id",
       "all": "Todos",
+      "allTypes": "Todos los tipos",
       "cancel": "Cancelar",
       "discardChanges": "Descartar cambios",
       "saveChanges": "Guardar cambios",
@@ -771,7 +796,17 @@
       "email": "Correo",
       "approval": "Aprobación",
       "accredited": "Acreditado",
+      "notAccredited": "No acreditado",
+      "pending": "Pendiente",
+      "pendingAccreditation": "Pendiente acreditación",
+      "pendingReview": "En revisión",
       "active": "Activo",
+      "rejected": "Rechazado",
+      "accountStatus": "Estado de cuenta",
+      "accreditation": "Acreditación",
+      "status": "Estado",
+      "type": "Tipo",
+      "planning": "Planeación",
       "inProgress": "En curso",
       "completed": "Completado"
     },
@@ -797,6 +832,8 @@
       "requestDocumentResubmit": "Solicitar reenvío de documentos",
       "awaitingResubmitKinds": "Pendiente de reenvío: {kinds}",
       "reviewNotePlaceholder": "Nota interna para rechazos",
+      "reviewSectionTitle": "Revisión y acreditación",
+      "accountDetailsSectionTitle": "Datos de la cuenta",
       "questionnaire": "Cuestionario",
       "uploadedDocuments": "Documentos cargados",
       "documentNotUploaded": "No cargado",
@@ -839,7 +876,11 @@
         "investmentId": "ID de inversión",
         "propertyType": "Tipo de propiedad",
         "status": "Estado",
-        "statusHint": "Los proyectos completados aparecen en el historial de la página de inicio.",
+        "statusHint": "Los proyectos completados aparecen en el historial de la página de inicio. Planeación y en curso aparecen en oportunidades activas.",
+        "progressPercent": "Avance (%)",
+        "startDate": "Fecha de inicio",
+        "targetCompletionDate": "Fecha meta de finalización",
+        "completedAt": "Fecha de finalización",
         "propertyName": "Nombre de la propiedad",
         "slug": "Slug (nombre para URL)",
         "city": "Ciudad",

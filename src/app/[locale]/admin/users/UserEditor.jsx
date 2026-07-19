@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
+import AdminFormField from '@/components/admin/AdminFormField'
+import AdminFormSection from '@/components/admin/AdminFormSection'
 import {
   formatProjectTypesForDisplay,
   INVESTMENT_RANGE_LABELS,
@@ -214,9 +215,10 @@ export default function UserEditor({
         ) : null}
       </CardHeader>
 
-      <CardContent className="space-y-8 pt-6">
+      <CardContent className="space-y-6 pt-6">
         {user && !isCreating && user.type === 'INVESTOR' ? (
-          <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-3">
+          <AdminFormSection title={t('users.reviewSectionTitle')}>
+            <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold tracking-wide text-muted-foreground">
                 {t('users.accountStatusLabel')}
@@ -286,7 +288,7 @@ export default function UserEditor({
             ) : null}
             {documents.length > 0 ? (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-primary">{t('users.uploadedDocuments')}</h3>
+                <h4 className="text-sm font-semibold text-foreground">{t('users.uploadedDocuments')}</h4>
                 <InvestorDocumentReviewGrid
                   documents={documents}
                   t={tInvest}
@@ -364,24 +366,21 @@ export default function UserEditor({
                 </div>
               </div>
             ) : null}
-            <div className="space-y-1">
-              <Label htmlFor="review-note" className="text-main-gold text-xs">
-                {t('users.reviewNote')}
-              </Label>
+            <AdminFormField label={t('users.reviewNote')} htmlFor="review-note">
               <Input
                 id="review-note"
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
                 placeholder={t('users.reviewNotePlaceholder')}
               />
+            </AdminFormField>
             </div>
-          </div>
+          </AdminFormSection>
         ) : null}
 
         {profile && !isCreating ? (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-primary">{t('users.questionnaire')}</h3>
-            <dl className="grid gap-2 text-sm md:grid-cols-2">
+          <AdminFormSection title={t('users.questionnaire')}>
+            <dl className="grid gap-3 text-sm md:grid-cols-2">
               {PROFILE_FIELD_KEYS.map((key) => {
                 const display = formatProfileValue(key, profile, tRegister)
                 if (!display) return null
@@ -389,27 +388,25 @@ export default function UserEditor({
                   <div
                     key={key}
                     className={cn(
-                      'rounded-md border border-border/60 bg-background px-3 py-2',
+                      'rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm',
                       (key === 'investmentGoals' || key === 'background') && 'md:col-span-2'
                     )}
                   >
                     <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {t(`users.profile.${key}`)}
                     </dt>
-                    <dd className="mt-1 text-foreground whitespace-pre-wrap">{display}</dd>
+                    <dd className="mt-1.5 text-sm text-foreground whitespace-pre-wrap">{display}</dd>
                   </div>
                 )
               })}
             </dl>
-          </div>
+          </AdminFormSection>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit}>
+          <AdminFormSection title={t('users.accountDetailsSectionTitle')}>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="user-email" className="text-main-gold">
-                {t('users.emailAddress')}
-              </Label>
+            <AdminFormField label={t('users.emailAddress')} htmlFor="user-email">
               <Input
                 id="user-email"
                 type="email"
@@ -418,13 +415,12 @@ export default function UserEditor({
                 onChange={handleChange}
                 required
               />
-            </div>
+            </AdminFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="user-password" className="text-main-gold">
-                {t('users.password')}{' '}
-                {user && !isCreating ? t('users.passwordKeepHint') : ''}
-              </Label>
+            <AdminFormField
+              label={`${t('users.password')}${user && !isCreating ? ` ${t('users.passwordKeepHint')}` : ''}`}
+              htmlFor="user-password"
+            >
               <Input
                 id="user-password"
                 type="password"
@@ -436,12 +432,9 @@ export default function UserEditor({
                   isCreating ? t('users.passwordPlaceholderNew') : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
                 }
               />
-            </div>
+            </AdminFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="user-type" className="text-main-gold">
-                {t('users.userType')}
-              </Label>
+            <AdminFormField label={t('users.userType')} htmlFor="user-type">
               <select
                 id="user-type"
                 name="type"
@@ -453,21 +446,20 @@ export default function UserEditor({
                 <option value="INVESTOR">{adminUserTypeLabel(t, 'INVESTOR')}</option>
                 <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
               </select>
-            </div>
+            </AdminFormField>
 
-            <div className="space-y-2">
-              <Label className="text-main-gold">{t('users.authProvider')}</Label>
+            <AdminFormField label={t('users.authProvider')} hint={t('users.authProviderHint')}>
               <Input
                 value={formData.provider || t('common.credentials')}
                 disabled
                 readOnly
                 className="bg-muted"
               />
-              <p className="text-xs text-muted-foreground">{t('users.authProviderHint')}</p>
-            </div>
+            </AdminFormField>
           </div>
+          </AdminFormSection>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">
               {isDirty ? (
                 <span className="text-main-gold">{t('common.unsavedChanges')}</span>

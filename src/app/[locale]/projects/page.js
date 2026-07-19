@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from './ProjectsClient'
+import { ACTIVE_PROPERTY_STATUSES } from '@/lib/projectTypes'
 
 const prisma = new PrismaClient()
 
@@ -17,6 +18,9 @@ export async function generateMetadata({ params }) {
 async function getProperties() {
   try {
     return await prisma.property.findMany({
+      where: {
+        status: { in: ACTIVE_PROPERTY_STATUSES },
+      },
       orderBy: {
         createdAt: 'desc',
       },

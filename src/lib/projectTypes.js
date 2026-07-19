@@ -10,6 +10,11 @@ export const PROJECT_FILTER_SLUGS = [
   'us-to-mex',
 ]
 
+export const COMPLETED_PROJECTS_SLUG = 'completed'
+
+/** Active (non-completed) listings shown on /projects and type filters */
+export const ACTIVE_PROPERTY_STATUSES = ['PLANNING', 'IN_PROGRESS']
+
 /** @type {Record<string, import('@prisma/client').PropertyType>} */
 export const slugToPropertyType = {
   'build-to-sell': 'BUILD_TO_SELL',
@@ -37,8 +42,13 @@ export const slugToHeaderKey = {
   fliphouses: 'fliphouse',
   'mex-to-us': 'mexToUs',
   'us-to-mex': 'usToMex',
+  completed: 'completed',
 }
 
 export function isValidProjectFilterSlug(slug) {
-  return PROJECT_FILTER_SLUGS.includes(slug)
+  return PROJECT_FILTER_SLUGS.includes(slug) || slug === COMPLETED_PROJECTS_SLUG
+}
+
+export function isCompletedProjectsSlug(slug) {
+  return slug === COMPLETED_PROJECTS_SLUG
 }

@@ -660,6 +660,8 @@ function HomeReasons({ content }) {
 }
 
 function HomeTrackRecord({ content, completedDeals }) {
+  const tProjects = useTranslations('Projects')
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-20">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -682,54 +684,62 @@ function HomeTrackRecord({ content, completedDeals }) {
         </div>
       ) : (
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {completedDeals.map((property) => (
-            <Card
-              key={property.id}
-              className="overflow-hidden border-border/80 py-0 shadow-sm transition-shadow hover:shadow-md gap-0"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                {property.images?.[0] ? (
-                  <img
-                    src={property.images[0]}
-                    alt={property.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-                <span className="absolute left-3 top-3 rounded-full bg-green-600/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                  Completed
-                </span>
-              </div>
-              <CardContent className="space-y-4 p-5">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {property.city}, {property.state}
-                  </p>
-                  <h3 className="font-heading mt-1 text-lg font-semibold text-primary">
-                    {property.name}
-                  </h3>
+          {completedDeals.map((property) => {
+            const typeKey = getPropertyTypeLabelKey(property.type)
+            return (
+              <Card
+                key={property.id}
+                className="overflow-hidden border-border/80 py-0 shadow-sm transition-shadow hover:shadow-md gap-0"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                  {property.images?.[0] ? (
+                    <img
+                      src={property.images[0]}
+                      alt={property.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                  <span
+                    className={cn(
+                      'absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                      getPropertyTypeBadgeClass(property.type)
+                    )}
+                  >
+                    {tProjects(typeKey)}
+                  </span>
                 </div>
+                <CardContent className="space-y-4 p-5">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {property.city}, {property.state}
+                    </p>
+                    <h3 className="font-heading mt-1 text-lg font-semibold text-primary">
+                      {property.name}
+                    </h3>
+                  </div>
 
-                <dl className="grid grid-cols-2 gap-3">
-                  <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {content.trackCardReturn}
-                    </dt>
-                    <dd className="mt-1 text-base font-semibold text-main-gold">
-                      {property.estimatedROI}%
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {content.trackCardTimeline}
-                    </dt>
-                    <dd className="mt-1 text-base font-semibold text-primary">
-                      {property.estimatedMonths} mo
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-          ))}
+                  <dl className="grid grid-cols-2 gap-3">
+                    <div>
+                      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {content.trackCardReturn}
+                      </dt>
+                      <dd className="mt-1 text-base font-semibold text-main-gold">
+                        {property.estimatedROI}%
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {content.trackCardTimeline}
+                      </dt>
+                      <dd className="mt-1 text-base font-semibold text-primary">
+                        {property.estimatedMonths} mo
+                      </dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
 

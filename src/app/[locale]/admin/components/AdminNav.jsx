@@ -17,11 +17,6 @@ export default function AdminNav() {
     { href: '/admin/content', label: t('nav.content') },
   ]
 
-  const navItemsDatabase = [
-    { href: '/admin/data', label: t('nav.data') },
-    { href: '/admin/schema', label: t('nav.schema') },
-  ]
-
   const fetchPendingCount = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/users/pending-count', { credentials: 'include' })
@@ -79,13 +74,6 @@ export default function AdminNav() {
               ))}
             </nav>
           </div>
-          <nav className="flex flex-wrap gap-2 border-t border-border pt-4 lg:border-0 lg:pt-0 lg:gap-4">
-            {navItemsDatabase.map((item) => (
-              <Link key={item.href} href={item.href} className={linkClass(item.href)}>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
 
 export default function PropertyCard({ property }) {
@@ -13,8 +14,8 @@ export default function PropertyCard({ property }) {
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
-      {property.images && property.images.length > 0 && (
-        <div className="relative h-64 overflow-hidden bg-muted">
+      <div className="relative h-64 overflow-hidden bg-muted">
+        {property.images && property.images.length > 0 ? (
           <Link href={`/properties/${property.investmentId}`} className="block h-full">
             <img
               src={property.images[0]}
@@ -22,23 +23,25 @@ export default function PropertyCard({ property }) {
               className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
             />
           </Link>
-          <div className="absolute left-4 top-4">
-            <span className="rounded-full bg-main-gold px-3 py-1 text-sm font-semibold text-white">
-              #{property.investmentId}
-            </span>
-          </div>
+        ) : null}
+        <div className="absolute left-4 top-4">
+          <span className="rounded-full bg-main-gold px-3 py-1 text-sm font-semibold text-white">
+            #{property.investmentId}
+          </span>
         </div>
-      )}
-
-      <CardContent className="flex flex-1 flex-col p-6 pt-6">
-        <div className="mb-4">
+        <div className="absolute right-4 top-4">
           <span
-            className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${getPropertyTypeBadgeClass(property.type)}`}
+            className={cn(
+              'inline-block rounded-full px-3 py-1 text-xs font-semibold',
+              getPropertyTypeBadgeClass(property.type)
+            )}
           >
             {t(typeKey)}
           </span>
         </div>
+      </div>
 
+      <CardContent className="flex flex-1 flex-col p-6 pt-6">
         <Link href={`/properties/${property.investmentId}`}>
           <h3 className="mb-2 font-heading text-3xl font-semibold text-primary transition-colors hover:text-secondary-blue">
             {property.name}
@@ -47,6 +50,8 @@ export default function PropertyCard({ property }) {
         <p className="mb-4 text-muted-foreground">
           {property.address}, {property.city}, {property.state}
         </p>
+
+        <PropertyProgressSummary property={property} className="mb-6" showDates={false} compact />
 
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="text-center">
@@ -69,7 +74,7 @@ export default function PropertyCard({ property }) {
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <p className="mb-1 text-sm text-muted-foreground">{t('timeline')}</p>
           <p className="text-lg font-medium text-primary">
             {property.estimatedMonths} {t('months')}

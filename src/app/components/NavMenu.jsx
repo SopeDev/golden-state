@@ -33,6 +33,8 @@ export default function NavMenu({ session: serverSession }) {
       href: item.href,
       text: tProjects(item.projectsLabelKey),
     })),
+    { divider: true },
+    { href: '/projects/completed', text: tProjects('completed') },
   ]
 
   return (
@@ -94,7 +96,7 @@ export default function NavMenu({ session: serverSession }) {
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {user?.type === 'ADMIN' && (
             <Link
-              href="/admin/data"
+              href="/admin/properties"
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'default' }),
                 'border-main-gold text-main-gold hover:bg-main-gold/10'
@@ -155,6 +157,12 @@ export default function NavMenu({ session: serverSession }) {
               </div>
             </Link>
           ))}
+          <hr className="border-border" />
+          <Link href="/projects/completed" onClick={() => setMenuOpen(false)}>
+            <div className="py-1 text-sm text-primary hover:text-secondary-blue">
+              {tProjects('completed')}
+            </div>
+          </Link>
           {user && (
             <>
               <hr />

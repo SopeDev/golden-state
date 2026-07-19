@@ -7,14 +7,9 @@ const LABEL_KEY = {
   US_TO_MEX: 'usToMex',
 }
 
-/** Tailwind classes for type chips (same family as previous blue/gold split). */
-const BADGE_CLASS = {
-  BUILD_TO_SELL: 'bg-secondary-blue text-white',
-  BUILD_TO_RENT: 'bg-secondary-gold text-primary',
-  FLIPHOUSE: 'bg-emerald-700 text-white',
-  MEX_TO_US: 'bg-violet-700 text-white',
-  US_TO_MEX: 'bg-amber-700 text-white',
-}
+/** Outlined / neutral — type is a label, not a primary signal (status owns color). */
+const TYPE_BADGE_CLASS =
+  'border border-border bg-white text-foreground'
 
 /** English labels for admin tables (UI is English). */
 export const PROPERTY_TYPE_ADMIN_LABEL = {
@@ -33,6 +28,6 @@ export function getPropertyTypeLabelKey(type) {
   return LABEL_KEY[type] || 'buildToRent'
 }
 
-export function getPropertyTypeBadgeClass(type) {
-  return BADGE_CLASS[type] || 'bg-muted text-foreground'
+export function getPropertyTypeBadgeClass(_type) {
+  return TYPE_BADGE_CLASS
 }

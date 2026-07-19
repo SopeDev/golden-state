@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils'
 
 export default function InvestNowButton({ propertyId, className }) {
   const { data: session, status } = useSession()
-  const t = useTranslations('Invest')
+  const t = useTranslations('PropertyDetails')
+  const label = t('investNow')
 
   if (status === 'loading') {
     return (
@@ -24,7 +25,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href={`/login?callbackUrl=/properties/${propertyId}/invest`}
         className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
       >
-        {t('investNow')}
+        {label}
       </Link>
     )
   }
@@ -37,7 +38,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href="/dashboard"
         className={cn(buttonVariants({ variant: 'outline', size: 'cta' }), 'w-full', className)}
       >
-        {t('investNow')}
+        {label}
       </Link>
     )
   }
@@ -48,7 +49,7 @@ export default function InvestNowButton({ propertyId, className }) {
         href={`/properties/${propertyId}/invest`}
         className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
       >
-        {t('investNow')}
+        {label}
       </Link>
     )
   }
@@ -58,7 +59,7 @@ export default function InvestNowButton({ propertyId, className }) {
       href={`/properties/${propertyId}/invest`}
       className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
     >
-      {t('investNow')}
+      {label}
     </Link>
   )
 }

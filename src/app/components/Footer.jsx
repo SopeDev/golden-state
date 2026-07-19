@@ -12,6 +12,7 @@ const PROJECT_FOOTER_LINKS = [
   { href: '/projects/fliphouses', labelKey: 'fliphouse', fromNavbar: false },
   { href: '/projects/mex-to-us', labelKey: 'mexToUs', fromNavbar: false },
   { href: '/projects/us-to-mex', labelKey: 'usToMex', fromNavbar: false },
+  { href: '/projects/completed', labelKey: 'completed', fromNavbar: false, dividerBefore: true },
 ]
 
 export default function Footer() {
@@ -24,7 +25,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
             <div>
-              <img src="/logo.png" alt="Golden State" className="mb-4 h-12" />
+              <img src="/logo-alt.png" alt="Golden State" className="mb-4 h-12" />
             </div>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
               {t('description')}
@@ -74,7 +75,13 @@ export default function Footer() {
             <ul className="space-y-2">
               {PROJECT_FOOTER_LINKS.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-primary-foreground/80 transition-colors hover:text-primary-foreground">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'inline-block text-primary-foreground/80 transition-colors hover:text-primary-foreground',
+                      item.dividerBefore && 'mt-1 border-t border-primary-foreground/20 pt-2'
+                    )}
+                  >
                     {item.fromNavbar ? t(item.labelKey) : tProjects(item.labelKey)}
                   </Link>
                 </li>
