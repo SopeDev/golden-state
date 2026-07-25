@@ -1,6 +1,7 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import RequiredLabel from '@/components/ui/RequiredLabel'
@@ -8,9 +9,11 @@ import { adminSelectClassName } from '@/lib/adminFormClasses'
 import {
   EXPERIENCE_OPTIONS,
   INVESTMENT_RANGE_OPTIONS,
-  QUESTIONNAIRE_PROPERTY_TYPES,
+  LOCATION_OPTIONS,
+  defaultLocationFromLocale,
+  parseInvestorLocation,
 } from '@/lib/auth/investorProfileOptions'
-import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import { cn } from '@/lib/utils'
 
 const textareaClassName =
@@ -20,11 +23,31 @@ export default function ProfileQuestionnaireFields({
   errors = {},
   prefix = '',
   initialProjectTypes = [],
+  defaultLocation,
 }) {
   const t = useTranslations('Register')
-  const tProjects = useTranslations('Projects')
+  const locale = useLocale()
   const field = (name) => `${prefix}${name}`
   const selectedTypes = new Set(initialProjectTypes)
+  const [location, setLocation] = useState(
+    () => parseInvestorLocation(defaultLocation) || defaultLocationFromLocale(locale)
+  )
+  const [propertyTypes, setPropertyTypes] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/property-types')
+      .then((res) => (res.ok ? res.json() : { types: [] }))
+      .then((data) => {
+        if (!cancelled) setPropertyTypes(Array.isArray(data.types) ? data.types : [])
+      })
+      .catch(() => {
+        if (!cancelled) setPropertyTypes([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="space-y-8 border-t border-border pt-8">
@@ -51,6 +74,36 @@ export default function ProfileQuestionnaireFields({
             <Label htmlFor={field('referralSource')}>{t('referralSource')}</Label>
             <Input id={field('referralSource')} name="referralSource" />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <RequiredLabel htmlFor={field('location')}>{t('location')}</RequiredLabel>
+            <select
+              id={field('location')}
+              name="location"
+              required
+              className={adminSelectClassName()}
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+            >
+              {LOCATION_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`location_${value}`)}
+                </option>
+              ))}
+            </select>
+            {errors.location ? <p className="text-xs text-destructive">{t('errorRequired')}</p> : null}
+          </div>
+          {location === 'MX' ? (
+            <div className="sm:col-span-2">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/80 bg-background px-3 py-2.5 text-sm transition-colors hover:border-main-gold/40">
+                <input
+                  type="checkbox"
+                  name="interestedInInvestorVisa"
+                  className="mt-0.5"
+                />
+                <span>{t('interestedInInvestorVisa')}</span>
+              </label>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -103,22 +156,22 @@ export default function ProfileQuestionnaireFields({
               <p className="mt-1 text-xs text-muted-foreground">{t('projectTypesHint')}</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {QUESTIONNAIRE_PROPERTY_TYPES.map((type) => (
+              {propertyTypes.map((type) => (
                 <label
-                  key={type}
+                  key={type.id}
                   className={cn(
                     'flex cursor-pointer items-start gap-3 rounded-lg border border-border/80 bg-background px-3 py-2.5 text-sm transition-colors hover:border-main-gold/40',
-                    selectedTypes.has(type) && 'border-main-gold/50 bg-main-gold/5'
+                    selectedTypes.has(type.code) && 'border-main-gold/50 bg-main-gold/5'
                   )}
                 >
                   <input
                     type="checkbox"
                     name="projectTypes"
-                    value={type}
-                    defaultChecked={selectedTypes.has(type)}
+                    value={type.code}
+                    defaultChecked={selectedTypes.has(type.code)}
                     className="mt-0.5"
                   />
-                  <span>{tProjects(getPropertyTypeLabelKey(type))}</span>
+                  <span>{getPropertyTypeLabel(type, locale)}</span>
                 </label>
               ))}
             </div>

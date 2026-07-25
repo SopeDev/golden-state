@@ -2,6 +2,15 @@ import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import HomePage from '@/components/Home/HomePage'
 import { getHomeContent } from '@/lib/pageContent'
+import {
+  ACTIVE_PROPERTY_STATUSES,
+  listActivePropertyTypes,
+  notDeletedProperty,
+  propertyTypeInclude,
+  toClientProperties,
+  toClientPropertyType,
+} from '@/lib/projectTypes'
+import { attachFundingToProperties } from '@/lib/propertyFunding'
 
 const prisma = new PrismaClient()
 
@@ -20,22 +29,33 @@ export async function generateMetadata({ params }) {
 
 async function loadHomeData() {
   try {
-    const [liveOpportunities, completedDeals] = await Promise.all([
+    const [liveRaw, completedRaw, typesRaw] = await Promise.all([
       prisma.property.findMany({
-        where: { status: { in: ['PLANNING', 'IN_PROGRESS'] } },
+        where: { ...notDeletedProperty, status: { in: ACTIVE_PROPERTY_STATUSES } },
+        include: propertyTypeInclude,
         orderBy: { createdAt: 'desc' },
         take: LIVE_LIMIT,
       }),
       prisma.property.findMany({
-        where: { status: 'COMPLETED' },
+        where: { ...notDeletedProperty, status: 'COMPLETED' },
+        include: propertyTypeInclude,
         orderBy: { updatedAt: 'desc' },
         take: COMPLETED_LIMIT,
       }),
+      listActivePropertyTypes(prisma),
     ])
-    return { liveOpportunities, completedDeals }
+    const [liveOpportunities, completedDeals] = await Promise.all([
+      attachFundingToProperties(prisma, toClientProperties(liveRaw)),
+      attachFundingToProperties(prisma, toClientProperties(completedRaw)),
+    ])
+    return {
+      liveOpportunities,
+      completedDeals,
+      propertyTypes: typesRaw.map(toClientPropertyType),
+    }
   } catch (error) {
     console.error('Error loading home data:', error)
-    return { liveOpportunities: [], completedDeals: [] }
+    return { liveOpportunities: [], completedDeals: [], propertyTypes: [] }
   } finally {
     await prisma.$disconnect()
   }
@@ -43,7 +63,7 @@ async function loadHomeData() {
 
 export default async function Home({ params }) {
   const { locale } = await params
-  const [content, { liveOpportunities, completedDeals }] = await Promise.all([
+  const [content, homeData] = await Promise.all([
     getHomeContent(locale),
     loadHomeData(),
   ])
@@ -51,8 +71,9 @@ export default async function Home({ params }) {
   return (
     <HomePage
       content={content}
-      liveOpportunities={liveOpportunities}
-      completedDeals={completedDeals}
+      liveOpportunities={homeData.liveOpportunities}
+      completedDeals={homeData.completedDeals}
+      propertyTypes={homeData.propertyTypes}
     />
   )
 }

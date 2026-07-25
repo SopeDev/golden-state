@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import ProfileQuestionnaireFields from '@/components/auth/ProfileQuestionnaireFields'
 import { formToProfilePayload } from '@/lib/auth/formPayload'
 
-export default function CompleteProfileClient() {
+export default function CompleteProfileClient({ defaultLocation }) {
   const t = useTranslations('Account')
   const tRegister = useTranslations('Register')
   const locale = useLocale()
@@ -52,7 +52,7 @@ export default function CompleteProfileClient() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
-            <ProfileQuestionnaireFields errors={errors} />
+            <ProfileQuestionnaireFields errors={errors} defaultLocation={defaultLocation} />
             <p className="text-xs text-muted-foreground">{tRegister('requiredFieldsNote')}</p>
           </CardContent>
           <CardFooter className="border-t border-border bg-muted/30">

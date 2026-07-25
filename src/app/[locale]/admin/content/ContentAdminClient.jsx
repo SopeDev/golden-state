@@ -236,7 +236,6 @@ const HOME_SECTIONS = [
     keys: [
       'reasonsKicker',
       'reasonsTitle',
-      'reasonsSubtitle',
       ...Array.from({ length: 10 }, (_, i) => [`reason${i + 1}Title`, `reason${i + 1}Body`]).flat(),
     ],
   },

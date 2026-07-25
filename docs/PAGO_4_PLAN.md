@@ -106,7 +106,7 @@ Migration: `prisma/migrations/20260601120000_pago4_user_auth/`
 | `POST /api/admin/users/[id]/accredited-status` | Done |
 | `GET /api/admin/users/pending-count` | Done |
 
-Uploads (dev): `public/uploads/investors/{userId}/` — production-hardening in **Pago 6**.
+Uploads: Cloudflare R2 (private bucket for investor docs; public bucket for property images). Dev defaults to `public/uploads/` unless `STORAGE_DRIVER=r2`. See README “File storage (R2)”.
 
 ---
 

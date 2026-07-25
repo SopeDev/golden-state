@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client'
 import UsersAdminClient from './UsersAdminClient'
 import AdminNav from '../components/AdminNav'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { toClientInvestorDocuments } from '@/lib/storage/r2'
 
 const prisma = new PrismaClient()
 
@@ -31,10 +32,15 @@ export default async function UsersAdminPage() {
       },
     })
 
+    const usersForClient = users.map((user) => ({
+      ...user,
+      investorDocuments: toClientInvestorDocuments(user.investorDocuments),
+    }))
+
     return (
       <div className="flex-1 bg-background">
         <AdminNav />
-        <UsersAdminClient users={users} />
+        <UsersAdminClient users={usersForClient} />
       </div>
     )
   } catch (error) {

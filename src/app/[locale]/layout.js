@@ -1,5 +1,5 @@
 import { NextIntlClientProvider, hasLocale } from 'next-intl'
-import { setRequestLocale } from 'next-intl/server'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { getServerSession } from "next-auth"
@@ -9,7 +9,7 @@ import "./globals.css"
 
 import SessionProvider from "../components/SessionProvider"
 import NavMenuServer from "../components/NavMenuServer"
-import Footer from "../components/Footer"
+import FooterServer from "../components/FooterServer"
 
 export const metadata = {
   title: "Golden State - Capital Management",
@@ -33,18 +33,19 @@ export default async function RootLayout({ children, params }) {
   }
 
   setRequestLocale(locale)
+  const messages = await getMessages()
 
   return (
     <html lang={locale} className="h-full">
       <body className="flex min-h-full flex-col antialiased">
         <SessionProvider session={session}>
-          <NextIntlClientProvider locale={locale}>
+          <NextIntlClientProvider locale={locale} messages={messages}>
             <NavMenuServer session={session} />
             <main className="flex flex-1 flex-col pt-[76px]">
               <div id="content" className="flex flex-1 flex-col">
                 {children}
               </div>
-              <Footer />
+              <FooterServer />
             </main>
           </NextIntlClientProvider>
         </SessionProvider>

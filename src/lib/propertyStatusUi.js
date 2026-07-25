@@ -1,12 +1,22 @@
-export const PROPERTY_STATUS_VALUES = ['PLANNING', 'IN_PROGRESS', 'COMPLETED']
+export const PROPERTY_STATUS_VALUES = [
+  'FUNDING',
+  'FUNDED',
+  'PLANNING',
+  'IN_PROGRESS',
+  'COMPLETED',
+]
 
 const STATUS_BADGE_CLASS = {
+  FUNDING: 'border border-main-gold/50 bg-main-gold/10 text-main-gold',
+  FUNDED: 'bg-blue-600/15 text-blue-800 dark:text-blue-300',
   PLANNING: 'border border-border bg-transparent text-muted-foreground',
   IN_PROGRESS: 'bg-amber-500/15 text-amber-900 dark:text-amber-100',
   COMPLETED: 'bg-green-600/15 text-green-800 dark:text-green-400',
 }
 
 const STATUS_LABEL_KEY = {
+  FUNDING: 'funding',
+  FUNDED: 'funded',
   PLANNING: 'planning',
   IN_PROGRESS: 'inProgress',
   COMPLETED: 'completed',
@@ -17,12 +27,12 @@ export function isPropertyStatus(value) {
 }
 
 export function getPropertyStatusBadgeClass(status) {
-  return STATUS_BADGE_CLASS[status] || STATUS_BADGE_CLASS.IN_PROGRESS
+  return STATUS_BADGE_CLASS[status] || STATUS_BADGE_CLASS.FUNDING
 }
 
 /** Translation key under Projects.status.* or Admin.filter.* */
 export function getPropertyStatusLabelKey(status) {
-  return STATUS_LABEL_KEY[status] || 'inProgress'
+  return STATUS_LABEL_KEY[status] || 'funding'
 }
 
 export function clampProgressPercent(value) {
@@ -63,17 +73,24 @@ export function formatPropertyDate(value, locale = 'en') {
 
 /**
  * Normalize progress fields from an admin API body.
+ * Raise-phase statuses force construction progress to 0.
  * Auto-fills completedAt when status becomes COMPLETED and no date was provided.
  */
 export function resolvePropertyProgressFields(body, existing = null) {
   const status = isPropertyStatus(body.status)
     ? body.status
-    : existing?.status || 'IN_PROGRESS'
+    : existing?.status || 'FUNDING'
 
-  const progressPercent =
+  const isRaise = status === 'FUNDING' || status === 'FUNDED'
+
+  let progressPercent =
     body.progressPercent === undefined || body.progressPercent === null || body.progressPercent === ''
       ? existing?.progressPercent ?? (status === 'COMPLETED' ? 100 : 0)
       : clampProgressPercent(body.progressPercent)
+
+  if (isRaise) {
+    progressPercent = 0
+  }
 
   const startDate =
     body.startDate === undefined
@@ -96,7 +113,7 @@ export function resolvePropertyProgressFields(body, existing = null) {
 
   return {
     status,
-      progressPercent: status === 'COMPLETED' ? Math.max(progressPercent, 100) : progressPercent,
+    progressPercent: status === 'COMPLETED' ? Math.max(progressPercent, 100) : progressPercent,
     startDate,
     targetCompletionDate,
     completedAt,

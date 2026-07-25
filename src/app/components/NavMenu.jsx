@@ -1,25 +1,19 @@
 'use client'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import { resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
 import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
 
-const PROJECT_TYPE_LINKS = [
-  { href: '/projects/build-to-sell', projectsLabelKey: 'buildToSell' },
-  { href: '/projects/build-to-rent', projectsLabelKey: 'buildToRent' },
-  { href: '/projects/fliphouses', projectsLabelKey: 'fliphouse' },
-  { href: '/projects/mex-to-us', projectsLabelKey: 'mexToUs' },
-  { href: '/projects/us-to-mex', projectsLabelKey: 'usToMex' },
-]
-
-export default function NavMenu({ session: serverSession }) {
+export default function NavMenu({ session: serverSession, propertyTypes = [] }) {
   const t = useTranslations('Navbar')
   const tProjects = useTranslations('Projects')
+  const locale = useLocale()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: clientSession } = useSession()
   const user = clientSession?.user ?? serverSession?.user
@@ -27,12 +21,14 @@ export default function NavMenu({ session: serverSession }) {
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
   const myAccountHref = user ? '/dashboard/account' : '/login'
 
+  const projectTypeLinks = propertyTypes.map((type) => ({
+    href: `/projects/${type.slug}`,
+    text: getPropertyTypeLabel(type, locale),
+  }))
+
   const projectDropdownLinks = [
     { href: '/projects', text: t('allProjects') },
-    ...PROJECT_TYPE_LINKS.map((item) => ({
-      href: item.href,
-      text: tProjects(item.projectsLabelKey),
-    })),
+    ...projectTypeLinks,
     { divider: true },
     { href: '/projects/completed', text: tProjects('completed') },
   ]
@@ -150,10 +146,10 @@ export default function NavMenu({ session: serverSession }) {
           <Link href="/projects" onClick={() => setMenuOpen(false)}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('allProjects')}</div>
           </Link>
-          {PROJECT_TYPE_LINKS.map((item) => (
+          {projectTypeLinks.map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
               <div className="py-1 text-sm text-primary hover:text-secondary-blue">
-                {tProjects(item.projectsLabelKey)}
+                {item.text}
               </div>
             </Link>
           ))}

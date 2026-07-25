@@ -3,6 +3,18 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { resolvePropertyProgressFields } from '@/lib/propertyStatusUi'
+import {
+  assertCanEnterExecutionStatus,
+  assertCanSetFundedStatus,
+  withFundingFields,
+} from '@/lib/propertyFunding'
+import {
+  getPropertyTypeByCode,
+  getPropertyTypeById,
+  notDeletedProperty,
+  propertyTypeInclude,
+  toClientProperty,
+} from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
 const parseRequiredInt = (value, field) => {
@@ -21,11 +33,60 @@ const parseRequiredFloat = (value, field) => {
   return parsed
 }
 
+async function requireAdmin() {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user?.type !== 'ADMIN') {
+    return null
+  }
+  return session
+}
+
+/** Resolve a live (non-archived) property type from typeId (preferred) or a legacy type code. */
+async function resolvePropertyType(body) {
+  if (body.typeId) {
+    const type = await getPropertyTypeById(prisma, body.typeId)
+    if (!type) throw new Error('Property type not found')
+    if (type.deletedAt) throw new Error('Cannot assign an archived property type')
+    return type
+  }
+  if (body.type) {
+    const type = await getPropertyTypeByCode(prisma, body.type)
+    if (!type) throw new Error('Property type not found')
+    if (type.deletedAt) throw new Error('Cannot assign an archived property type')
+    return type
+  }
+  throw new Error('Missing required field: typeId')
+}
+
+export async function GET(request) {
+  try {
+    const session = await requireAdmin()
+    if (!session) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const includeArchived = searchParams.get('includeArchived') === '1'
+
+    const properties = await prisma.property.findMany({
+      where: includeArchived ? undefined : notDeletedProperty,
+      include: propertyTypeInclude,
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return NextResponse.json(properties.map(toClientProperty))
+  } catch (error) {
+    console.error('Error listing properties:', error)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session || session.user?.type !== 'ADMIN') {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -51,7 +112,6 @@ export async function POST(request) {
       'investmentId',
       'name',
       'slug',
-      'type',
       'city',
       'state',
       'address',
@@ -67,6 +127,13 @@ export async function POST(request) {
       if (!body[field]) {
         return NextResponse.json({ message: `Missing required field: ${field}` }, { status: 400 })
       }
+    }
+
+    let propertyType
+    try {
+      propertyType = await resolvePropertyType(body)
+    } catch (typeError) {
+      return NextResponse.json({ message: typeError.message }, { status: 400 })
     }
 
     let parsedFields
@@ -89,6 +156,23 @@ export async function POST(request) {
       return NextResponse.json({ message: 'estimatedMonths is required' }, { status: 400 })
     }
 
+    try {
+      if (progressFields.status === 'FUNDED') {
+        await assertCanSetFundedStatus(prisma, {
+          propertyId: null,
+          goalPrice: parsedFields.price,
+        })
+      }
+      await assertCanEnterExecutionStatus(prisma, {
+        propertyId: null,
+        nextStatus: progressFields.status,
+        goalPrice: parsedFields.price,
+        previousStatus: null,
+      })
+    } catch (fundingError) {
+      return NextResponse.json({ message: fundingError.message }, { status: 400 })
+    }
+
     const existingProperty = await prisma.property.findFirst({
       where: {
         OR: [{ investmentId: parsedFields.investmentId }, { slug: body.slug }],
@@ -107,7 +191,7 @@ export async function POST(request) {
         investmentId: parsedFields.investmentId,
         name: body.name,
         slug: body.slug,
-        type: body.type,
+        typeId: propertyType.id,
         status: progressFields.status,
         progressPercent: progressFields.progressPercent,
         startDate: progressFields.startDate,
@@ -126,9 +210,10 @@ export async function POST(request) {
         investmentDetails: investmentDetails,
         images: body.images || [],
       },
+      include: propertyTypeInclude,
     })
 
-    return NextResponse.json(property)
+    return NextResponse.json(withFundingFields(toClientProperty(property), 0))
   } catch (error) {
     console.error('Error creating property:', error)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })

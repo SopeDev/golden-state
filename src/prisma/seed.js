@@ -3,8 +3,79 @@ const { hash } = require('bcryptjs')
 
 const prisma = new PrismaClient()
 
+const PROPERTY_TYPES = [
+  {
+    code: 'BUILD_TO_SELL',
+    slug: 'build-to-sell',
+    labelEn: 'Build to Sell',
+    labelEs: 'Construir para Vender',
+    descriptionEn: 'Residential developments positioned for disposition and targeted returns.',
+    descriptionEs: 'Desarrollos residenciales orientados a la venta y retornos definidos.',
+    sortOrder: 1,
+  },
+  {
+    code: 'BUILD_TO_RENT',
+    slug: 'build-to-rent',
+    labelEn: 'Build to Rent',
+    labelEs: 'Construir para Rentar',
+    descriptionEn: 'Income-oriented projects designed for long-term rental performance.',
+    descriptionEs: 'Proyectos orientados a ingreso y desempeño de renta a largo plazo.',
+    sortOrder: 2,
+  },
+  {
+    code: 'FLIPHOUSE',
+    slug: 'fliphouses',
+    labelEn: 'Fliphouses',
+    labelEs: 'Fliphouses',
+    descriptionEn: 'Value-add acquisitions and renovations with defined execution timelines.',
+    descriptionEs: 'Adquisiciones y remodelaciones con plazos de ejecución definidos.',
+    sortOrder: 3,
+  },
+  {
+    code: 'MEX_TO_US',
+    slug: 'mex-to-us',
+    labelEn: 'MEX to US',
+    labelEs: 'MEX a US',
+    descriptionEn: 'Cross-border opportunities centered on Mexico-to-United States capital deployment.',
+    descriptionEs: 'Oportunidades cross-border centradas en capital de México hacia Estados Unidos.',
+    sortOrder: 4,
+  },
+  {
+    code: 'US_TO_MEX',
+    slug: 'us-to-mex',
+    labelEn: 'US to MEX',
+    labelEs: 'US a MEX',
+    descriptionEn: 'Cross-border opportunities centered on United States-to-Mexico capital deployment.',
+    descriptionEs: 'Oportunidades cross-border centradas en capital de Estados Unidos hacia México.',
+    sortOrder: 5,
+  },
+]
+
+async function ensurePropertyTypes() {
+  const typeIdByCode = {}
+  for (const type of PROPERTY_TYPES) {
+    const record = await prisma.propertyType.upsert({
+      where: { code: type.code },
+      create: type,
+      update: {
+        slug: type.slug,
+        labelEn: type.labelEn,
+        labelEs: type.labelEs,
+        descriptionEn: type.descriptionEn,
+        descriptionEs: type.descriptionEs,
+        sortOrder: type.sortOrder,
+      },
+    })
+    typeIdByCode[type.code] = record.id
+    console.log('✅ Property type ready:', record.code)
+  }
+  return typeIdByCode
+}
+
 async function main() {
   console.log('🌱 Starting database seed...')
+
+  const typeIdByCode = await ensurePropertyTypes()
 
   // Create admin user with hashed password
   const adminPassword = 'admin'
@@ -42,6 +113,8 @@ async function main() {
       profile: {
         fullName: 'Sample Investor',
         phone: '+1 619 555 0100',
+        location: 'US',
+        interestedInInvestorVisa: false,
         investmentGoals: 'Long-term income and appreciation across California and Baja.',
         experience: 'experienced',
         investmentRange: '100k_250k',
@@ -63,6 +136,8 @@ async function main() {
       profile: {
         fullName: 'Sample Investor',
         phone: '+1 619 555 0100',
+        location: 'US',
+        interestedInInvestorVisa: false,
         investmentGoals: 'Long-term income and appreciation across California and Baja.',
         experience: 'experienced',
         investmentRange: '100k_250k',
@@ -88,6 +163,8 @@ async function main() {
       profile: {
         fullName: 'Maria Santos',
         phone: '+1 619 555 0142',
+        location: 'MX',
+        interestedInInvestorVisa: true,
         investmentGoals: 'Diversified coastal and hospitality exposure.',
         experience: 'intermediate',
         investmentRange: '250k_500k',
@@ -109,6 +186,8 @@ async function main() {
       profile: {
         fullName: 'Maria Santos',
         phone: '+1 619 555 0142',
+        location: 'MX',
+        interestedInInvestorVisa: true,
         investmentGoals: 'Diversified coastal and hospitality exposure.',
         experience: 'intermediate',
         investmentRange: '250k_500k',
@@ -132,6 +211,8 @@ async function main() {
       profile: {
         fullName: 'James Okonkwo',
         phone: '+1 858 555 0198',
+        location: 'US',
+        interestedInInvestorVisa: false,
         investmentGoals: 'Cross-border industrial and build-to-sell projects.',
         experience: 'experienced',
         investmentRange: '500k_plus',
@@ -153,6 +234,8 @@ async function main() {
       profile: {
         fullName: 'James Okonkwo',
         phone: '+1 858 555 0198',
+        location: 'US',
+        interestedInInvestorVisa: false,
         investmentGoals: 'Cross-border industrial and build-to-sell projects.',
         experience: 'experienced',
         investmentRange: '500k_plus',
@@ -173,11 +256,12 @@ async function main() {
       investmentId: 1001,
       name: 'Hornblend Street Development',
       slug: 'hornblend-street-development',
-      type: 'BUILD_TO_SELL',
-      status: 'IN_PROGRESS',
-      progressPercent: 45,
-      startDate: new Date('2025-06-01'),
-      targetCompletionDate: new Date('2026-12-01'),
+      typeId: typeIdByCode.BUILD_TO_SELL,
+      status: 'FUNDING',
+      progressPercent: 0,
+      startDate: null,
+      targetCompletionDate: null,
+      completedAt: null,
       city: 'San Diego',
       state: 'CA',
       address: '2741 Hornblend St, San Diego, CA 92109',
@@ -211,10 +295,12 @@ async function main() {
       investmentId: 1002,
       name: 'Downtown LA Mixed-Use',
       slug: 'downtown-la-mixed-use',
-      type: 'BUILD_TO_RENT',
-      status: 'PLANNING',
-      progressPercent: 10,
-      targetCompletionDate: new Date('2027-06-01'),
+      typeId: typeIdByCode.BUILD_TO_RENT,
+      status: 'FUNDING',
+      progressPercent: 0,
+      startDate: null,
+      targetCompletionDate: null,
+      completedAt: null,
       city: 'Los Angeles',
       state: 'CA',
       address: '123 Main St, Los Angeles, CA 90012',
@@ -246,17 +332,18 @@ async function main() {
       investmentId: 1003,
       name: 'Pacific Flip — Claremont Villas',
       slug: 'pacific-flip-claremont-villas',
-      type: 'FLIPHOUSE',
-      status: 'IN_PROGRESS',
-      progressPercent: 62,
-      startDate: new Date('2025-09-15'),
-      targetCompletionDate: new Date('2026-08-01'),
+      typeId: typeIdByCode.FLIPHOUSE,
+      status: 'FUNDED',
+      progressPercent: 0,
+      startDate: null,
+      targetCompletionDate: null,
+      completedAt: null,
       city: 'San Diego',
       state: 'CA',
       address: '4100 Clairemont Mesa Blvd, San Diego, CA 92117',
-      price: 2100000,
+      price: 100000,
       unitCount: 2,
-      minInvestment: 75000,
+      minInvestment: 50000,
       estimatedROI: 5.8,
       estimatedMonths: '12-18',
       summary:
@@ -276,11 +363,12 @@ async function main() {
       investmentId: 1004,
       name: 'CrossBorder Logistics Park',
       slug: 'crossborder-logistics-park-mex-us',
-      type: 'MEX_TO_US',
-      status: 'IN_PROGRESS',
-      progressPercent: 28,
-      startDate: new Date('2025-03-01'),
-      targetCompletionDate: new Date('2028-03-01'),
+      typeId: typeIdByCode.MEX_TO_US,
+      status: 'FUNDING',
+      progressPercent: 0,
+      startDate: null,
+      targetCompletionDate: null,
+      completedAt: null,
       city: 'San Diego',
       state: 'CA',
       address: 'Near Otay Mesa POE, CA',
@@ -305,11 +393,12 @@ async function main() {
       investmentId: 1005,
       name: 'Baja Coastal Hospitality Co-Invest',
       slug: 'baja-coastal-hospitality-co-invest',
-      type: 'US_TO_MEX',
-      status: 'IN_PROGRESS',
-      progressPercent: 35,
-      startDate: new Date('2025-08-01'),
-      targetCompletionDate: new Date('2027-12-01'),
+      typeId: typeIdByCode.US_TO_MEX,
+      status: 'FUNDING',
+      progressPercent: 0,
+      startDate: null,
+      targetCompletionDate: null,
+      completedAt: null,
       city: 'Rosarito',
       state: 'BC',
       address: 'Km 38 Rosarito–Ensenada corridor',
@@ -334,7 +423,7 @@ async function main() {
       investmentId: 901,
       name: 'La Jolla Coastal Townhomes',
       slug: 'la-jolla-coastal-townhomes',
-      type: 'BUILD_TO_SELL',
+      typeId: typeIdByCode.BUILD_TO_SELL,
       status: 'COMPLETED',
       progressPercent: 100,
       startDate: new Date('2023-01-10'),
@@ -363,7 +452,7 @@ async function main() {
       investmentId: 902,
       name: 'Encinitas Coastal Flip Series',
       slug: 'encinitas-coastal-flip-series',
-      type: 'FLIPHOUSE',
+      typeId: typeIdByCode.FLIPHOUSE,
       status: 'COMPLETED',
       progressPercent: 100,
       startDate: new Date('2023-09-01'),
@@ -391,7 +480,7 @@ async function main() {
       investmentId: 903,
       name: 'Tijuana Riverfront Logistics',
       slug: 'tijuana-riverfront-logistics',
-      type: 'MEX_TO_US',
+      typeId: typeIdByCode.MEX_TO_US,
       status: 'COMPLETED',
       progressPercent: 100,
       startDate: new Date('2022-03-15'),
@@ -458,6 +547,19 @@ async function main() {
     if (!propertyId) {
       throw new Error(`Missing property for seed holding: ${holding.slug}`)
     }
+
+    const property = await prisma.property.findUnique({ where: { id: propertyId } })
+    const fundedAgg = await prisma.investment.aggregate({
+      where: { propertyId },
+      _sum: { amount: true },
+    })
+    const currentFunded = Number(fundedAgg._sum.amount || 0)
+    if (currentFunded + holding.amount > property.price + 1e-6) {
+      throw new Error(
+        `Seed holding would overfund ${holding.slug}: ${currentFunded + holding.amount} > ${property.price}`
+      )
+    }
+
     const investment = await prisma.investment.create({
       data: {
         userId: holding.userId,
@@ -466,6 +568,31 @@ async function main() {
       },
     })
     console.log(`✅ Holding: user ${holding.userId} → ${holding.slug} ($${investment.amount})`)
+  }
+
+  // Auto FUNDING → FUNDED when capital meets goal
+  for (const slug of Object.keys(propertyBySlug)) {
+    const propertyId = propertyBySlug[slug]
+    const property = await prisma.property.findUnique({ where: { id: propertyId } })
+    if (!property || (property.status !== 'FUNDING' && property.status !== 'FUNDED')) continue
+    const fundedAgg = await prisma.investment.aggregate({
+      where: { propertyId },
+      _sum: { amount: true },
+    })
+    const funded = Number(fundedAgg._sum.amount || 0)
+    const fullyFunded = property.price > 0 && funded >= property.price - 1e-6
+    if (property.status === 'FUNDING' && fullyFunded) {
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'FUNDED', progressPercent: 0 },
+      })
+      console.log(`✅ Auto-funded status: ${slug}`)
+    } else if (property.status === 'FUNDED' && !fullyFunded) {
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'FUNDING' },
+      })
+    }
   }
 
   console.log('\n🎉 Database seeding completed successfully!')

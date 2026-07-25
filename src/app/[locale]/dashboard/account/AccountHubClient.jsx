@@ -14,18 +14,18 @@ import { getAccreditedStatusBadgeClass, getAccountStatusBadgeClass } from '@/lib
 import RequestReviewButton from '@/components/invest/RequestReviewButton'
 import { getFieldLabelKeyForKind, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 
-const formatDocKind = (kind) =>
-  kind
-    ?.replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase()) || '—'
-
 export default function AccountHubClient() {
   const t = useTranslations('MyAccount')
   const tInvest = useTranslations('Invest')
   const { data: session, update } = useSession()
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  const formatDocKind = (kind) => {
+    const labelKey = getFieldLabelKeyForKind(kind)
+    if (labelKey && tInvest.has(labelKey)) return tInvest(labelKey)
+    return kind?.replace(/_/g, ' ') || '—'
+  }
 
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '' })
   const [profileErrors, setProfileErrors] = useState({})

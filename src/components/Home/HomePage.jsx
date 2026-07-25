@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   ShieldCheck,
   Globe2,
@@ -21,15 +21,25 @@ import {
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
+import { getPropertyTypeDescription, getPropertyTypeLabel } from '@/lib/propertyTypes'
 
-const STRATEGY_CARDS = [
-  { key: 'BuildToSell', slug: 'build-to-sell', Icon: Building2 },
-  { key: 'BuildToRent', slug: 'build-to-rent', Icon: LayoutDashboard },
-  { key: 'Fliphouse', slug: 'fliphouses', Icon: Hammer },
-  { key: 'MexToUs', slug: 'mex-to-us', Icon: Globe2 },
-  { key: 'UsToMex', slug: 'us-to-mex', Icon: Globe2 },
-]
+const STRATEGY_ICON_BY_SLUG = {
+  'build-to-sell': Building2,
+  'build-to-rent': LayoutDashboard,
+  fliphouses: Hammer,
+  'mex-to-us': Globe2,
+  'us-to-mex': Globe2,
+}
+
+/** Optional Home content overrides keyed by slug for seeded types. */
+const STRATEGY_CONTENT_KEY_BY_SLUG = {
+  'build-to-sell': 'BuildToSell',
+  'build-to-rent': 'BuildToRent',
+  fliphouses: 'Fliphouse',
+  'mex-to-us': 'MexToUs',
+  'us-to-mex': 'UsToMex',
+}
 
 const REASON_ICONS = [TrendingUp, Sparkles, CheckCircle2, Users, ScrollText, LayoutDashboard, Globe2, HandshakeIcon, ShieldCheck, BarChart3]
 
@@ -325,8 +335,9 @@ function HomeWhyUs({ content }) {
   )
 }
 
-function HomeStrategies({ content }) {
+function HomeStrategies({ content, propertyTypes = [] }) {
   const tProjects = useTranslations('Projects')
+  const locale = useLocale()
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-20">
@@ -343,14 +354,20 @@ function HomeStrategies({ content }) {
       </div>
 
       <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {STRATEGY_CARDS.map(({ key, slug, Icon }) => {
-          const title = content[`strategy${key}Title`]
-          const timeline = content[`strategy${key}Timeline`]
-          const body = content[`strategy${key}Body`]
-          if (!title) return null
+        {propertyTypes.map((type) => {
+          const contentKey = STRATEGY_CONTENT_KEY_BY_SLUG[type.slug]
+          const title =
+            (contentKey && content[`strategy${contentKey}Title`]) ||
+            getPropertyTypeLabel(type, locale)
+          const timeline = contentKey ? content[`strategy${contentKey}Timeline`] : null
+          const body =
+            (contentKey && content[`strategy${contentKey}Body`]) ||
+            getPropertyTypeDescription(type, locale)
+          const Icon = STRATEGY_ICON_BY_SLUG[type.slug] || Building2
+
           return (
             <Card
-              key={slug}
+              key={type.id}
               className="group flex h-full flex-col gap-4 border-border/80 bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-center justify-between gap-3">
@@ -366,7 +383,7 @@ function HomeStrategies({ content }) {
               <h3 className="font-heading text-xl font-semibold text-primary">{title}</h3>
               {body ? <p className="text-sm leading-relaxed text-muted-foreground">{body}</p> : null}
               <Link
-                href={`/projects/${slug}`}
+                href={`/projects/${type.slug}`}
                 className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-blue transition-colors hover:text-main-gold"
               >
                 {tProjects('browseProjects')}
@@ -400,6 +417,7 @@ function HomeStrategies({ content }) {
 
 function HomeLiveOpportunities({ content, liveOpportunities }) {
   const tProjects = useTranslations('Projects')
+  const locale = useLocale()
 
   return (
     <section className="border-t border-border bg-muted/30">
@@ -423,7 +441,7 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
         ) : (
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {liveOpportunities.map((property) => {
-              const typeKey = getPropertyTypeLabelKey(property.type)
+              const typeLabel = resolvePropertyTypeLabel(property, locale)
               return (
                 <Card
                   key={property.id}
@@ -446,7 +464,7 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
                         getPropertyTypeBadgeClass(property.type)
                       )}
                     >
-                      {tProjects(typeKey)}
+                      {typeLabel}
                     </span>
                   </Link>
                   <CardContent className="flex flex-1 flex-col gap-4 p-5">
@@ -629,11 +647,6 @@ function HomeReasons({ content }) {
           <h2 className="font-heading mt-3 text-3xl font-semibold text-primary md:text-4xl">
             {content.reasonsTitle}
           </h2>
-          {content.reasonsSubtitle ? (
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
-              {content.reasonsSubtitle}
-            </p>
-          ) : null}
         </div>
 
         <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -661,6 +674,7 @@ function HomeReasons({ content }) {
 
 function HomeTrackRecord({ content, completedDeals }) {
   const tProjects = useTranslations('Projects')
+  const locale = useLocale()
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-20">
@@ -685,7 +699,7 @@ function HomeTrackRecord({ content, completedDeals }) {
       ) : (
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {completedDeals.map((property) => {
-            const typeKey = getPropertyTypeLabelKey(property.type)
+            const typeLabel = resolvePropertyTypeLabel(property, locale)
             return (
               <Card
                 key={property.id}
@@ -705,7 +719,7 @@ function HomeTrackRecord({ content, completedDeals }) {
                       getPropertyTypeBadgeClass(property.type)
                     )}
                   >
-                    {tProjects(typeKey)}
+                    {typeLabel}
                   </span>
                 </div>
                 <CardContent className="space-y-4 p-5">
@@ -854,14 +868,19 @@ function HomeFinalCta({ content }) {
   )
 }
 
-export default function HomePage({ content, liveOpportunities = [], completedDeals = [] }) {
+export default function HomePage({
+  content,
+  liveOpportunities = [],
+  completedDeals = [],
+  propertyTypes = [],
+}) {
   return (
     <div className="flex-1 bg-background text-foreground">
       <HomeHero content={content} statsLayout={HOME_STATS_LAYOUT} />
       <HomeStats content={content} layout={HOME_STATS_LAYOUT} />
       <HomeWhatIs content={content} />
       <HomeWhyUs content={content} />
-      <HomeStrategies content={content} />
+      <HomeStrategies content={content} propertyTypes={propertyTypes} />
       <HomeLiveOpportunities content={content} liveOpportunities={liveOpportunities} />
       <HomeHowItWorks content={content} />
       <HomeReasons content={content} />

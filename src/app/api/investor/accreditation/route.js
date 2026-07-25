@@ -2,13 +2,16 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
-import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 
 import { INVESTOR_DOCUMENT_KIND_MAP } from '@/lib/investorDocumentFields'
 import { notifyAdminsAccreditationSubmitted } from '@/lib/email/adminNotify'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
 import { parseResubmitKinds } from '@/lib/investorDocumentResubmit'
+import {
+  putPrivateObject,
+  toClientInvestorDocuments,
+} from '@/lib/storage/r2'
 
 const prisma = new PrismaClient()
 
@@ -46,7 +49,13 @@ export async function GET() {
         investorDocuments: { orderBy: { uploadedAt: 'desc' } },
       },
     })
-    return NextResponse.json(user)
+    if (!user) {
+      return NextResponse.json({ message: 'Not found' }, { status: 404 })
+    }
+    return NextResponse.json({
+      ...user,
+      investorDocuments: toClientInvestorDocuments(user.investorDocuments),
+    })
   } finally {
     await prisma.$disconnect()
   }
@@ -79,9 +88,6 @@ export async function POST(request) {
     const resubmitKinds = parseResubmitKinds(existingUser?.accreditationResubmitKinds)
     const isPartialResubmit = resubmitKinds.length > 0
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'investors', String(userId))
-    await mkdir(uploadDir, { recursive: true })
-
     const createdDocs = []
     const entries = Object.entries(KIND_MAP).filter(([, kind]) =>
       isPartialResubmit ? resubmitKinds.includes(kind) : true
@@ -100,15 +106,19 @@ export async function POST(request) {
 
       const ext = path.extname(file.name) || '.bin'
       const filename = `${field}-${Date.now()}-${sanitizeBaseName(file.name)}${ext}`
+      const objectKey = `investors/${userId}/${filename}`
       const buffer = Buffer.from(await file.arrayBuffer())
-      await writeFile(path.join(uploadDir, filename), buffer)
-      const fileUrl = `/uploads/investors/${userId}/${filename}`
+      await putPrivateObject({
+        key: objectKey,
+        body: buffer,
+        contentType: file.type,
+      })
 
       const doc = await prisma.investorDocument.create({
         data: {
           userId,
           kind,
-          fileUrl,
+          fileUrl: objectKey,
           fileName: file.name,
           mimeType: file.type,
         },

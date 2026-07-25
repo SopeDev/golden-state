@@ -1,7 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from './ProjectsClient'
-import { ACTIVE_PROPERTY_STATUSES } from '@/lib/projectTypes'
+import {
+  ACTIVE_PROPERTY_STATUSES,
+  notDeletedProperty,
+  propertyTypeInclude,
+  toClientProperties,
+} from '@/lib/projectTypes'
+import { attachFundingToProperties } from '@/lib/propertyFunding'
 
 const prisma = new PrismaClient()
 
@@ -17,14 +23,17 @@ export async function generateMetadata({ params }) {
 
 async function getProperties() {
   try {
-    return await prisma.property.findMany({
+    const properties = await prisma.property.findMany({
       where: {
+        ...notDeletedProperty,
         status: { in: ACTIVE_PROPERTY_STATUSES },
       },
+      include: propertyTypeInclude,
       orderBy: {
         createdAt: 'desc',
       },
     })
+    return attachFundingToProperties(prisma, toClientProperties(properties))
   } catch (error) {
     console.error('Error fetching properties:', error)
     return []

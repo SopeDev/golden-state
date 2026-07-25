@@ -1,7 +1,13 @@
 import { getServerSession } from 'next-auth'
+import { getLocale } from 'next-intl/server'
+import { headers } from 'next/headers'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { needsEmailVerification } from '@/lib/auth/userStatus'
+import {
+  getRequestCountryCode,
+  resolveDefaultInvestorLocation,
+} from '@/lib/auth/investorProfileOptions'
 import CompleteProfileClient from './CompleteProfileClient'
 
 export default async function CompleteProfilePage() {
@@ -16,5 +22,12 @@ export default async function CompleteProfilePage() {
     await redirect(session.user.accountStatus === 'ACTIVE' ? '/dashboard' : '/account/pending')
   }
 
-  return <CompleteProfileClient />
+  const locale = await getLocale()
+  const requestHeaders = await headers()
+  const defaultLocation = resolveDefaultInvestorLocation({
+    locale,
+    countryCode: getRequestCountryCode(requestHeaders),
+  })
+
+  return <CompleteProfileClient defaultLocation={defaultLocation} />
 }

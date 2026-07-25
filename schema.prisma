@@ -103,12 +103,30 @@ model InvestmentIntent {
   @@unique([userId, propertyId])
 }
 
+model PropertyType {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  slug           String    @unique
+  labelEn        String
+  labelEs        String
+  descriptionEn  String    @default("")
+  descriptionEs  String    @default("")
+  sortOrder      Int       @default(0)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  properties Property[]
+
+  @@map("property_types")
+}
+
 model Property {
-  id               String         @id @default(cuid())
-  investmentId     Int            @unique
+  id               String @id @default(cuid())
+  investmentId     Int    @unique
   name             String
-  slug             String         @unique
-  type             PropertyType
+  slug             String @unique
+  typeId           String
   city             String
   state            String
   address          String
@@ -123,31 +141,55 @@ model Property {
   investmentDetails Json
   images            String[]
 
-  status               PropertyStatus @default(IN_PROGRESS)
+  status               PropertyStatus @default(FUNDING)
   progressPercent      Int            @default(0)
   startDate            DateTime?
   targetCompletionDate DateTime?
   completedAt          DateTime?
+  deletedAt            DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  propertyType      PropertyType       @relation(fields: [typeId], references: [id])
   investments       Investment[]
   investmentIntents InvestmentIntent[]
-}
+  documents         PropertyDocument[]
 
-enum PropertyType {
-  BUILD_TO_SELL
-  BUILD_TO_RENT
-  FLIPHOUSE
-  MEX_TO_US
-  US_TO_MEX
+  @@index([deletedAt])
+  @@index([typeId])
 }
 
 enum PropertyStatus {
+  FUNDING
+  FUNDED
   PLANNING
   IN_PROGRESS
   COMPLETED
+}
+
+enum PropertyDocumentKind {
+  CONSTRUCTION_PHOTOS
+  CONTRACT
+  FINANCIAL_REPORT
+  PERMIT
+  PROGRESS_UPDATE
+  OTHER
+}
+
+model PropertyDocument {
+  id           String               @id @default(cuid())
+  propertyId   String
+  kind         PropertyDocumentKind
+  storageKey   String
+  fileName     String
+  mimeType     String
+  uploadedAt   DateTime             @default(now())
+  uploadedById Int?
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, kind, uploadedAt])
 }
 
 model Investment {

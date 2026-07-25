@@ -34,6 +34,18 @@ export async function notifyAdminsInvestorPendingApproval({ investor, locale = '
   const email = escapeHtml(investor.email)
   const investmentRange = escapeHtml(profile.investmentRange || '—')
   const investmentGoals = escapeHtml(profile.investmentGoals || '—')
+  const locationLabel =
+    profile.location === 'MX' ? (locale === 'es' ? 'México' : 'Mexico') : profile.location === 'US' ? (locale === 'es' ? 'Estados Unidos' : 'United States') : '—'
+  const visaInterest =
+    profile.location === 'MX'
+      ? profile.interestedInInvestorVisa
+        ? locale === 'es'
+          ? 'Sí'
+          : 'Yes'
+        : locale === 'es'
+          ? 'No'
+          : 'No'
+      : null
   const projectTypes = escapeHtml(
     Array.isArray(profile.projectTypes) ? profile.projectTypes.join(', ') : '—'
   )
@@ -49,6 +61,8 @@ export async function notifyAdminsInvestorPendingApproval({ investor, locale = '
 <ul>
 <li><strong>Nombre:</strong> ${name}</li>
 <li><strong>Correo:</strong> ${email}</li>
+<li><strong>Ubicación:</strong> ${escapeHtml(locationLabel)}</li>
+${visaInterest ? `<li><strong>Visa de inversionista:</strong> ${visaInterest}</li>` : ''}
 <li><strong>Monto planeado:</strong> ${investmentRange}</li>
 <li><strong>Objetivos:</strong> ${investmentGoals}</li>
 <li><strong>Tipos de proyecto:</strong> ${projectTypes}</li>
@@ -58,6 +72,8 @@ export async function notifyAdminsInvestorPendingApproval({ investor, locale = '
 <ul>
 <li><strong>Name:</strong> ${name}</li>
 <li><strong>Email:</strong> ${email}</li>
+<li><strong>Location:</strong> ${escapeHtml(locationLabel)}</li>
+${visaInterest ? `<li><strong>Investor Visa interest:</strong> ${visaInterest}</li>` : ''}
 <li><strong>Planned investment:</strong> ${investmentRange}</li>
 <li><strong>Goals:</strong> ${investmentGoals}</li>
 <li><strong>Project interests:</strong> ${projectTypes}</li>

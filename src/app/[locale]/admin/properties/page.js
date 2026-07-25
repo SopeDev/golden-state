@@ -7,26 +7,45 @@ import PropertiesAdminClient from './PropertiesAdminClient'
 import AdminNav from '../components/AdminNav'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+import { attachFundingToProperties } from '@/lib/propertyFunding'
+import {
+  listAllPropertyTypes,
+  notDeletedProperty,
+  propertyTypeInclude,
+  toClientProperties,
+  toClientPropertyType,
+} from '@/lib/propertyTypes'
+
 const prisma = new PrismaClient()
 
-export default async function PropertiesAdminPage() {
+export default async function PropertiesAdminPage({ searchParams }) {
   const t = await getTranslations('Admin.properties')
   const session = await getServerSession(authOptions)
-  
+  const { includeArchived } = (await searchParams) || {}
+
   // Redirect if not authenticated as admin
   if (!session || session.user?.type !== 'ADMIN') {
     await redirect('/')
   }
 
   try {
-    const properties = await prisma.property.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
+    const [properties, propertyTypes] = await Promise.all([
+      prisma.property.findMany({
+        where: includeArchived === '1' ? undefined : notDeletedProperty,
+        include: propertyTypeInclude,
+        orderBy: { createdAt: 'desc' },
+      }),
+      listAllPropertyTypes(prisma, { includeDeleted: true }),
+    ])
+    const withFunding = await attachFundingToProperties(prisma, toClientProperties(properties))
 
     return (
       <div className="flex-1 bg-background">
         <AdminNav />
-        <PropertiesAdminClient properties={properties} />
+        <PropertiesAdminClient
+          properties={withFunding}
+          propertyTypes={propertyTypes.map(toClientPropertyType)}
+        />
       </div>
     )
   } catch (error) {

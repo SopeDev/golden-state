@@ -31,6 +31,8 @@ const buildInitialState = (user) => ({
 const PROFILE_FIELD_KEYS = [
   'fullName',
   'phone',
+  'location',
+  'interestedInInvestorVisa',
   'referralSource',
   'investmentRange',
   'investmentGoals',
@@ -39,12 +41,23 @@ const PROFILE_FIELD_KEYS = [
   'background',
 ]
 
-const formatProfileValue = (key, profile, tRegister) => {
+const formatProfileValue = (key, profile, tRegister, projectTypeLabelByCode) => {
   if (key === 'projectTypes') {
-    return formatProjectTypesForDisplay(profile.projectTypes)
+    return formatProjectTypesForDisplay(profile.projectTypes, projectTypeLabelByCode)
+  }
+  if (key === 'interestedInInvestorVisa') {
+    if (profile.location !== 'MX') return null
+    return profile.interestedInInvestorVisa ? tRegister('yes') : tRegister('no')
   }
   const value = profile[key]
   if (!value) return null
+  if (key === 'location') {
+    try {
+      return tRegister(`location_${value}`)
+    } catch {
+      return String(value)
+    }
+  }
   if (key === 'investmentRange') {
     try {
       return tRegister(`range_${value}`)
@@ -99,6 +112,26 @@ export default function UserEditor({
   const [reviewNote, setReviewNote] = useState('')
   const [selectedResubmitKinds, setSelectedResubmitKinds] = useState([])
   const [actionLoading, setActionLoading] = useState(false)
+  const [projectTypeLabelByCode, setProjectTypeLabelByCode] = useState({})
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/property-types')
+      .then((res) => (res.ok ? res.json() : { types: [] }))
+      .then((data) => {
+        if (cancelled) return
+        const types = Array.isArray(data.types) ? data.types : []
+        setProjectTypeLabelByCode(
+          Object.fromEntries(types.map((type) => [type.code, type.labelEn]))
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setProjectTypeLabelByCode({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialState(user))
@@ -382,7 +415,7 @@ export default function UserEditor({
           <AdminFormSection title={t('users.questionnaire')}>
             <dl className="grid gap-3 text-sm md:grid-cols-2">
               {PROFILE_FIELD_KEYS.map((key) => {
-                const display = formatProfileValue(key, profile, tRegister)
+                const display = formatProfileValue(key, profile, tRegister, projectTypeLabelByCode)
                 if (!display) return null
                 return (
                   <div

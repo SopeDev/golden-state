@@ -1,7 +1,21 @@
 /**
- * URL slugs under /projects/[slug] and legacy redirect targets.
+ * Project listing helpers. Property type catalog lives in `propertyTypes.js`.
  */
 
+export {
+  COMPLETED_PROJECTS_SLUG,
+  ACTIVE_PROPERTY_STATUSES,
+  isCompletedProjectsSlug,
+  notDeletedProperty,
+  propertyTypeInclude,
+  getPropertyTypeBySlug,
+  listActivePropertyTypes,
+  toClientProperty,
+  toClientProperties,
+  toClientPropertyType,
+} from '@/lib/propertyTypes'
+
+/** @deprecated Prefer listActivePropertyTypes() — kept for static redirects only */
 export const PROJECT_FILTER_SLUGS = [
   'build-to-sell',
   'build-to-rent',
@@ -10,12 +24,7 @@ export const PROJECT_FILTER_SLUGS = [
   'us-to-mex',
 ]
 
-export const COMPLETED_PROJECTS_SLUG = 'completed'
-
-/** Active (non-completed) listings shown on /projects and type filters */
-export const ACTIVE_PROPERTY_STATUSES = ['PLANNING', 'IN_PROGRESS']
-
-/** @type {Record<string, import('@prisma/client').PropertyType>} */
+/** @deprecated Prefer DB property types */
 export const slugToPropertyType = {
   'build-to-sell': 'BUILD_TO_SELL',
   'build-to-rent': 'BUILD_TO_RENT',
@@ -24,7 +33,7 @@ export const slugToPropertyType = {
   'us-to-mex': 'US_TO_MEX',
 }
 
-/** @type {Record<import('@prisma/client').PropertyType, string>} */
+/** @deprecated Prefer DB property types */
 export const propertyTypeToSlug = {
   BUILD_TO_SELL: 'build-to-sell',
   BUILD_TO_RENT: 'build-to-rent',
@@ -34,7 +43,7 @@ export const propertyTypeToSlug = {
 }
 
 /**
- * i18n key under Projects.headers.* (camelCase segment, no "headers." prefix)
+ * Legacy i18n header keys for seeded types. New types use DB labels/descriptions.
  */
 export const slugToHeaderKey = {
   'build-to-sell': 'buildToSell',
@@ -45,10 +54,6 @@ export const slugToHeaderKey = {
   completed: 'completed',
 }
 
-export function isValidProjectFilterSlug(slug) {
-  return PROJECT_FILTER_SLUGS.includes(slug) || slug === COMPLETED_PROJECTS_SLUG
-}
-
-export function isCompletedProjectsSlug(slug) {
-  return slug === COMPLETED_PROJECTS_SLUG
+export function isValidProjectFilterSlug(slug, activeSlugs = PROJECT_FILTER_SLUGS) {
+  return activeSlugs.includes(slug) || slug === COMPLETED_PROJECTS_SLUG
 }

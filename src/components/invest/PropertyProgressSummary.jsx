@@ -7,6 +7,7 @@ import {
   getPropertyStatusBadgeClass,
   getPropertyStatusLabelKey,
 } from '@/lib/propertyStatusUi'
+import { isRaisePhaseStatus } from '@/lib/propertyFunding'
 
 function ThinProgressBar({ percent, className }) {
   const clamped = Math.min(100, Math.max(0, percent))
@@ -30,7 +31,7 @@ function StatusBadge({ status, label }) {
   return (
     <span
       className={cn(
-        'inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide',
+        'inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide',
         getPropertyStatusBadgeClass(status)
       )}
     >
@@ -53,7 +54,6 @@ function MetaLines({
     ? t('estimatedDurationValue', { months: estimatedMonths })
     : null
 
-  // Prefer concrete dates over underwriting duration when both exist.
   const hasTargetOrCompleted = Boolean(
     (showDates && targetLabel && !completedLabel) || (showDates && completedLabel)
   )
@@ -92,10 +92,16 @@ function MetaLines({
   )
 }
 
+function formatMoney(amount, locale) {
+  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(Number(amount) || 0)
+}
+
 /**
  * @param {'tile' | 'inline'} [variant='inline']
- * tile — property-detail sidebar metric tiles
- * inline — project cards / portfolio rows
  */
 export default function PropertyProgressSummary({
   property,
@@ -107,11 +113,22 @@ export default function PropertyProgressSummary({
 }) {
   const t = useTranslations('Projects')
   const locale = useLocale()
-  const status = property?.status || 'IN_PROGRESS'
+  const status = property?.status || 'FUNDING'
+  const isRaise = isRaisePhaseStatus(status)
   const isCompleted = status === 'COMPLETED'
-  const percent = Number.isFinite(property?.progressPercent)
+  const isFunded = status === 'FUNDED'
+
+  const constructionPercent = Number.isFinite(property?.progressPercent)
     ? property.progressPercent
     : isCompleted
+      ? 100
+      : 0
+
+  const fundedAmount = Number(property?.fundedAmount) || 0
+  const goal = Number(property?.investmentGoal ?? property?.price) || 0
+  const fundingPercent = Number.isFinite(property?.fundingPercent)
+    ? property.fundingPercent
+    : isFunded
       ? 100
       : 0
 
@@ -123,29 +140,46 @@ export default function PropertyProgressSummary({
     ? String(property.estimatedMonths).trim()
     : ''
 
+  const meterPercent = isRaise ? fundingPercent : constructionPercent
+  const showMeter = isRaise || !isCompleted
+  const fundingCaption =
+    goal > 0
+      ? t('fundingRaisedOfGoal', {
+          raised: formatMoney(fundedAmount, locale),
+          goal: formatMoney(goal, locale),
+        })
+      : null
+
   if (variant === 'tile') {
     return (
       <div className={cn('rounded-lg bg-muted/50 p-4 text-center', className)}>
         <p className="text-sm text-muted-foreground">{t('statusLabel')}</p>
         <p className="mt-1 font-heading text-2xl font-semibold text-primary">{statusLabel}</p>
 
-        {!isCompleted ? (
+        {showMeter ? (
           <div className="mx-auto mt-3 max-w-[12rem] space-y-2">
-            <p className="text-lg font-semibold tabular-nums text-main-gold">{percent}%</p>
-            <ThinProgressBar percent={percent} />
+            <p className="text-lg font-semibold tabular-nums text-main-gold">
+              {isRaise ? t('fundingPercent', { percent: meterPercent }) : `${meterPercent}%`}
+            </p>
+            <ThinProgressBar percent={meterPercent} />
+            {isRaise && fundingCaption ? (
+              <p className="text-xs text-muted-foreground">{fundingCaption}</p>
+            ) : null}
           </div>
         ) : null}
 
-        <MetaLines
-          startLabel={startLabel}
-          targetLabel={targetLabel}
-          completedLabel={completedLabel}
-          estimatedMonths={estimatedMonths}
-          showDates={showDates}
-          showDuration={showDuration}
-          t={t}
-          className="mt-3"
-        />
+        {!isRaise ? (
+          <MetaLines
+            startLabel={startLabel}
+            targetLabel={targetLabel}
+            completedLabel={completedLabel}
+            estimatedMonths={estimatedMonths}
+            showDates={showDates}
+            showDuration={showDuration}
+            t={t}
+            className="mt-3"
+          />
+        ) : null}
       </div>
     )
   }
@@ -154,22 +188,30 @@ export default function PropertyProgressSummary({
     <div className={cn('space-y-2', className)}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={status} label={statusLabel} />
-        {!isCompleted ? (
-          <span className="text-xs tabular-nums text-muted-foreground">{percent}%</span>
+        {showMeter ? (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {isRaise ? t('fundingPercent', { percent: meterPercent }) : `${meterPercent}%`}
+          </span>
         ) : null}
       </div>
 
-      {!isCompleted ? <ThinProgressBar percent={percent} /> : null}
+      {showMeter ? <ThinProgressBar percent={meterPercent} /> : null}
 
-      <MetaLines
-        startLabel={startLabel}
-        targetLabel={targetLabel}
-        completedLabel={completedLabel}
-        estimatedMonths={estimatedMonths}
-        showDates={showDates}
-        showDuration={showDuration}
-        t={t}
-      />
+      {isRaise && fundingCaption && !compact ? (
+        <p className="text-xs text-muted-foreground">{fundingCaption}</p>
+      ) : null}
+
+      {!isRaise ? (
+        <MetaLines
+          startLabel={startLabel}
+          targetLabel={targetLabel}
+          completedLabel={completedLabel}
+          estimatedMonths={estimatedMonths}
+          showDates={showDates}
+          showDuration={showDuration}
+          t={t}
+        />
+      ) : null}
     </div>
   )
 }

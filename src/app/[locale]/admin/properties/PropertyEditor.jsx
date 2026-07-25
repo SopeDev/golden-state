@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,20 +17,14 @@ import {
   looksLikeIntegerString,
   parseFormattedInteger,
 } from '@/lib/admin/numberFormat'
-import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeLabel } from '@/lib/propertyTypes'
+import AdminPropertyDocuments from '@/components/invest/AdminPropertyDocuments'
 import {
   PROPERTY_STATUS_VALUES,
   getPropertyStatusLabelKey,
   toDateInputValue,
 } from '@/lib/propertyStatusUi'
-
-const PROPERTY_TYPE_OPTIONS = [
-  'BUILD_TO_SELL',
-  'BUILD_TO_RENT',
-  'FLIPHOUSE',
-  'MEX_TO_US',
-  'US_TO_MEX',
-]
+import { isRaisePhaseStatus } from '@/lib/propertyFunding'
 
 const keyToLabel = (key) => {
   if (!key) return ''
@@ -122,12 +116,12 @@ const rowsToObject = (rows) => {
   }, {})
 }
 
-const buildInitialFormData = (property) => ({
+const buildInitialFormData = (property, propertyTypes = []) => ({
   investmentId: property?.investmentId || '',
   name: property?.name || '',
   slug: property?.slug || '',
-  type: property?.type || 'BUILD_TO_SELL',
-  status: property?.status || 'IN_PROGRESS',
+  typeId: property?.typeId || propertyTypes[0]?.id || '',
+  status: property?.status || 'FUNDING',
   progressPercent:
     property?.progressPercent ?? (property?.status === 'COMPLETED' ? 100 : 0),
   startDate: toDateInputValue(property?.startDate),
@@ -244,6 +238,7 @@ function KeyValueRow({ row, onChange, onRemove, placeholders }) {
 
 export default function PropertyEditor({
   property,
+  propertyTypes = [],
   isCreating,
   isLoading,
   onSubmit,
@@ -253,8 +248,8 @@ export default function PropertyEditor({
   const t = useTranslations('Admin.properties.editor')
   const tc = useTranslations('Admin.common')
   const tf = useTranslations('Admin.filter')
-  const tProjects = useTranslations('Projects')
-  const [formData, setFormData] = useState(() => buildInitialFormData(property))
+  const locale = useLocale()
+  const [formData, setFormData] = useState(() => buildInitialFormData(property, propertyTypes))
   const [propertyFactsRows, setPropertyFactsRows] = useState(() =>
     objectToRows(property?.propertyFacts)
   )
@@ -262,12 +257,22 @@ export default function PropertyEditor({
     objectToRows(property?.investmentDetails)
   )
   const [isUploadingImages, setIsUploadingImages] = useState(false)
+  const isRaisePhase = isRaisePhaseStatus(formData.status)
+  const fundedAmount = Number(property?.fundedAmount) || 0
+  const fundingPercent = Number.isFinite(property?.fundingPercent)
+    ? property.fundingPercent
+    : 0
+  const goalPreview = Number(formData.price) || 0
+  const fundingLabel =
+    goalPreview > 0
+      ? `${fundedAmount.toLocaleString('en-US')} / ${goalPreview.toLocaleString('en-US')} (${fundingPercent}%)`
+      : fundedAmount.toLocaleString('en-US')
 
   const resetForm = useCallback(() => {
-    setFormData(buildInitialFormData(property))
+    setFormData(buildInitialFormData(property, propertyTypes))
     setPropertyFactsRows(objectToRows(property?.propertyFacts))
     setInvestmentDetailsRows(objectToRows(property?.investmentDetails))
-  }, [property])
+  }, [property, propertyTypes])
 
   useEffect(() => {
     resetForm()
@@ -278,11 +283,11 @@ export default function PropertyEditor({
   const initialSnapshot = useMemo(
     () =>
       JSON.stringify({
-        formData: buildInitialFormData(property),
+        formData: buildInitialFormData(property, propertyTypes),
         propertyFactsRows: objectToRows(property?.propertyFacts),
         investmentDetailsRows: objectToRows(property?.investmentDetails),
       }),
-    [property]
+    [property, propertyTypes]
   )
 
   const currentSnapshot = useMemo(
@@ -364,8 +369,10 @@ export default function PropertyEditor({
     event.preventDefault()
     const submitData = {
       ...formData,
-      status: formData.status || 'IN_PROGRESS',
-      progressPercent: parseInt(formData.progressPercent, 10) || 0,
+      status: formData.status || 'FUNDING',
+      progressPercent: isRaisePhaseStatus(formData.status)
+        ? 0
+        : parseInt(formData.progressPercent, 10) || 0,
       startDate: formData.startDate || null,
       targetCompletionDate: formData.targetCompletionDate || null,
       completedAt: formData.completedAt || null,
@@ -425,15 +432,15 @@ export default function PropertyEditor({
               <Field label={t('propertyType')} htmlFor="prop-type">
                 <select
                   id="prop-type"
-                  name="type"
-                  value={formData.type}
+                  name="typeId"
+                  value={formData.typeId}
                   onChange={handleChange}
                   className={adminSelectClassName()}
                   required
                 >
-                  {PROPERTY_TYPE_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {tProjects(getPropertyTypeLabelKey(value))}
+                  {propertyTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {getPropertyTypeLabel(type, locale)}
                     </option>
                   ))}
                 </select>
@@ -455,18 +462,36 @@ export default function PropertyEditor({
                 </select>
                 <p className="text-xs text-muted-foreground">{t('statusHint')}</p>
               </Field>
-              <Field label={t('progressPercent')} htmlFor="prop-progress">
-                <Input
-                  id="prop-progress"
-                  type="number"
-                  name="progressPercent"
-                  min="0"
-                  max="100"
-                  value={formData.progressPercent}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
+              {!isCreating && property ? (
+                <Field label={t('fundingRaised')} htmlFor="prop-funding-raised">
+                  <Input
+                    id="prop-funding-raised"
+                    value={fundingLabel}
+                    readOnly
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('fundingRaisedHint')}</p>
+                </Field>
+              ) : null}
+              {!isRaisePhase ? (
+                <Field label={t('progressPercent')} htmlFor="prop-progress">
+                  <Input
+                    id="prop-progress"
+                    type="number"
+                    name="progressPercent"
+                    min="0"
+                    max="100"
+                    value={formData.progressPercent}
+                    onChange={handleChange}
+                    required
+                  />
+                </Field>
+              ) : (
+                <input type="hidden" name="progressPercent" value="0" />
+              )}
+              {!isRaisePhase ? (
+                <>
               <Field label={t('startDate')} htmlFor="prop-start-date">
                 <Input
                   id="prop-start-date"
@@ -494,6 +519,8 @@ export default function PropertyEditor({
                   onChange={handleChange}
                 />
               </Field>
+                </>
+              ) : null}
               <Field label={t('propertyName')} htmlFor="prop-name">
                 <Input
                   id="prop-name"
@@ -554,7 +581,7 @@ export default function PropertyEditor({
 
           <AdminFormSection title={t('financialInfo')}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <Field label={t('totalPrice')} htmlFor="prop-price" emphasis>
+              <Field label={t('investmentGoal')} htmlFor="prop-price" emphasis>
                 <AdminFormattedNumberInput
                   id="prop-price"
                   name="price"
@@ -726,6 +753,12 @@ export default function PropertyEditor({
               </div>
             </Field>
           </AdminFormSection>
+
+          {!isCreating && property?.id ? (
+            <AdminFormSection title={t('progressDocuments')}>
+              <AdminPropertyDocuments propertyId={property.id} />
+            </AdminFormSection>
+          ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">

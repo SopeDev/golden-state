@@ -1,16 +1,16 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
 export default function PortfolioClient({ investments }) {
   const t = useTranslations('Portfolio')
-  const tProjects = useTranslations('Projects')
+  const locale = useLocale()
 
   const totalInvested = investments.reduce((sum, investment) => sum + investment.amount, 0)
   const totalProperties = investments.length
@@ -135,7 +135,7 @@ export default function PortfolioClient({ investments }) {
                         <span
                           className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${getPropertyTypeBadgeClass(investment.property.type)}`}
                         >
-                          {tProjects(getPropertyTypeLabelKey(investment.property.type))}
+                          {resolvePropertyTypeLabel(investment.property, locale)}
                         </span>
                       </div>
                       <h3 className="font-heading text-xl font-semibold text-primary">
@@ -177,9 +177,15 @@ export default function PortfolioClient({ investments }) {
                         >
                           {t('viewDetails')}
                         </Link>
-                        <Button type="button" variant="secondary" size="sm" className="border-main-gold bg-transparent">
+                        <Link
+                          href={`/dashboard/portfolio/${investment.property.id}/documents`}
+                          className={cn(
+                            buttonVariants({ variant: 'secondary', size: 'sm' }),
+                            'border-main-gold bg-transparent'
+                          )}
+                        >
                           {t('downloadDocs')}
-                        </Button>
+                        </Link>
                       </div>
                     </div>
                   </div>

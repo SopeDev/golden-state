@@ -3,8 +3,47 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { PrismaClient } from '@prisma/client'
 import { resolvePropertyProgressFields } from '@/lib/propertyStatusUi'
+import {
+  assertCanEnterExecutionStatus,
+  assertCanSetFundedStatus,
+  getPropertyFundedAmount,
+  syncPropertyFundingStatus,
+  withFundingFields,
+} from '@/lib/propertyFunding'
+import {
+  getPropertyTypeByCode,
+  getPropertyTypeById,
+  propertyTypeInclude,
+  toClientProperty,
+} from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
+
+async function requireAdmin() {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user?.type !== 'ADMIN') {
+    return null
+  }
+  return session
+}
+
+/** Resolve a live (non-archived) property type from typeId (preferred) or a legacy type code. */
+async function resolvePropertyType(body) {
+  if (body.typeId) {
+    const type = await getPropertyTypeById(prisma, body.typeId)
+    if (!type) throw new Error('Property type not found')
+    if (type.deletedAt) throw new Error('Cannot assign an archived property type')
+    return type
+  }
+  if (body.type) {
+    const type = await getPropertyTypeByCode(prisma, body.type)
+    if (!type) throw new Error('Property type not found')
+    if (type.deletedAt) throw new Error('Cannot assign an archived property type')
+    return type
+  }
+  throw new Error('Missing required field: typeId')
+}
+
 const parseRequiredInt = (value, field) => {
   const parsed = parseInt(value, 10)
   if (Number.isNaN(parsed)) {
@@ -23,10 +62,10 @@ const parseRequiredFloat = (value, field) => {
 
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions)
-    
+    const session = await requireAdmin()
+
     // Check if user is authenticated as admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -35,7 +74,7 @@ export async function PUT(request, { params }) {
     
     // Validate required fields
     const requiredFields = [
-      'investmentId', 'name', 'slug', 'type', 'city', 'state', 
+      'investmentId', 'name', 'slug', 'city', 'state',
       'address', 'price', 'unitCount', 'minInvestment', 
       'estimatedROI', 'estimatedMonths', 'summary'
     ]
@@ -47,6 +86,13 @@ export async function PUT(request, { params }) {
           { status: 400 }
         )
       }
+    }
+
+    let propertyType
+    try {
+      propertyType = await resolvePropertyType(body)
+    } catch (typeError) {
+      return NextResponse.json({ message: typeError.message }, { status: 400 })
     }
 
     // Validate propertyFacts and investmentDetails as valid JSON objects
@@ -99,6 +145,23 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ message: 'estimatedMonths is required' }, { status: 400 })
     }
 
+    try {
+      if (progressFields.status === 'FUNDED') {
+        await assertCanSetFundedStatus(prisma, {
+          propertyId: id,
+          goalPrice: parsedFields.price,
+        })
+      }
+      await assertCanEnterExecutionStatus(prisma, {
+        propertyId: id,
+        nextStatus: progressFields.status,
+        goalPrice: parsedFields.price,
+        previousStatus: existingProperty.status,
+      })
+    } catch (fundingError) {
+      return NextResponse.json({ message: fundingError.message }, { status: 400 })
+    }
+
     const duplicateProperty = await prisma.property.findFirst({
       where: {
         OR: [
@@ -117,13 +180,13 @@ export async function PUT(request, { params }) {
     }
 
     // Update the property
-    const property = await prisma.property.update({
+    let property = await prisma.property.update({
       where: { id },
       data: {
         investmentId: parsedFields.investmentId,
         name: body.name,
         slug: body.slug,
-        type: body.type,
+        typeId: propertyType.id,
         status: progressFields.status,
         progressPercent: progressFields.progressPercent,
         startDate: progressFields.startDate,
@@ -141,10 +204,23 @@ export async function PUT(request, { params }) {
         propertyFacts: propertyFacts,
         investmentDetails: investmentDetails,
         images: body.images || []
-      }
+      },
+      include: propertyTypeInclude,
     })
 
-    return NextResponse.json(property)
+    // Keep FUNDING / FUNDED in sync with capital if still in raise phase
+    if (progressFields.status === 'FUNDING' || progressFields.status === 'FUNDED') {
+      const synced = await syncPropertyFundingStatus(prisma, id)
+      if (synced) {
+        property = await prisma.property.findUnique({
+          where: { id },
+          include: propertyTypeInclude,
+        })
+      }
+    }
+
+    const fundedAmount = await getPropertyFundedAmount(prisma, id)
+    return NextResponse.json(withFundingFields(toClientProperty(property), fundedAmount))
   } catch (error) {
     console.error('Error updating property:', error)
     return NextResponse.json(
@@ -156,26 +232,18 @@ export async function PUT(request, { params }) {
   }
 }
 
+/** Soft-delete a property. Allowed even when it has investments — history stays intact. */
 export async function DELETE(request, { params }) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    // Check if user is authenticated as admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    const session = await requireAdmin()
+
+    if (!session) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
 
-    // Check if property exists
-    const existingProperty = await prisma.property.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { investments: true }
-        }
-      }
-    })
+    const existingProperty = await prisma.property.findUnique({ where: { id } })
 
     if (!existingProperty) {
       return NextResponse.json(
@@ -184,20 +252,17 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Check if property has investments
-    if (existingProperty._count.investments > 0) {
-      return NextResponse.json(
-        { message: 'Cannot delete property with existing investments' }, 
-        { status: 400 }
-      )
+    if (existingProperty.deletedAt) {
+      return NextResponse.json({ message: 'Property already archived' }, { status: 400 })
     }
 
-    // Delete the property
-    await prisma.property.delete({
-      where: { id }
+    const property = await prisma.property.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+      include: propertyTypeInclude,
     })
 
-    return NextResponse.json({ message: 'Property deleted successfully' })
+    return NextResponse.json(toClientProperty(property))
   } catch (error) {
     console.error('Error deleting property:', error)
     return NextResponse.json(
@@ -207,4 +272,41 @@ export async function DELETE(request, { params }) {
   } finally {
     await prisma.$disconnect()
   }
-} 
+}
+
+/** Restore a soft-deleted property. */
+export async function POST(request, { params }) {
+  try {
+    const session = await requireAdmin()
+
+    if (!session) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = await params
+
+    const existingProperty = await prisma.property.findUnique({ where: { id } })
+
+    if (!existingProperty) {
+      return NextResponse.json({ message: 'Property not found' }, { status: 404 })
+    }
+
+    if (!existingProperty.deletedAt) {
+      return NextResponse.json({ message: 'Property is not archived' }, { status: 400 })
+    }
+
+    const property = await prisma.property.update({
+      where: { id },
+      data: { deletedAt: null },
+      include: propertyTypeInclude,
+    })
+
+    const fundedAmount = await getPropertyFundedAmount(prisma, id)
+    return NextResponse.json(withFundingFields(toClientProperty(property), fundedAmount))
+  } catch (error) {
+    console.error('Error restoring property:', error)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
+  }
+}

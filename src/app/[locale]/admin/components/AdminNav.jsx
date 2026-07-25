@@ -13,6 +13,7 @@ export default function AdminNav() {
 
   const navItems = [
     { href: '/admin/properties', label: t('nav.properties') },
+    { href: '/admin/property-types', label: t('nav.propertyTypes') },
     { href: '/admin/users', label: t('nav.users'), showPendingBadge: true },
     { href: '/admin/content', label: t('nav.content') },
   ]
@@ -42,7 +43,7 @@ export default function AdminNav() {
   const linkClass = (href) =>
     cn(
       'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-      pathname.endsWith(href)
+      pathname === href || pathname.endsWith(href)
         ? 'bg-primary text-primary-foreground'
         : 'text-foreground hover:bg-muted hover:text-primary'
     )

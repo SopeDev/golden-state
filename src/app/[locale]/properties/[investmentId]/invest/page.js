@@ -20,8 +20,8 @@ export default async function InvestPage({ params }) {
     if (onboardingPath) await redirect(onboardingPath)
   }
 
-  const property = await prisma.property.findUnique({
-    where: { investmentId: parseInt(investmentId, 10) },
+  const property = await prisma.property.findFirst({
+    where: { investmentId: parseInt(investmentId, 10), deletedAt: null },
   })
 
   await prisma.$disconnect()

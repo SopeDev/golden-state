@@ -1,4 +1,4 @@
-import { parseProjectTypes } from '@/lib/auth/investorProfileOptions'
+import { parseProjectTypes, parseInvestorLocation } from '@/lib/auth/investorProfileOptions'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -46,12 +46,18 @@ export function validateRegistration(body) {
   }
 }
 
+const isTruthyFlag = (value) =>
+  value === true || value === 'true' || value === 'on' || value === '1'
+
 export function buildProfile(body) {
   const str = (key) => (typeof body[key] === 'string' ? body[key].trim() : '')
+  const location = parseInvestorLocation(body.location)
 
   return {
     fullName: str('fullName'),
     phone: str('phone'),
+    location,
+    interestedInInvestorVisa: location === 'MX' && isTruthyFlag(body.interestedInInvestorVisa),
     investmentGoals: str('investmentGoals'),
     experience: str('experience'),
     investmentRange: str('investmentRange'),
@@ -67,6 +73,7 @@ export function validateProfileCompletion(body) {
   const errors = {}
   const profile = buildProfile(body)
   if (!profile.fullName) errors.fullName = 'required'
+  if (!profile.location) errors.location = 'required'
   if (!profile.investmentGoals) errors.investmentGoals = 'required'
   if (!profile.experience) errors.experience = 'required'
   if (!profile.investmentRange) errors.investmentRange = 'required'

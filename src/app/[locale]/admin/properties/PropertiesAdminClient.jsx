@@ -1,26 +1,18 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import {
   getPropertyStatusBadgeClass,
   getPropertyStatusLabelKey,
 } from '@/lib/propertyStatusUi'
 import PropertyEditor from './PropertyEditor'
-
-const PROPERTY_TYPE_VALUES = [
-  'BUILD_TO_SELL',
-  'BUILD_TO_RENT',
-  'FLIPHOUSE',
-  'MEX_TO_US',
-  'US_TO_MEX',
-]
 
 const filterChipClass = (active) =>
   cn(
@@ -30,12 +22,19 @@ const filterChipClass = (active) =>
       : 'border-border text-muted-foreground hover:text-primary'
   )
 
-export default function PropertiesAdminClient({ properties }) {
+export default function PropertiesAdminClient({ properties, propertyTypes = [] }) {
   const t = useTranslations('Admin')
-  const tProjects = useTranslations('Projects')
+  const locale = useLocale()
+
+  const activePropertyTypes = useMemo(
+    () => propertyTypes.filter((type) => !type.deletedAt),
+    [propertyTypes]
+  )
 
   const STATUS_FILTERS = [
     { id: 'ALL', label: t('common.all') },
+    { id: 'FUNDING', label: t('filter.funding') },
+    { id: 'FUNDED', label: t('filter.funded') },
     { id: 'PLANNING', label: t('filter.planning') },
     { id: 'IN_PROGRESS', label: t('filter.inProgress') },
     { id: 'COMPLETED', label: t('filter.completed') },
@@ -43,9 +42,9 @@ export default function PropertiesAdminClient({ properties }) {
 
   const TYPE_FILTERS = [
     { id: 'ALL', label: t('common.all') },
-    ...PROPERTY_TYPE_VALUES.map((type) => ({
-      id: type,
-      label: tProjects(getPropertyTypeLabelKey(type)),
+    ...activePropertyTypes.map((type) => ({
+      id: type.id,
+      label: getPropertyTypeLabel(type, locale),
     })),
   ]
 
@@ -65,10 +64,10 @@ export default function PropertiesAdminClient({ properties }) {
   const filteredProperties = useMemo(() => {
     let list = propertiesList
     if (statusFilter !== 'ALL') {
-      list = list.filter((property) => (property.status || 'IN_PROGRESS') === statusFilter)
+      list = list.filter((property) => (property.status || 'FUNDING') === statusFilter)
     }
     if (typeFilter !== 'ALL') {
-      list = list.filter((property) => property.type === typeFilter)
+      list = list.filter((property) => property.typeId === typeFilter)
     }
     if (!query.trim()) return list
     const q = query.trim().toLowerCase()
@@ -79,9 +78,9 @@ export default function PropertiesAdminClient({ properties }) {
         property.city?.toLowerCase().includes(q) ||
         property.state?.toLowerCase().includes(q) ||
         String(property.investmentId).includes(q) ||
-        property.type?.toLowerCase().includes(q)
+        getPropertyTypeLabel(property.propertyType, locale)?.toLowerCase().includes(q)
     )
-  }, [propertiesList, query, statusFilter, typeFilter])
+  }, [propertiesList, query, statusFilter, typeFilter, locale])
 
   const editorVisible = isCreating || selectedProperty
 
@@ -254,7 +253,7 @@ export default function PropertiesAdminClient({ properties }) {
               <ul>
                 {filteredProperties.map((property) => {
                   const isActive = !isCreating && property.id === selectedId
-                  const status = property.status || 'IN_PROGRESS'
+                  const status = property.status || 'FUNDING'
                   return (
                     <li key={property.id}>
                       <button
@@ -275,7 +274,7 @@ export default function PropertiesAdminClient({ properties }) {
                         </div>
                         <span
                           className={cn(
-                            'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide',
                             getPropertyStatusBadgeClass(status)
                           )}
                         >
@@ -302,6 +301,7 @@ export default function PropertiesAdminClient({ properties }) {
             <PropertyEditor
               key={isCreating ? '__new__' : selectedProperty?.id}
               property={selectedProperty}
+              propertyTypes={activePropertyTypes}
               isCreating={isCreating}
               isLoading={isLoading}
               onSubmit={handleFormSubmit}

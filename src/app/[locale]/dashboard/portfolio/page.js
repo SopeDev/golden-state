@@ -2,6 +2,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import PortfolioClient from './PortfolioClient'
+import { attachFundingToProperties } from '@/lib/propertyFunding'
+import { propertyTypeInclude, toClientProperties } from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +16,7 @@ export default async function PortfolioPage() {
       include: {
         investments: {
           include: {
-            property: true,
+            property: { include: propertyTypeInclude },
           },
           orderBy: {
             createdAt: 'desc',
@@ -27,9 +29,20 @@ export default async function PortfolioPage() {
       return <PortfolioClient investments={[]} />
     }
 
-    return <PortfolioClient investments={user.investments} />
+    const properties = user.investments.map((row) => row.property).filter(Boolean)
+    const withFunding = await attachFundingToProperties(prisma, toClientProperties(properties))
+    const byId = Object.fromEntries(withFunding.map((p) => [p.id, p]))
+
+    const investments = user.investments.map((row) => ({
+      ...row,
+      property: byId[row.propertyId] || row.property,
+    }))
+
+    return <PortfolioClient investments={investments} />
   } catch (error) {
     console.error('Error fetching portfolio:', error)
     return <PortfolioClient investments={[]} />
+  } finally {
+    await prisma.$disconnect()
   }
 }

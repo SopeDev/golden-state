@@ -1,16 +1,17 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
-import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 
 export default function PropertyCard({ property }) {
   const t = useTranslations('Projects')
-  const typeKey = getPropertyTypeLabelKey(property.type)
+  const locale = useLocale()
+  const typeLabel = resolvePropertyTypeLabel(property, locale)
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
@@ -36,7 +37,7 @@ export default function PropertyCard({ property }) {
               getPropertyTypeBadgeClass(property.type)
             )}
           >
-            {t(typeKey)}
+            {typeLabel}
           </span>
         </div>
       </div>

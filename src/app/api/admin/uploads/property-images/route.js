@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { mkdir, writeFile } from 'fs/promises'
-import path from 'path'
+import { putPublicObject } from '@/lib/storage/r2'
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
 
@@ -30,9 +29,6 @@ export async function POST(request) {
       return NextResponse.json({ message: 'No files provided' }, { status: 400 })
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'properties')
-    await mkdir(uploadDir, { recursive: true })
-
     const uploadedUrls = []
 
     for (const file of files) {
@@ -50,11 +46,15 @@ export async function POST(request) {
       const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : 'jpg'
       const safeBase = sanitizeBaseName(file.name) || 'property-image'
       const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}.${extension}`
-      const filePath = path.join(uploadDir, uniqueName)
+      const objectKey = `properties/${uniqueName}`
 
       const bytes = await file.arrayBuffer()
-      await writeFile(filePath, Buffer.from(bytes))
-      uploadedUrls.push(`/uploads/properties/${uniqueName}`)
+      const url = await putPublicObject({
+        key: objectKey,
+        body: Buffer.from(bytes),
+        contentType: file.type,
+      })
+      uploadedUrls.push(url)
     }
 
     return NextResponse.json({ urls: uploadedUrls })

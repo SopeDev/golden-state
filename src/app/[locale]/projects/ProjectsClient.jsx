@@ -3,11 +3,11 @@
 import { useTranslations } from 'next-intl'
 import PropertyCard from '../../components/PropertyCard'
 
-export default function ProjectsClient({ properties, headerKey = 'all' }) {
+export default function ProjectsClient({ properties, headerKey = 'all', fallbackHeader = null }) {
   const t = useTranslations('Projects')
 
-  const title = t(`headers.${headerKey}.title`)
-  const subtitle = t(`headers.${headerKey}.subtitle`)
+  const title = fallbackHeader?.title || t(`headers.${headerKey}.title`)
+  const subtitle = fallbackHeader?.subtitle || t(`headers.${headerKey}.subtitle`)
 
   return (
     <div className="flex-1 bg-background">

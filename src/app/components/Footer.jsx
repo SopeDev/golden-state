@@ -1,23 +1,28 @@
 'use client'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import LocaleToggle from './LocaleToggle'
 
-const PROJECT_FOOTER_LINKS = [
-  { href: '/projects', labelKey: 'allProjects', fromNavbar: true },
-  { href: '/projects/build-to-sell', labelKey: 'buildToSell', fromNavbar: false },
-  { href: '/projects/build-to-rent', labelKey: 'buildToRent', fromNavbar: false },
-  { href: '/projects/fliphouses', labelKey: 'fliphouse', fromNavbar: false },
-  { href: '/projects/mex-to-us', labelKey: 'mexToUs', fromNavbar: false },
-  { href: '/projects/us-to-mex', labelKey: 'usToMex', fromNavbar: false },
-  { href: '/projects/completed', labelKey: 'completed', fromNavbar: false, dividerBefore: true },
-]
-
-export default function Footer() {
+export default function Footer({ propertyTypes = [] }) {
   const t = useTranslations('Footer')
   const tProjects = useTranslations('Projects')
+  const locale = useLocale()
+
+  const projectFooterLinks = [
+    { href: '/projects', label: t('allProjects') },
+    ...propertyTypes.map((type) => ({
+      href: `/projects/${type.slug}`,
+      label: getPropertyTypeLabel(type, locale),
+    })),
+    {
+      href: '/projects/completed',
+      label: tProjects('completed'),
+      dividerBefore: true,
+    },
+  ]
 
   return (
     <footer className="bg-primary text-primary-foreground">
@@ -73,7 +78,7 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-main-gold">{t('projectsHeading')}</h3>
             <ul className="space-y-2">
-              {PROJECT_FOOTER_LINKS.map((item) => (
+              {projectFooterLinks.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
@@ -82,7 +87,7 @@ export default function Footer() {
                       item.dividerBefore && 'mt-1 border-t border-primary-foreground/20 pt-2'
                     )}
                   >
-                    {item.fromNavbar ? t(item.labelKey) : tProjects(item.labelKey)}
+                    {item.label}
                   </Link>
                 </li>
               ))}

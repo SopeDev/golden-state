@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { getPropertyTypeBadgeClass, getPropertyTypeLabelKey } from '@/lib/propertyTypeUi'
+import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 import InvestNowButton from '@/components/invest/InvestNowButton'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
@@ -88,7 +88,7 @@ export default function PropertyDetailsClient({ property }) {
           <span
             className={`mt-4 inline-block rounded-full px-4 py-2 text-sm font-semibold ${getPropertyTypeBadgeClass(property.type)}`}
           >
-            {t(getPropertyTypeLabelKey(property.type))}
+            {resolvePropertyTypeLabel(property, locale)}
           </span>
         </div>
       </header>

@@ -5,6 +5,7 @@ import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import AdminNav from '../components/AdminNav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getPropertyTypeLabel, propertyTypeInclude, toClientProperties } from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
 
@@ -22,8 +23,9 @@ export default async function DataPage() {
   }
 
   try {
-    const [properties, users, investments] = await Promise.all([
+    const [propertiesRaw, users, investments] = await Promise.all([
       prisma.property.findMany({
+        include: propertyTypeInclude,
         orderBy: { createdAt: 'desc' },
       }),
       prisma.user.findMany({
@@ -46,6 +48,7 @@ export default async function DataPage() {
         orderBy: { createdAt: 'desc' },
       }),
     ])
+    const properties = toClientProperties(propertiesRaw)
 
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat(dateLocale, {
@@ -84,7 +87,9 @@ export default async function DataPage() {
                     <div>
                       <CardTitle className="text-lg">{property.name}</CardTitle>
                     </div>
-                    <span className={badgeClass}>{property.type}</span>
+                    <span className={badgeClass}>
+                      {getPropertyTypeLabel(property.propertyType, locale)}
+                    </span>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
                     <div>
