@@ -2,7 +2,7 @@ import { mkdir, writeFile, readFile } from 'fs/promises'
 import path from 'path'
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 
-const useLocalStorage = () => {
+const isLocalStorageDriver = () => {
   if (process.env.STORAGE_DRIVER === 'local') return true
   if (process.env.STORAGE_DRIVER === 'r2') return false
   // Dev convenience: skip R2 unless explicitly requested
@@ -54,7 +54,7 @@ const streamToBuffer = async (body) => {
  * Upload a private investor document. Returns the object key stored in DB.
  */
 export const putPrivateObject = async ({ key, body, contentType }) => {
-  if (useLocalStorage()) {
+  if (isLocalStorageDriver()) {
     const filePath = path.join(localRoot(), key)
     await mkdir(path.dirname(filePath), { recursive: true })
     await writeFile(filePath, body)
@@ -77,7 +77,7 @@ export const putPrivateObject = async ({ key, body, contentType }) => {
  * Read a private object by key. Returns { body: Buffer, contentType }.
  */
 export const getPrivateObject = async (key) => {
-  if (useLocalStorage()) {
+  if (isLocalStorageDriver()) {
     const filePath = path.join(localRoot(), key)
     const body = await readFile(filePath)
     return { body, contentType: null }
@@ -101,7 +101,7 @@ export const getPrivateObject = async (key) => {
  * Upload a public marketing asset. Returns a URL suitable for <img src>.
  */
 export const putPublicObject = async ({ key, body, contentType }) => {
-  if (useLocalStorage()) {
+  if (isLocalStorageDriver()) {
     const filePath = path.join(localRoot(), key)
     await mkdir(path.dirname(filePath), { recursive: true })
     await writeFile(filePath, body)
