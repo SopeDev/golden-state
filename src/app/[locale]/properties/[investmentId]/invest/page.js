@@ -3,6 +3,12 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import { resolveInvestorOnboardingPath } from '@/lib/auth/userStatus'
+import {
+  getPropertyFundedAmount,
+  isPropertyOpenForInvestment,
+  withFundingFields,
+} from '@/lib/propertyFunding'
+import { propertyTypeInclude, toClientProperty } from '@/lib/propertyTypes'
 import InvestFlowClient from './InvestFlowClient'
 
 const prisma = new PrismaClient()
@@ -22,13 +28,25 @@ export default async function InvestPage({ params }) {
 
   const property = await prisma.property.findFirst({
     where: { investmentId: parseInt(investmentId, 10), deletedAt: null },
+    include: propertyTypeInclude,
   })
 
-  await prisma.$disconnect()
-
   if (!property) {
+    await prisma.$disconnect()
     await redirect('/projects')
   }
 
-  return <InvestFlowClient property={property} />
+  if (!isPropertyOpenForInvestment(property.status)) {
+    await prisma.$disconnect()
+    await redirect(`/properties/${property.investmentId}`)
+  }
+
+  const fundedAmount = await getPropertyFundedAmount(prisma, property.id)
+  await prisma.$disconnect()
+
+  return (
+    <InvestFlowClient
+      property={withFundingFields(toClientProperty(property), fundedAmount)}
+    />
+  )
 }

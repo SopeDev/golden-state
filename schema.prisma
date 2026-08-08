@@ -38,7 +38,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  investments Investment[]
+  fundingContributions FundingContribution[] @relation("InvestorContributions")
+  createdContributions FundingContribution[] @relation("ContributionCreatedBy")
+  depositRequests DepositRequest[] @relation("InvestorDeposits")
+  reviewedDepositRequests DepositRequest[] @relation("DepositReviewedBy")
+  createdDepositRequests DepositRequest[] @relation("DepositCreatedBy")
   investorDocuments InvestorDocument[]
   investmentIntents InvestmentIntent[]
 }
@@ -86,21 +90,38 @@ enum InvestmentIntentStatus {
   STARTED
   ACCREDITATION_PENDING
   READY
+  MEETING_REQUESTED
+  AWAITING_WIRE
+  COMPLETED
   CANCELLED
 }
 
-model InvestmentIntent {
-  id         String                 @id @default(cuid())
-  userId     Int
-  propertyId String
-  status     InvestmentIntentStatus @default(STARTED)
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
+enum MeetingChannel {
+  CALENDLY
+  WHATSAPP
+  VIDEO_CALL
+  PHONE_CALL
+  IN_PERSON
+}
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+model InvestmentIntent {
+  id               String                 @id @default(cuid())
+  userId           Int
+  propertyId       String
+  status           InvestmentIntentStatus @default(STARTED)
+  channel          MeetingChannel?
+  intendedAmount   Float?
+  meetingNote      String?
+  meetingRequestedAt DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  depositRequests DepositRequest[]
 
   @@unique([userId, propertyId])
+  @@index([status, updatedAt])
 }
 
 model PropertyType {
@@ -151,10 +172,11 @@ model Property {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  propertyType      PropertyType       @relation(fields: [typeId], references: [id])
-  investments       Investment[]
-  investmentIntents InvestmentIntent[]
-  documents         PropertyDocument[]
+  propertyType           PropertyType          @relation(fields: [typeId], references: [id])
+  fundingContributions   FundingContribution[]
+  depositRequests        DepositRequest[]
+  investmentIntents      InvestmentIntent[]
+  documents              PropertyDocument[]
 
   @@index([deletedAt])
   @@index([typeId])
@@ -192,15 +214,78 @@ model PropertyDocument {
   @@index([propertyId, kind, uploadedAt])
 }
 
-model Investment {
-  id         String   @id @default(cuid())
-  userId     Int
-  propertyId String
-  amount     Float
-  createdAt  DateTime @default(now())
+enum FundingContributionSource {
+  INVESTOR
+  MANUAL
+}
 
-  user     User     @relation(fields: [userId], references: [id])
-  property Property @relation(fields: [propertyId], references: [id])
+enum FundingContributionStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum DepositRequestStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+/// Capital raise ledger. Investor holdings are ACTIVE + INVESTOR rows with userId.
+model FundingContribution {
+  id               String                     @id @default(cuid())
+  propertyId       String
+  userId           Int?
+  amount           Float
+  source           FundingContributionSource
+  status           FundingContributionStatus  @default(ACTIVE)
+  label            String?
+  note             String?
+  createdByAdminId Int?
+  depositRequestId String?                    @unique
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  cancelledAt      DateTime?
+
+  property       Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  user           User?          @relation("InvestorContributions", fields: [userId], references: [id], onDelete: Restrict)
+  createdByAdmin User?          @relation("ContributionCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  depositRequest DepositRequest? @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, status])
+  @@index([userId, status])
+  @@map("funding_contributions")
+}
+
+model DepositRequest {
+  id                 String               @id @default(cuid())
+  userId             Int
+  propertyId         String
+  investmentIntentId String?
+  amount             Float
+  reference          String?
+  depositedAt        DateTime?
+  status             DepositRequestStatus @default(PENDING)
+  adminNote          String?
+  receiptStorageKey  String?
+  receiptFileName    String?
+  receiptMimeType    String?
+  reviewedAt         DateTime?
+  reviewedById       Int?
+  createdByAdminId   Int?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  user             User                  @relation("InvestorDeposits", fields: [userId], references: [id], onDelete: Restrict)
+  property         Property              @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  investmentIntent InvestmentIntent?     @relation(fields: [investmentIntentId], references: [id], onDelete: SetNull)
+  reviewedBy       User?                 @relation("DepositReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdByAdmin   User?                 @relation("DepositCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  contribution     FundingContribution?
+
+  @@index([status, createdAt])
+  @@index([propertyId, status])
+  @@index([userId, status])
+  @@map("deposit_requests")
 }
 
 model PageContent {
@@ -218,4 +303,5 @@ enum PageKey {
   HOME
   ABOUT
   FAQ
+  CONTACT
 }

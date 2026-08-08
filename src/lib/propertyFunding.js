@@ -1,5 +1,6 @@
 /**
- * Capital raise helpers: funded amount = sum of Investment.amount; goal = Property.price.
+ * Capital raise helpers: funded amount = sum of ACTIVE FundingContribution.amount;
+ * goal = Property.price.
  */
 
 export const RAISE_STATUSES = ['FUNDING', 'FUNDED']
@@ -13,9 +14,22 @@ export function isExecutionStatus(status) {
   return EXECUTION_STATUSES.includes(status)
 }
 
+/** New investments only while the raise is open (not fully funded / execution). */
+export function isPropertyOpenForInvestment(status) {
+  return status === 'FUNDING'
+}
+
+export function getFundedAmountFromContributions(contributions) {
+  if (!Array.isArray(contributions)) return 0
+  return contributions.reduce((sum, row) => {
+    if (row?.status && row.status !== 'ACTIVE') return sum
+    return sum + Number(row?.amount || 0)
+  }, 0)
+}
+
+/** @deprecated Use getFundedAmountFromContributions */
 export function getFundedAmountFromInvestments(investments) {
-  if (!Array.isArray(investments)) return 0
-  return investments.reduce((sum, row) => sum + Number(row?.amount || 0), 0)
+  return getFundedAmountFromContributions(investments)
 }
 
 export function getFundingPercent(fundedAmount, goal) {
@@ -24,21 +38,62 @@ export function getFundingPercent(fundedAmount, goal) {
   return Math.min(100, Math.round((Number(fundedAmount) / g) * 100))
 }
 
+/** Dollars still available under the raise goal. */
+export function getRemainingCapacity(goal, fundedAmount) {
+  return Math.max(0, Number(goal || 0) - Number(fundedAmount || 0))
+}
+
+/** Platform-wide minimum ticket for every property. */
+export const PLATFORM_MIN_INVESTMENT = 5000
+
+/**
+ * Stated ticket minimum — always the platform floor (not per-property).
+ * First argument is ignored (legacy property.minInvestment call sites).
+ */
+export function getStatedMinInvestment(_ignoredMinInvestment, platformFloor = PLATFORM_MIN_INVESTMENT) {
+  return Number(platformFloor) || PLATFORM_MIN_INVESTMENT
+}
+
+/**
+ * Effective minimum = min(platform min, remaining capacity).
+ * When less than a full ticket remains, the last investor may take the stub.
+ */
+export function getEffectiveMinInvestment({
+  goal,
+  fundedAmount,
+  platformFloor = PLATFORM_MIN_INVESTMENT,
+  minInvestment: _minInvestment,
+} = {}) {
+  const stated = Number(platformFloor) || PLATFORM_MIN_INVESTMENT
+  const remaining = getRemainingCapacity(goal, fundedAmount)
+  if (remaining <= 0) return stated
+  return Math.min(stated, remaining)
+}
+
 export function withFundingFields(property, fundedAmount) {
   if (!property) return property
   const amount = Number(fundedAmount) || 0
   const goal = Number(property.price) || 0
+  const remaining = getRemainingCapacity(goal, amount)
+  const statedMin = PLATFORM_MIN_INVESTMENT
+  const effectiveMin = getEffectiveMinInvestment({
+    goal,
+    fundedAmount: amount,
+  })
   return {
     ...property,
     fundedAmount: amount,
     fundingPercent: getFundingPercent(amount, goal),
     investmentGoal: goal,
+    remainingCapacity: remaining,
+    statedMinInvestment: statedMin,
+    effectiveMinInvestment: effectiveMin,
   }
 }
 
 export async function getPropertyFundedAmount(prisma, propertyId) {
-  const agg = await prisma.investment.aggregate({
-    where: { propertyId },
+  const agg = await prisma.fundingContribution.aggregate({
+    where: { propertyId, status: 'ACTIVE' },
     _sum: { amount: true },
   })
   return Number(agg._sum.amount || 0)
@@ -48,9 +103,9 @@ export async function getPropertyFundedAmount(prisma, propertyId) {
 export async function attachFundingToProperties(prisma, properties) {
   if (!properties?.length) return properties || []
   const ids = properties.map((p) => p.id)
-  const grouped = await prisma.investment.groupBy({
+  const grouped = await prisma.fundingContribution.groupBy({
     by: ['propertyId'],
-    where: { propertyId: { in: ids } },
+    where: { propertyId: { in: ids }, status: 'ACTIVE' },
     _sum: { amount: true },
   })
   const byId = Object.fromEntries(
@@ -63,7 +118,7 @@ export function assertNoOverfunding({ goal, currentFunded, additionalAmount }) {
   const next = Number(currentFunded) + Number(additionalAmount)
   const g = Number(goal)
   if (next > g + 1e-6) {
-    const err = new Error('Investment would exceed the funding goal')
+    const err = new Error('Contribution would exceed the funding goal')
     err.code = 'OVERFUND'
     throw err
   }
@@ -71,11 +126,11 @@ export function assertNoOverfunding({ goal, currentFunded, additionalAmount }) {
 
 /**
  * Ensure amount fits under the property raise target.
- * Pass excludeInvestmentId when updating an existing row.
+ * Pass excludeContributionId when updating an existing row.
  */
-export async function assertInvestmentFitsGoal(
+export async function assertContributionFitsGoal(
   prisma,
-  { propertyId, amount, excludeInvestmentId = null }
+  { propertyId, amount, excludeContributionId = null }
 ) {
   const property = await prisma.property.findUnique({ where: { id: propertyId } })
   if (!property) {
@@ -85,11 +140,11 @@ export async function assertInvestmentFitsGoal(
   }
 
   let current = await getPropertyFundedAmount(prisma, propertyId)
-  if (excludeInvestmentId) {
-    const existing = await prisma.investment.findUnique({
-      where: { id: excludeInvestmentId },
+  if (excludeContributionId) {
+    const existing = await prisma.fundingContribution.findUnique({
+      where: { id: excludeContributionId },
     })
-    if (existing && existing.propertyId === propertyId) {
+    if (existing && existing.propertyId === propertyId && existing.status === 'ACTIVE') {
       current -= Number(existing.amount || 0)
     }
   }
@@ -101,6 +156,15 @@ export async function assertInvestmentFitsGoal(
   })
 
   return property
+}
+
+/** @deprecated Use assertContributionFitsGoal */
+export async function assertInvestmentFitsGoal(prisma, args) {
+  return assertContributionFitsGoal(prisma, {
+    propertyId: args.propertyId,
+    amount: args.amount,
+    excludeContributionId: args.excludeInvestmentId || args.excludeContributionId || null,
+  })
 }
 
 /**
@@ -140,7 +204,6 @@ export async function assertCanEnterExecutionStatus(
   { propertyId, nextStatus, goalPrice, previousStatus = null }
 ) {
   if (!isExecutionStatus(nextStatus)) return
-  // Already in execution — allow updates / moves among Planning / In progress / Completed
   if (previousStatus && isExecutionStatus(previousStatus)) return
 
   const funded = propertyId ? await getPropertyFundedAmount(prisma, propertyId) : 0

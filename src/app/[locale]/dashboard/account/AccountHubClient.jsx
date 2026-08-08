@@ -2,21 +2,28 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import { Link, useRouter } from '@/i18n/navigation'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import RequiredLabel from '@/components/ui/RequiredLabel'
+import PhoneInputField from '@/components/auth/PhoneInputField'
 import { cn } from '@/lib/utils'
-import { getAccreditedStatusBadgeClass, getAccountStatusBadgeClass } from '@/lib/auth/userStatus'
+import { getAccreditedStatusBadgeClass } from '@/lib/auth/userStatus'
+import {
+  getInvestorAdminPhase,
+  getInvestorAdminPhaseBadgeClass,
+} from '@/lib/admin/userTimeline'
 import RequestReviewButton from '@/components/invest/RequestReviewButton'
 import { getFieldLabelKeyForKind, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 
 export default function AccountHubClient() {
   const t = useTranslations('MyAccount')
   const tInvest = useTranslations('Invest')
+  const locale = useLocale()
+  const router = useRouter()
   const { data: session, update } = useSession()
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -60,6 +67,13 @@ export default function AccountHubClient() {
   useEffect(() => {
     loadAccount()
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#investment-requests') {
+      router.replace('/dashboard/investments')
+    }
+  }, [router])
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault()
@@ -120,7 +134,22 @@ export default function AccountHubClient() {
   const isAdmin = session?.user?.type === 'ADMIN'
   const provider = account?.provider || session?.user?.provider || 'credentials'
   const accountStatus = account?.accountStatus || session?.user?.accountStatus
-  const profileComplete = session?.user?.profileComplete
+  const profileComplete =
+    Boolean(session?.user?.profileComplete) || Boolean(account?.profile?.completedAt)
+  const emailVerified =
+    Boolean(session?.user?.emailVerified) ||
+    Boolean(account?.emailVerifiedAt) ||
+    provider === 'google'
+  const onboardingPhase = !isAdmin
+    ? getInvestorAdminPhase({
+        type: 'INVESTOR',
+        accountStatus,
+        emailVerified,
+        profileComplete,
+        profile: account?.profile,
+        provider,
+      })
+    : null
   const isActive = accountStatus === 'ACTIVE'
   const accreditedStatus = account?.accreditedStatus || session?.user?.accreditedStatus || 'NOT_STARTED'
   const documents = account?.investorDocuments || []
@@ -143,7 +172,7 @@ export default function AccountHubClient() {
         </div>
 
         <div className="space-y-8">
-          {!isAdmin && accountStatus && !isActive ? (
+          {!isAdmin && onboardingPhase && onboardingPhase !== 'ACTIVE' ? (
             <Card className="border-border/80 shadow-sm">
               <CardHeader>
                 <div className="flex flex-wrap items-center gap-3">
@@ -153,16 +182,16 @@ export default function AccountHubClient() {
                   <span
                     className={cn(
                       'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                      getAccountStatusBadgeClass(accountStatus)
+                      getInvestorAdminPhaseBadgeClass(onboardingPhase)
                     )}
                   >
-                    {t(`accountStatus.${accountStatus}`)}
+                    {t(`accountStatus.${onboardingPhase}`)}
                   </span>
                 </div>
-                <CardDescription>{t(`applicationDesc.${accountStatus}`)}</CardDescription>
+                <CardDescription>{t(`applicationDesc.${onboardingPhase}`)}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-3">
-                {accountStatus === 'REJECTED' ? (
+                {onboardingPhase === 'REJECTED' ? (
                   <>
                     <RequestReviewButton
                       scope="account"
@@ -181,7 +210,15 @@ export default function AccountHubClient() {
                     </Link>
                   </>
                 ) : null}
-                {!profileComplete ? (
+                {onboardingPhase === 'PENDING_EMAIL' ? (
+                  <Link
+                    href="/register/check-email"
+                    className={cn(buttonVariants({ variant: 'gold', size: 'cta' }))}
+                  >
+                    {t('viewApplicationStatus')}
+                  </Link>
+                ) : null}
+                {onboardingPhase === 'PENDING_PROFILE' ? (
                   <Link
                     href="/account/complete-profile"
                     className={cn(buttonVariants({ variant: 'gold', size: 'cta' }))}
@@ -189,7 +226,7 @@ export default function AccountHubClient() {
                     {t('completeProfileCta')}
                   </Link>
                 ) : null}
-                {accountStatus === 'PENDING_ADMIN' ? (
+                {onboardingPhase === 'PENDING_ADMIN' ? (
                   <Link
                     href="/account/pending"
                     className={cn(buttonVariants({ variant: 'outline', size: 'default' }))}
@@ -315,11 +352,14 @@ export default function AccountHubClient() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="account-phone">{t('phone')}</Label>
-                    <Input
+                    <PhoneInputField
+                      key={account?.id || 'phone'}
                       id="account-phone"
-                      type="tel"
-                      value={profileForm.phone}
-                      onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      locale={locale}
+                      defaultValue={profileForm.phone}
+                      onChange={(phone) => setProfileForm((prev) => ({ ...prev, phone }))}
+                      countryLabel={t('phoneCountryCode')}
+                      numberPlaceholder={t('phoneNumberPlaceholder')}
                     />
                   </div>
                   {profileSuccess ? (

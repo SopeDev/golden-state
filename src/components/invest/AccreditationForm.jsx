@@ -99,12 +99,15 @@ export default function AccreditationForm({ propertyId, subtitle, resubmitFieldN
             />
             <span className="flex gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-main-gold" aria-hidden="true" />
-              <span className="text-sm leading-relaxed text-foreground">
-                {t('selfCertify')}
-                <span className="text-destructive" aria-hidden="true">
-                  {' '}
-                  *
+              <span className="space-y-1.5 text-sm leading-relaxed text-foreground">
+                <span className="block">
+                  {t('selfCertify')}
+                  <span className="text-destructive" aria-hidden="true">
+                    {' '}
+                    *
+                  </span>
                 </span>
+                <span className="block text-xs text-muted-foreground">{t('selfCertifyNote')}</span>
               </span>
             </span>
           </label>

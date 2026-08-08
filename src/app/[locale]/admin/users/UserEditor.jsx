@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,13 @@ import {
   adminAccreditedStatusLabel,
   adminUserTypeLabel,
 } from '@/lib/admin/adminLabels'
+import {
+  buildUserActivityEvents,
+  getInvestorAdminPhase,
+  getInvestorAdminPhaseTone,
+} from '@/lib/admin/userTimeline'
 import { cn } from '@/lib/utils'
+import { useMessaging } from '@/hooks/useMessaging'
 import InvestorDocumentReviewGrid from '@/components/invest/InvestorDocumentReviewGrid'
 import { getFieldLabelKeyForKind, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 
@@ -107,12 +113,35 @@ export default function UserEditor({
   const t = useTranslations('Admin')
   const tRegister = useTranslations('Register')
   const tInvest = useTranslations('Invest')
+  const locale = useLocale()
+  const { alert } = useMessaging()
   const initialState = useMemo(() => buildInitialState(user), [user])
   const [formData, setFormData] = useState(initialState)
   const [reviewNote, setReviewNote] = useState('')
   const [selectedResubmitKinds, setSelectedResubmitKinds] = useState([])
   const [actionLoading, setActionLoading] = useState(false)
   const [projectTypeLabelByCode, setProjectTypeLabelByCode] = useState({})
+
+  const adminPhase = useMemo(
+    () => (user && !isCreating && user.type === 'INVESTOR' ? getInvestorAdminPhase(user) : null),
+    [user, isCreating]
+  )
+
+  const activityEvents = useMemo(
+    () => (user && !isCreating ? buildUserActivityEvents(user) : []),
+    [user, isCreating]
+  )
+
+  const formatEventDateTime = (value) => {
+    if (!value) return '—'
+    return new Date(value).toLocaleString(locale === 'es' ? 'es-ES' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -186,7 +215,7 @@ export default function UserEditor({
       })
       if (!response.ok) {
         const error = await response.json().catch(() => ({}))
-        alert(error.error || error.message || t('common.actionFailed'))
+        await alert(error.error || error.message || t('common.actionFailed'))
         return
       }
       const updated = await response.json()
@@ -195,7 +224,7 @@ export default function UserEditor({
       setSelectedResubmitKinds([])
     } catch (error) {
       console.error('Status action error:', error)
-      alert(t('common.actionFailed'))
+      await alert(t('common.actionFailed'))
     } finally {
       setActionLoading(false)
     }
@@ -257,15 +286,11 @@ export default function UserEditor({
                 {t('users.accountStatusLabel')}
               </span>
               {statusPill(
-                user.accountStatus,
-                user.accountStatus === 'ACTIVE'
-                  ? 'ok'
-                  : user.accountStatus === 'REJECTED'
-                    ? 'bad'
-                    : user.accountStatus === 'PENDING_ADMIN'
-                      ? 'warn'
-                      : 'info',
-                adminAccountStatusLabel(t, user.accountStatus)
+                adminPhase || user.accountStatus,
+                getInvestorAdminPhaseTone(adminPhase || user.accountStatus),
+                adminPhase
+                  ? t(`accountPhase.${adminPhase}`)
+                  : adminAccountStatusLabel(t, user.accountStatus)
               )}
               <span className="text-xs font-semibold tracking-wide text-muted-foreground">
                 {t('users.accreditedStatusLabel')}
@@ -491,6 +516,36 @@ export default function UserEditor({
             </AdminFormField>
           </div>
           </AdminFormSection>
+
+          {user && !isCreating ? (
+            <div className="mt-6">
+              <AdminFormSection
+                title={t('users.activityLogTitle')}
+                description={t('users.activityLogDesc')}
+              >
+                {activityEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('users.activityLogEmpty')}</p>
+                ) : (
+                  <ol className="relative ml-2 space-y-0 border-l border-border/80">
+                    {activityEvents.map((event) => (
+                      <li key={event.id} className="relative pb-4 pl-5 last:pb-0">
+                        <span
+                          className="absolute top-1.5 -left-[5px] size-2.5 rounded-full border-2 border-background bg-main-gold"
+                          aria-hidden
+                        />
+                        <p className="text-sm font-medium text-foreground">
+                          {t(`users.activity.${event.key}`)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {formatEventDateTime(event.at)}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </AdminFormSection>
+            </div>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">

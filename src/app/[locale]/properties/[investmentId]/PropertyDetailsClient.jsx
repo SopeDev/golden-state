@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import InvestNowButton from '@/components/invest/InvestNowButton'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
@@ -188,25 +189,25 @@ export default function PropertyDetailsClient({ property }) {
                 <PropertyProgressSummary property={property} variant="tile" showDuration />
                 <div className="rounded-lg bg-muted/50 p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('totalPrice')}</p>
-                  <p className="text-2xl font-semibold text-primary">${property.price.toLocaleString()}</p>
+                  <p className="text-2xl font-semibold text-primary">${formatMoneyAmount(property.price)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('units')}</p>
                   <p className="text-2xl font-semibold text-primary">{property.unitCount}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t('minimumInvestment')}</p>
-                  <p className="text-2xl font-semibold text-main-gold">
-                    ${property.minInvestment.toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('estimatedRoi')}</p>
                   <p className="text-2xl font-semibold text-main-gold">{property.estimatedROI}%</p>
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                    {t('roiDisclaimer')}
+                  </p>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/30">
-                <InvestNowButton propertyId={property.investmentId} />
+                <InvestNowButton
+                  propertyId={property.investmentId}
+                  propertyStatus={property.status}
+                />
                 <Button
                   type="button"
                   variant="outline"

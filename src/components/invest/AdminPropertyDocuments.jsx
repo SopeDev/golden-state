@@ -11,11 +11,13 @@ import {
   PROPERTY_DOCUMENT_KINDS,
   translatePropertyDocumentKind,
 } from '@/lib/propertyDocuments'
+import { useMessaging } from '@/hooks/useMessaging'
 
 export default function AdminPropertyDocuments({ propertyId }) {
   const t = useTranslations('PropertyDocuments')
   const tc = useTranslations('Admin.common')
   const locale = useLocale()
+  const { confirm } = useMessaging()
   const [documents, setDocuments] = useState([])
   const [kind, setKind] = useState('CONSTRUCTION_PHOTOS')
   const [file, setFile] = useState(null)
@@ -77,7 +79,12 @@ export default function AdminPropertyDocuments({ propertyId }) {
   }
 
   const handleDelete = async (docId) => {
-    if (!confirm(t('confirmDelete'))) return
+    const confirmed = await confirm({
+      message: t('confirmDelete'),
+      variant: 'destructive',
+      confirmLabel: t('remove'),
+    })
+    if (!confirmed) return
     setError('')
     try {
       const res = await fetch(`/api/admin/properties/${propertyId}/documents/${docId}`, {

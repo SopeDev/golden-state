@@ -100,7 +100,7 @@ export default function Footer({ propertyTypes = [] }) {
               <p className="text-primary-foreground/80">
                 <span className="font-semibold text-main-gold">{t('phone')}:</span>
                 <br />
-                +1 (619) 555-0142
+                +1 (619) 769-4155
               </p>
               <p className="text-primary-foreground/80">
                 <span className="font-semibold text-main-gold">{t('email')}:</span>
@@ -130,6 +130,9 @@ export default function Footer({ propertyTypes = [] }) {
         </div>
 
         <div className="mt-8 border-t border-primary-foreground/20 pt-8">
+          <p className="mb-6 max-w-4xl text-xs leading-relaxed text-primary-foreground/55">
+            {t('legalStrip')}
+          </p>
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-6">
             <div className="text-sm text-primary-foreground/70">{t('copyright')}</div>
             <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">

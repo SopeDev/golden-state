@@ -16,18 +16,13 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Invest meeting links (post-accreditation)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Accredited investors schedule a call before wiring. Bank details are **never** shown in-app or emailed.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Env var | Purpose |
+|---------|---------|
+| `NEXT_PUBLIC_INVEST_WHATSAPP_PHONE` | WhatsApp number with country code, digits only (e.g. `15205551234`) |
 
 ## File storage (R2)
 

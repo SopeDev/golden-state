@@ -12,6 +12,7 @@ import {
   getPropertyStatusBadgeClass,
   getPropertyStatusLabelKey,
 } from '@/lib/propertyStatusUi'
+import { useMessaging } from '@/hooks/useMessaging'
 import PropertyEditor from './PropertyEditor'
 
 const filterChipClass = (active) =>
@@ -25,6 +26,7 @@ const filterChipClass = (active) =>
 export default function PropertiesAdminClient({ properties, propertyTypes = [] }) {
   const t = useTranslations('Admin')
   const locale = useLocale()
+  const { alert, confirm } = useMessaging()
 
   const activePropertyTypes = useMemo(
     () => propertyTypes.filter((type) => !type.deletedAt),
@@ -107,7 +109,11 @@ export default function PropertiesAdminClient({ properties, propertyTypes = [] }
   }
 
   const handleDeleteProperty = async (propertyId) => {
-    if (!confirm(t('common.confirmDeleteProperty'))) return
+    const confirmed = await confirm({
+      message: t('common.confirmDeleteProperty'),
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     setIsLoading(true)
     try {
@@ -123,12 +129,12 @@ export default function PropertiesAdminClient({ properties, propertyTypes = [] }
           setIsCreating(false)
         }
       } else {
-        const error = await response.json()
-        alert(`Failed to delete property: ${error.message}`)
+        const error = await response.json().catch(() => ({}))
+        await alert(error.error || error.message || t('common.errorDeleteProperty'))
       }
     } catch (error) {
       console.error('Error deleting property:', error)
-      alert(t('common.errorDeleteProperty'))
+      await alert(t('common.errorDeleteProperty'))
     } finally {
       setIsLoading(false)
     }
@@ -161,12 +167,17 @@ export default function PropertiesAdminClient({ properties, propertyTypes = [] }
           setIsCreating(false)
         }
       } else {
-        const error = await response.json()
-        alert(`Failed to ${isEdit ? 'update' : 'create'} property: ${error.message}`)
+        const error = await response.json().catch(() => ({}))
+        const message = error.error || error.message || t('common.actionFailed')
+        await alert(
+          isEdit
+            ? t('common.failedUpdateProperty', { message })
+            : t('common.failedCreateProperty', { message })
+        )
       }
     } catch (error) {
       console.error('Error saving property:', error)
-      alert(t('common.errorSaveProperty'))
+      await alert(t('common.errorSaveProperty'))
     } finally {
       setIsLoading(false)
     }

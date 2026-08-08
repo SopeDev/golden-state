@@ -60,6 +60,14 @@ export async function POST(request, { params }) {
         },
       })
 
+      await prisma.investmentIntent.updateMany({
+        where: {
+          userId,
+          status: { in: ['STARTED', 'ACCREDITATION_PENDING'] },
+        },
+        data: { status: 'READY' },
+      })
+
       const locale = resolveUserLocale(user)
       try {
         await sendAccreditationApprovedEmail({ to: user.email, locale })

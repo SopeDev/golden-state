@@ -35,12 +35,20 @@ export default function Form() {
     const email = String(formData.get('email') || '').trim()
     const password = String(formData.get('password') || '')
     const confirmPassword = String(formData.get('confirmPassword') || '')
+    const acceptLegal = formData.get('acceptLegal') === 'on'
+
+    if (!acceptLegal) {
+      setErrors({ acceptLegal: 'required' })
+      setFormError(t('errorLegalRequired'))
+      setSubmitting(false)
+      return
+    }
 
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, confirmPassword, locale }),
+        body: JSON.stringify({ email, password, confirmPassword, acceptLegal, locale }),
       })
 
       const data = await res.json().catch(() => ({}))
@@ -136,6 +144,31 @@ export default function Form() {
                 <p className="text-xs text-destructive">{t('errorPasswordMismatch')}</p>
               ) : null}
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/80 bg-background px-3 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                name="acceptLegal"
+                required
+                className="mt-0.5"
+              />
+              <span className="leading-relaxed text-muted-foreground">
+                {t.rich('legalAcknowledgment', {
+                  terms: (chunks) => (
+                    <Link href="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
+                      {chunks}
+                    </Link>
+                  ),
+                  privacy: (chunks) => (
+                    <Link href="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </span>
+            </label>
+            {errors.acceptLegal ? (
+              <p className="text-xs text-destructive">{t('errorLegalRequired')}</p>
+            ) : null}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? t('submitting') : t('submit')}
             </Button>
@@ -150,6 +183,9 @@ export default function Form() {
               <GoogleIcon className="size-5 shrink-0" />
               {t('googleSignUp')}
             </Button>
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              {t('googleLegalNote')}
+            </p>
             <p className="text-center text-sm text-muted-foreground">
               {t('signInHint')}{' '}
               <Link

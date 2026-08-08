@@ -314,13 +314,18 @@ export function accreditationApprovedEmailContent({ locale, dashboardLink }) {
           'Si tiene preguntas, nuestro equipo está a su disposición.',
         ],
         cta: { href: dashboardLink, label: 'Ir al panel' },
-        footnotes: ['Gracias por confiar en Golden State Capital.'],
+        footnotes: [
+          'Esta aprobación otorga acceso a la plataforma según nuestra revisión. No constituye asesoría de inversión ni garantiza rendimientos.',
+          'Gracias por confiar en Golden State Capital.',
+        ],
       }),
       text: [
         'Golden State Capital — Verificación de inversionista acreditado aprobada',
         '',
         'Su verificación ha sido aprobada. Acceda a su panel:',
         dashboardLink,
+        '',
+        'Esta aprobación otorga acceso a la plataforma según nuestra revisión. No constituye asesoría de inversión ni garantiza rendimientos.',
       ].join('\n'),
     }
   }
@@ -338,13 +343,18 @@ export function accreditationApprovedEmailContent({ locale, dashboardLink }) {
         'If you have any questions, our team is here to help.',
       ],
       cta: { href: dashboardLink, label: 'Go to dashboard' },
-      footnotes: ['Thank you for choosing Golden State Capital.'],
+      footnotes: [
+        'This approval grants platform access based on our review. It is not investment advice and does not guarantee returns.',
+        'Thank you for choosing Golden State Capital.',
+      ],
     }),
     text: [
       'Golden State Capital — Accredited investor verification approved',
       '',
       'Your verification has been approved. Access your dashboard:',
       dashboardLink,
+      '',
+      'This approval grants platform access based on our review. It is not investment advice and does not guarantee returns.',
     ].join('\n'),
   }
 }
@@ -457,5 +467,155 @@ export function passwordResetEmailContent({ locale, link }) {
       footnotes: ['This link expires in 1 hour.', 'If you did not request this change, please ignore this email.'],
     }),
     text: `Reset your password by visiting: ${link}\n\nThis link expires in 1 hour.`,
+  }
+}
+
+export function meetingRequestedEmailContent({
+  locale,
+  propertyName,
+  accountLink,
+  investLink,
+  channelLabel,
+  amountLabel,
+}) {
+  if (locale === 'es') {
+    return {
+      subject: `Solicitud de reunión registrada — ${propertyName} | Golden State Capital`,
+      html: buildTransactionalEmail({
+        locale: 'es',
+        preheader: 'Recibimos su solicitud de reunión de inversión.',
+        eyebrow: 'Solicitud de inversión',
+        heading: 'Solicitud de reunión guardada',
+        paragraphs: [
+          `Registramos su interés en invertir en ${propertyName}.`,
+          amountLabel
+            ? `Monto estimado indicado: ${amountLabel}.`
+            : 'Nuestro equipo recibió su solicitud.',
+          channelLabel
+            ? `Modalidad seleccionada: ${channelLabel}. Abrir WhatsApp no confirma por sí solo una reunión; complete el mensaje ahí para coordinar.`
+            : 'Abrir WhatsApp no confirma por sí solo una reunión.',
+          'Puede seguir el estado en Mi cuenta → Solicitudes de inversión. La confirmación de depósito se habilita después de la reunión y cuando nuestro equipo lo apruebe para invertir.',
+        ].filter(Boolean),
+        cta: { href: accountLink, label: 'Ver solicitudes' },
+        footnotes: [
+          'Los datos bancarios nunca se envían por correo ni se muestran en la app.',
+          'Gracias por confiar en Golden State Capital.',
+        ],
+      }),
+      text: [
+        'Golden State Capital — Solicitud de reunión guardada',
+        '',
+        `Propiedad: ${propertyName}`,
+        amountLabel ? `Monto estimado: ${amountLabel}` : '',
+        channelLabel ? `Modalidad: ${channelLabel}` : '',
+        '',
+        'Abrir WhatsApp no confirma una reunión por sí solo.',
+        accountLink,
+        investLink ? `Continuar: ${investLink}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    }
+  }
+
+  return {
+    subject: `Meeting request saved — ${propertyName} | Golden State Capital`,
+    html: buildTransactionalEmail({
+      locale: 'en',
+      preheader: 'We received your investment meeting request.',
+      eyebrow: 'Investment request',
+      heading: 'Meeting request saved',
+      paragraphs: [
+        `We recorded your interest in investing in ${propertyName}.`,
+        amountLabel
+          ? `Intended amount noted: ${amountLabel}.`
+          : 'Our team received your request.',
+        channelLabel
+          ? `Selected modality: ${channelLabel}. Opening WhatsApp does not by itself confirm a meeting — finish messaging there to arrange one.`
+          : 'Opening WhatsApp does not by itself confirm a meeting.',
+        'You can track status under My account → Investment requests. Deposit confirmation unlocks after your meeting and once our team approves you to invest.',
+      ].filter(Boolean),
+      cta: { href: accountLink, label: 'View requests' },
+      footnotes: [
+        'Bank and wire details are never emailed or shown in the app.',
+        'Thank you for choosing Golden State Capital.',
+      ],
+    }),
+    text: [
+      'Golden State Capital — Meeting request saved',
+      '',
+      `Property: ${propertyName}`,
+      amountLabel ? `Intended amount: ${amountLabel}` : '',
+      channelLabel ? `Modality: ${channelLabel}` : '',
+      '',
+      'Opening WhatsApp does not by itself confirm a meeting.',
+      accountLink,
+      investLink ? `Continue: ${investLink}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  }
+}
+
+export function awaitingWireEmailContent({
+  locale,
+  propertyName,
+  investLink,
+  accountLink,
+}) {
+  if (locale === 'es') {
+    return {
+      subject: `Listo para confirmar su depósito — ${propertyName} | Golden State Capital`,
+      html: buildTransactionalEmail({
+        locale: 'es',
+        preheader: 'Nuestro equipo lo aprobó para continuar con el depósito.',
+        eyebrow: 'Siguiente paso',
+        heading: 'Puede confirmar su depósito',
+        paragraphs: [
+          `Nuestro equipo lo aprobó para continuar con la inversión en ${propertyName}.`,
+          'Use únicamente las instrucciones de transferencia compartidas en su llamada o en persona. Luego abra la página de inversión y suba su comprobante.',
+          'Los datos bancarios no se incluyen en este correo ni en la app.',
+        ],
+        cta: { href: investLink, label: 'Confirmar depósito' },
+        footnotes: [
+          'También puede ver el estado en Mi cuenta → Solicitudes de inversión.',
+          'Gracias por confiar en Golden State Capital.',
+        ],
+      }),
+      text: [
+        'Golden State Capital — Listo para confirmar su depósito',
+        '',
+        `Propiedad: ${propertyName}`,
+        investLink,
+        accountLink,
+      ].join('\n'),
+    }
+  }
+
+  return {
+    subject: `Ready to confirm your deposit — ${propertyName} | Golden State Capital`,
+    html: buildTransactionalEmail({
+      locale: 'en',
+      preheader: 'Our team approved you to proceed with your deposit.',
+      eyebrow: 'Next step',
+      heading: 'You can confirm your deposit',
+      paragraphs: [
+        `Our team approved you to proceed with the investment in ${propertyName}.`,
+        'Use only the wire instructions shared on your call or in person. Then open the invest page and upload your receipt.',
+        'Bank details are not included in this email or in the app.',
+      ],
+      cta: { href: investLink, label: 'Confirm deposit' },
+      footnotes: [
+        'You can also track status under My account → Investment requests.',
+        'Thank you for choosing Golden State Capital.',
+      ],
+    }),
+    text: [
+      'Golden State Capital — Ready to confirm your deposit',
+      '',
+      `Property: ${propertyName}`,
+      investLink,
+      accountLink,
+    ].join('\n'),
   }
 }

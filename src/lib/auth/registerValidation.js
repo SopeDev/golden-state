@@ -18,6 +18,10 @@ export function validateAccountRegistration(body) {
     errors.password = 'password_too_short'
   }
 
+  if (body.acceptLegal !== true && body.acceptLegal !== 'true' && body.acceptLegal !== 'on') {
+    errors.acceptLegal = 'required'
+  }
+
   if (password !== confirmPassword) {
     errors.confirmPassword = 'password_mismatch'
   }

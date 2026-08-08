@@ -12,14 +12,26 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const pendingApproval = await prisma.user.count({
-      where: {
-        type: 'INVESTOR',
-        accountStatus: 'PENDING_ADMIN',
-      },
-    })
+    const [pendingApproval, meetingRequests, pendingDeposits] = await Promise.all([
+      prisma.user.count({
+        where: {
+          type: 'INVESTOR',
+          accountStatus: 'PENDING_ADMIN',
+        },
+      }),
+      prisma.investmentIntent.count({
+        where: { status: 'MEETING_REQUESTED' },
+      }),
+      prisma.depositRequest.count({
+        where: { status: 'PENDING' },
+      }),
+    ])
 
-    return NextResponse.json({ pendingApproval })
+    return NextResponse.json({
+      pendingApproval,
+      meetingRequests,
+      pendingDeposits,
+    })
   } catch (error) {
     console.error('Pending count error:', error)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })

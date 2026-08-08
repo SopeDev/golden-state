@@ -7,6 +7,7 @@ import {
   assertCanEnterExecutionStatus,
   assertCanSetFundedStatus,
   getPropertyFundedAmount,
+  PLATFORM_MIN_INVESTMENT,
   syncPropertyFundingStatus,
   withFundingFields,
 } from '@/lib/propertyFunding'
@@ -75,7 +76,7 @@ export async function PUT(request, { params }) {
     // Validate required fields
     const requiredFields = [
       'investmentId', 'name', 'slug', 'city', 'state',
-      'address', 'price', 'unitCount', 'minInvestment', 
+      'address', 'price', 'unitCount',
       'estimatedROI', 'estimatedMonths', 'summary'
     ]
     
@@ -132,7 +133,7 @@ export async function PUT(request, { params }) {
         investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
         price: parseRequiredInt(body.price, 'price'),
         unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
-        minInvestment: parseRequiredInt(body.minInvestment, 'minInvestment'),
+        minInvestment: PLATFORM_MIN_INVESTMENT,
         estimatedROI: parseRequiredFloat(body.estimatedROI, 'estimatedROI'),
         estimatedMonths: String(body.estimatedMonths).trim(),
       }

@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
       include: {
         _count: {
           select: {
-            investments: true
+            fundingContributions: true
           }
         }
       }
@@ -150,7 +150,7 @@ export async function PUT(request, { params }) {
       include: {
         _count: {
           select: {
-            investments: true
+            fundingContributions: true
           }
         }
       }
@@ -172,65 +172,82 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/admin/users/[id] - Delete user
+// Optional ?force=true removes investment/deposit ledger rows first (for test resets).
 export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
-    
-    // Check if user is authenticated and is admin
+
     if (!session || session.user?.type !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
     const userId = parseInt(id)
+    const force = new URL(request.url).searchParams.get('force') === 'true'
 
     if (isNaN(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 })
+    }
+
+    if (Number(session.user.id) === userId) {
       return NextResponse.json(
-        { error: 'Invalid user ID' },
+        { error: 'You cannot delete your own admin account', code: 'SELF_DELETE' },
         { status: 400 }
       )
     }
 
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
       include: {
         _count: {
           select: {
-            investments: true
-          }
-        }
-      }
+            fundingContributions: true,
+            depositRequests: true,
+          },
+        },
+      },
     })
 
     if (!existingUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Prevent deleting users with investments
-    if (existingUser._count.investments > 0) {
+    const hasLedger =
+      existingUser._count.fundingContributions > 0 || existingUser._count.depositRequests > 0
+
+    if (hasLedger && !force) {
       return NextResponse.json(
-        { error: 'Cannot delete user with existing investments' },
+        {
+          error:
+            'Cannot delete user with existing investments or deposit records. Confirm force delete to remove their ledger data and try again.',
+          code: 'HAS_INVESTMENTS',
+          fundingContributions: existingUser._count.fundingContributions,
+          depositRequests: existingUser._count.depositRequests,
+        },
         { status: 400 }
       )
     }
 
-    // Delete user
-    await prisma.user.delete({
-      where: { id: userId }
+    await prisma.$transaction(async (tx) => {
+      if (force) {
+        await tx.fundingContribution.deleteMany({ where: { userId } })
+        await tx.depositRequest.deleteMany({ where: { userId } })
+        await tx.investmentIntent.deleteMany({ where: { userId } })
+      }
+
+      await tx.user.updateMany({
+        where: { adminApprovedById: userId },
+        data: { adminApprovedById: null },
+      })
+
+      await tx.user.delete({ where: { id: userId } })
     })
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {
     console.error('Error deleting user:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete user' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
   } finally {
     await prisma.$disconnect()
   }
-} 
+}

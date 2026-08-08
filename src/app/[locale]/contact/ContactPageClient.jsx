@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
 import { CalendarClock, Clock, Mail, MapPin, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,8 +12,7 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_SCHEDULING_URL = 'https://calendly.com/goldenstate-capital/discovery-call'
 
-export default function ContactPageClient() {
-  const t = useTranslations('Contact')
+export default function ContactPageClient({ content }) {
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -82,12 +80,12 @@ export default function ContactPageClient() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(212,175,55,0.22),transparent_40%)]" aria-hidden />
         <div className="relative mx-auto max-w-6xl px-4 py-14 md:py-20">
           <div className="max-w-3xl">
-            <h1 className="font-heading text-3xl font-semibold md:text-5xl">{t('heroTitle')}</h1>
+            <h1 className="font-heading text-3xl font-semibold md:text-5xl">{content.heroTitle}</h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/92 md:text-lg">
-              {t('heroThanks')}
+              {content.heroThanks}
             </p>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/88 md:text-lg">
-              {t('heroInvite')}
+              {content.heroInvite}
             </p>
           </div>
         </div>
@@ -103,9 +101,9 @@ export default function ContactPageClient() {
                     <CalendarClock className="size-6" aria-hidden />
                   </span>
                   <div>
-                    <CardTitle className="font-heading text-2xl text-primary">{t('scheduleTitle')}</CardTitle>
+                    <CardTitle className="font-heading text-2xl text-primary">{content.scheduleTitle}</CardTitle>
                     <CardDescription className="mt-1 text-base text-muted-foreground">
-                      {t('scheduleDescription')}
+                      {content.scheduleDescription}
                     </CardDescription>
                   </div>
                 </div>
@@ -113,10 +111,10 @@ export default function ContactPageClient() {
               <CardContent className="flex flex-col justify-center gap-2 border-t border-border/80 bg-card p-8 md:border-l md:border-t-0 md:p-10">
                 <Button asChild size="lg" className="w-full sm:w-auto sm:self-start" variant="gold">
                   <a href={schedulingUrl} target="_blank" rel="noopener noreferrer">
-                    {t('scheduleCta')}
+                    {content.scheduleCta}
                   </a>
                 </Button>
-                <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">{t('scheduleFootnote')}</p>
+                <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">{content.scheduleFootnote}</p>
               </CardContent>
             </div>
           </Card>
@@ -127,8 +125,8 @@ export default function ContactPageClient() {
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
           <div className="space-y-8 lg:col-span-5">
             <div>
-              <h2 className="font-heading text-2xl font-semibold text-primary md:text-3xl">{t('officeTitle')}</h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t('contactDisclaimer')}</p>
+              <h2 className="font-heading text-2xl font-semibold text-primary md:text-3xl">{content.officeTitle}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{content.contactDisclaimer}</p>
             </div>
 
             <Card className="border-border/80 shadow-sm">
@@ -138,9 +136,11 @@ export default function ContactPageClient() {
                     <MapPin className="size-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">Office</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">
+                      {content.officeLabel}
+                    </p>
                     <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                      {t('officeAddress')}
+                      {content.officeAddress}
                     </p>
                   </div>
                 </div>
@@ -149,12 +149,12 @@ export default function ContactPageClient() {
                     <Phone className="size-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{t('phoneLabel')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{content.phoneLabel}</p>
                     <a
-                      href={`tel:${t('phoneHref')}`}
+                      href={`tel:${content.phoneHref}`}
                       className="mt-1 block text-sm font-medium text-secondary-blue hover:underline"
                     >
-                      {t('phoneValue')}
+                      {content.phoneValue}
                     </a>
                   </div>
                 </div>
@@ -163,12 +163,12 @@ export default function ContactPageClient() {
                     <Mail className="size-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{t('emailLabel')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{content.emailLabel}</p>
                     <a
-                      href={`mailto:${t('emailValue')}`}
+                      href={`mailto:${content.emailValue}`}
                       className="mt-1 block text-sm font-medium text-secondary-blue hover:underline break-all"
                     >
-                      {t('emailValue')}
+                      {content.emailValue}
                     </a>
                   </div>
                 </div>
@@ -177,9 +177,9 @@ export default function ContactPageClient() {
                     <Clock className="size-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{t('hoursLabel')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{content.hoursLabel}</p>
                     <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                      {t('hoursValue')}
+                      {content.hoursValue}
                     </p>
                   </div>
                 </div>
@@ -190,44 +190,44 @@ export default function ContactPageClient() {
           <div className="lg:col-span-7">
             <Card className="border-border/80 shadow-md">
               <CardHeader className="space-y-2 pb-2">
-                <CardTitle className="font-heading text-2xl">{t('formSectionTitle')}</CardTitle>
-                <CardDescription>{t('formSectionDescription')}</CardDescription>
+                <CardTitle className="font-heading text-2xl">{content.formSectionTitle}</CardTitle>
+                <CardDescription>{content.formSectionDescription}</CardDescription>
               </CardHeader>
               <CardContent className="pt-2">
                 <form className="space-y-6" onSubmit={handleSubmit}>
                   <div className="grid gap-6 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name">{t('name')}</Label>
+                      <Label htmlFor="contact-name">{content.name}</Label>
                       <Input id="contact-name" name="name" type="text" autoComplete="name" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contact-email">{t('email')}</Label>
+                      <Label htmlFor="contact-email">{content.email}</Label>
                       <Input id="contact-email" name="email" type="email" autoComplete="email" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact-phone">{t('phone')}</Label>
+                    <Label htmlFor="contact-phone">{content.phone}</Label>
                     <Input id="contact-phone" name="phone" type="tel" autoComplete="tel" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact-message">{t('message')}</Label>
+                    <Label htmlFor="contact-message">{content.message}</Label>
                     <Textarea id="contact-message" name="message" rows={6} required className="min-h-[140px] resize-y" />
                   </div>
 
-                  <p className="text-xs text-muted-foreground">{t('privacyNote')}</p>
+                  <p className="text-xs text-muted-foreground">{content.privacyNote}</p>
 
                   {status === 'success' && (
-                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{t('success')}</p>
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{content.success}</p>
                   )}
                   {status === 'validation' && (
-                    <p className="text-sm font-medium text-destructive">{t('validationError')}</p>
+                    <p className="text-sm font-medium text-destructive">{content.validationError}</p>
                   )}
                   {status === 'error' && (
-                    <p className="text-sm font-medium text-destructive">{t('error')}</p>
+                    <p className="text-sm font-medium text-destructive">{content.error}</p>
                   )}
 
                   <Button type="submit" className={cn('w-full sm:w-auto')} variant="gold" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? t('submitting') : t('submit')}
+                    {isSubmitting ? content.submitting : content.submit}
                   </Button>
                 </form>
               </CardContent>

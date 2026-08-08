@@ -5,6 +5,7 @@ import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import AdminNav from '../components/AdminNav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatUsd } from '@/lib/formatMoney'
 import { getPropertyTypeLabel, propertyTypeInclude, toClientProperties } from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
@@ -36,11 +37,12 @@ export default async function DataPage() {
           provider: true,
           createdAt: true,
           _count: {
-            select: { investments: true },
+            select: { fundingContributions: true },
           },
         },
       }),
-      prisma.investment.findMany({
+      prisma.fundingContribution.findMany({
+        where: { status: 'ACTIVE' },
         include: {
           user: { select: { email: true } },
           property: { select: { name: true } },
@@ -50,14 +52,7 @@ export default async function DataPage() {
     ])
     const properties = toClientProperties(propertiesRaw)
 
-    const formatCurrency = (amount) => {
-      return new Intl.NumberFormat(dateLocale, {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount)
-    }
+    const formatCurrency = (amount) => formatUsd(amount)
 
     const formatDate = (date) => {
       return new Date(date).toLocaleDateString(dateLocale, {
@@ -103,10 +98,6 @@ export default async function DataPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{t('minInvestment')}</p>
-                      <p className="text-amber-600 dark:text-amber-400">{formatCurrency(property.minInvestment)}</p>
-                    </div>
-                    <div>
                       <p className="font-medium text-foreground">{t('estimatedRoi')}</p>
                       <p className="text-amber-600 dark:text-amber-400">{property.estimatedROI}%</p>
                     </div>
@@ -141,7 +132,7 @@ export default async function DataPage() {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{t('investments')}</p>
-                      <p className="text-amber-600 dark:text-amber-400">{user._count.investments}</p>
+                      <p className="text-amber-600 dark:text-amber-400">{user._count.fundingContributions}</p>
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{t('joined')}</p>
@@ -162,7 +153,8 @@ export default async function DataPage() {
                 <Card key={investment.id}>
                   <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b pb-4">
                     <CardTitle className="text-base font-medium leading-snug">
-                      {investment.user.email} → {investment.property.name}
+                      {investment.user?.email || 'Manual'} → {investment.property.name}
+                      {investment.source === 'MANUAL' ? ` (${investment.label || 'manual'})` : ''}
                     </CardTitle>
                     <span className={badgeClass}>{formatCurrency(investment.amount)}</span>
                   </CardHeader>

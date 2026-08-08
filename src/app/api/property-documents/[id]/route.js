@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { getPrivateObject } from '@/lib/storage/r2'
+import { investorHoldingWhere } from '@/lib/fundingContributions'
 
 const prisma = new PrismaClient()
 
@@ -37,11 +38,10 @@ export async function GET(_request, { params }) {
     let canAccess = isAdmin
 
     if (!canAccess) {
-      const holding = await prisma.investment.findFirst({
-        where: {
+      const holding = await prisma.fundingContribution.findFirst({
+        where: investorHoldingWhere(Number(session.user.id), {
           propertyId: doc.propertyId,
-          userId: Number(session.user.id),
-        },
+        }),
         select: { id: true },
       })
       canAccess = Boolean(holding)

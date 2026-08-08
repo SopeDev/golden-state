@@ -94,40 +94,49 @@ export async function POST(request) {
     )
 
     for (const [field, kind] of entries) {
-      const file = formData.get(field)
-      if (!(file instanceof File) || file.size === 0) continue
-      if (!ALLOWED_MIME.has(file.type)) {
-        return NextResponse.json({ message: `Invalid file type: ${field}` }, { status: 400 })
+      const files = formData
+        .getAll(field)
+        .filter((entry) => entry instanceof File && entry.size > 0)
+
+      if (files.length === 0) continue
+
+      for (const file of files) {
+        if (!ALLOWED_MIME.has(file.type)) {
+          return NextResponse.json({ message: `Invalid file type: ${field}` }, { status: 400 })
+        }
       }
 
       await prisma.investorDocument.deleteMany({
         where: { userId, kind },
       })
 
-      const ext = path.extname(file.name) || '.bin'
-      const filename = `${field}-${Date.now()}-${sanitizeBaseName(file.name)}${ext}`
-      const objectKey = `investors/${userId}/${filename}`
-      const buffer = Buffer.from(await file.arrayBuffer())
-      await putPrivateObject({
-        key: objectKey,
-        body: buffer,
-        contentType: file.type,
-      })
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index]
+        const ext = path.extname(file.name) || '.bin'
+        const filename = `${field}-${Date.now()}-${index}-${sanitizeBaseName(file.name)}${ext}`
+        const objectKey = `investors/${userId}/${filename}`
+        const buffer = Buffer.from(await file.arrayBuffer())
+        await putPrivateObject({
+          key: objectKey,
+          body: buffer,
+          contentType: file.type,
+        })
 
-      const doc = await prisma.investorDocument.create({
-        data: {
-          userId,
-          kind,
-          fileUrl: objectKey,
-          fileName: file.name,
-          mimeType: file.type,
-        },
-      })
-      createdDocs.push(doc)
+        const doc = await prisma.investorDocument.create({
+          data: {
+            userId,
+            kind,
+            fileUrl: objectKey,
+            fileName: file.name,
+            mimeType: file.type,
+          },
+        })
+        createdDocs.push(doc)
+      }
     }
 
     if (isPartialResubmit) {
-      const uploadedKinds = createdDocs.map((doc) => doc.kind)
+      const uploadedKinds = [...new Set(createdDocs.map((doc) => doc.kind))]
       const missingKinds = resubmitKinds.filter((kind) => !uploadedKinds.includes(kind))
       if (missingKinds.length > 0) {
         return NextResponse.json({ message: 'All requested documents are required' }, { status: 400 })

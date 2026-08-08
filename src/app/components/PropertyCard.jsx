@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
@@ -57,21 +58,16 @@ export default function PropertyCard({ property }) {
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">{t('price')}</p>
-            <p className="text-xl font-semibold text-primary">${property.price.toLocaleString()}</p>
+            <p className="text-xl font-semibold text-primary">${formatMoneyAmount(property.price)}</p>
           </div>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">{t('units')}</p>
             <p className="text-xl font-semibold text-primary">{property.unitCount}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">{t('minInvestment')}</p>
-            <p className="text-xl font-semibold text-main-gold">
-              ${property.minInvestment.toLocaleString()}
-            </p>
-          </div>
-          <div className="text-center">
             <p className="text-sm text-muted-foreground">{t('estRoi')}</p>
             <p className="text-xl font-semibold text-main-gold">{property.estimatedROI}%</p>
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t('roiDisclaimer')}</p>
           </div>
         </div>
 

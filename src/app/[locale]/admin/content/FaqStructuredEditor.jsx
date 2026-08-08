@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useMessaging } from '@/hooks/useMessaging'
 
 const labelClass = 'text-main-gold'
 
@@ -31,9 +32,31 @@ export default function FaqStructuredEditor({
 }) {
   const t = useTranslations('Admin.content.faq')
   const tc = useTranslations('Admin.common')
+  const { confirm } = useMessaging()
   const highlightRing = (id) =>
     highlightedFieldId === id ? 'ring-2 ring-main-gold ring-offset-1' : ''
   const categories = structure?.categories || []
+
+  const handleRemoveCategory = async (categoryId, previewLabel) => {
+    const confirmed = await confirm({
+      message: t('confirmRemoveCategory', { name: previewLabel }),
+      variant: 'destructive',
+      confirmLabel: t('remove'),
+    })
+    if (confirmed) onRemoveCategory(categoryId)
+  }
+
+  const handleRemoveQuestion = async (categoryId, qIndex, previewLabel) => {
+    const confirmed = await confirm({
+      message: t('confirmRemoveQuestion', {
+        number: qIndex + 1,
+        name: previewLabel,
+      }),
+      variant: 'destructive',
+      confirmLabel: t('remove'),
+    })
+    if (confirmed) onRemoveQuestion(categoryId, qIndex)
+  }
 
   return (
     <div className="space-y-5">
@@ -94,11 +117,7 @@ export default function FaqStructuredEditor({
                       size="sm"
                       variant="outline"
                       className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => {
-                        if (window.confirm(t('confirmRemoveCategory', { name: previewLabel }))) {
-                          onRemoveCategory(category.id)
-                        }
-                      }}
+                      onClick={() => handleRemoveCategory(category.id, previewLabel)}
                     >
                       <Trash2 className="size-4" aria-hidden />
                       {t('remove')}
@@ -195,18 +214,9 @@ export default function FaqStructuredEditor({
                                     variant="outline"
                                     className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                     aria-label={t('removeQuestion')}
-                                    onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          t('confirmRemoveQuestion', {
-                                            number: qIndex + 1,
-                                            name: previewLabel,
-                                          })
-                                        )
-                                      ) {
-                                        onRemoveQuestion(category.id, qIndex)
-                                      }
-                                    }}
+                                    onClick={() =>
+                                      handleRemoveQuestion(category.id, qIndex, previewLabel)
+                                    }
                                   >
                                     <Trash2 className="size-4" aria-hidden />
                                   </Button>

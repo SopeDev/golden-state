@@ -17,14 +17,17 @@ import {
   looksLikeIntegerString,
   parseFormattedInteger,
 } from '@/lib/admin/numberFormat'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import AdminPropertyDocuments from '@/components/invest/AdminPropertyDocuments'
+import AdminPropertyCapitalRaise from '@/components/invest/AdminPropertyCapitalRaise'
 import {
   PROPERTY_STATUS_VALUES,
   getPropertyStatusLabelKey,
   toDateInputValue,
 } from '@/lib/propertyStatusUi'
-import { isRaisePhaseStatus } from '@/lib/propertyFunding'
+import { isRaisePhaseStatus, PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
+import { useMessaging } from '@/hooks/useMessaging'
 
 const keyToLabel = (key) => {
   if (!key) return ''
@@ -132,7 +135,6 @@ const buildInitialFormData = (property, propertyTypes = []) => ({
   address: property?.address || '',
   price: property?.price ?? '',
   unitCount: property?.unitCount ?? '',
-  minInvestment: property?.minInvestment ?? '',
   estimatedROI: property?.estimatedROI ?? '',
   estimatedMonths: property?.estimatedMonths || '',
   summary: property?.summary || '',
@@ -249,6 +251,7 @@ export default function PropertyEditor({
   const tc = useTranslations('Admin.common')
   const tf = useTranslations('Admin.filter')
   const locale = useLocale()
+  const { alert } = useMessaging()
   const [formData, setFormData] = useState(() => buildInitialFormData(property, propertyTypes))
   const [propertyFactsRows, setPropertyFactsRows] = useState(() =>
     objectToRows(property?.propertyFacts)
@@ -265,8 +268,8 @@ export default function PropertyEditor({
   const goalPreview = Number(formData.price) || 0
   const fundingLabel =
     goalPreview > 0
-      ? `${fundedAmount.toLocaleString('en-US')} / ${goalPreview.toLocaleString('en-US')} (${fundingPercent}%)`
-      : fundedAmount.toLocaleString('en-US')
+      ? `${formatMoneyAmount(fundedAmount)} / ${formatMoneyAmount(goalPreview)} (${fundingPercent}%)`
+      : formatMoneyAmount(fundedAmount)
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialFormData(property, propertyTypes))
@@ -329,8 +332,8 @@ export default function PropertyEditor({
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        alert(`Failed to upload images: ${error.message}`)
+        const error = await response.json().catch(() => ({}))
+        await alert(error.error || error.message || t('uploadError'))
         return
       }
 
@@ -343,7 +346,7 @@ export default function PropertyEditor({
       }))
     } catch (error) {
       console.error('Error uploading images:', error)
-      alert(t('uploadError'))
+      await alert(t('uploadError'))
     } finally {
       event.target.value = ''
       setIsUploadingImages(false)
@@ -378,7 +381,7 @@ export default function PropertyEditor({
       completedAt: formData.completedAt || null,
       price: parseInt(formData.price, 10),
       unitCount: parseInt(formData.unitCount, 10),
-      minInvestment: parseInt(formData.minInvestment, 10),
+      minInvestment: PLATFORM_MIN_INVESTMENT,
       estimatedROI: parseFloat(formData.estimatedROI),
       propertyFacts: rowsToObject(propertyFactsRows),
       investmentDetails: rowsToObject(investmentDetailsRows),
@@ -600,15 +603,6 @@ export default function PropertyEditor({
                   required
                 />
               </Field>
-              <Field label={t('minInvestment')} htmlFor="prop-minInvestment" emphasis>
-                <AdminFormattedNumberInput
-                  id="prop-minInvestment"
-                  name="minInvestment"
-                  value={formData.minInvestment}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
               <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI" emphasis>
                 <Input
                   id="prop-estimatedROI"
@@ -753,6 +747,15 @@ export default function PropertyEditor({
               </div>
             </Field>
           </AdminFormSection>
+
+          {!isCreating && property?.id ? (
+            <AdminFormSection title={t('capitalRaise')} description={t('capitalRaiseDesc')}>
+              <AdminPropertyCapitalRaise
+                propertyId={property.id}
+                investmentGoal={Number(property.price) || 0}
+              />
+            </AdminFormSection>
+          ) : null}
 
           {!isCreating && property?.id ? (
             <AdminFormSection title={t('progressDocuments')}>

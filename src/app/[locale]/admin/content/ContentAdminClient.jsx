@@ -26,6 +26,7 @@ const PREVIEW_CONFIG = {
   HOME: { src: '/en/admin/content/preview/home', updateType: 'HOME_PREVIEW_UPDATE', selectType: 'HOME_PREVIEW_SELECT' },
   ABOUT: { src: '/en/admin/content/preview/about', updateType: 'ABOUT_PREVIEW_UPDATE', selectType: 'ABOUT_PREVIEW_SELECT' },
   FAQ: { src: '/en/admin/content/preview/faq', updateType: 'FAQ_PREVIEW_UPDATE', selectType: 'FAQ_PREVIEW_SELECT' },
+  CONTACT: { src: '/en/admin/content/preview/contact', updateType: 'CONTACT_PREVIEW_UPDATE', selectType: 'CONTACT_PREVIEW_SELECT' },
 }
 
 const stripFaqStructuredKeys = (obj) => {
@@ -280,6 +281,43 @@ const HOME_SECTIONS = [
   },
 ]
 
+const CONTACT_KEY_ORDER = [
+  'metaTitle',
+  'metaDescription',
+  'heroTitle',
+  'heroThanks',
+  'heroInvite',
+  'scheduleTitle',
+  'scheduleDescription',
+  'scheduleCta',
+  'scheduleFootnote',
+  'officeTitle',
+  'officeLabel',
+  'officeAddress',
+  'phoneLabel',
+  'phoneValue',
+  'phoneHref',
+  'emailLabel',
+  'emailValue',
+  'hoursLabel',
+  'hoursValue',
+  'contactDisclaimer',
+  'formSectionTitle',
+  'formSectionDescription',
+  'title',
+  'subtitle',
+  'name',
+  'email',
+  'phone',
+  'message',
+  'submit',
+  'submitting',
+  'success',
+  'error',
+  'validationError',
+  'privacyNote',
+]
+
 const HOME_KEY_ORDER = HOME_SECTIONS.flatMap((section) => section.keys)
 
 const PAGE_CONFIG = {
@@ -312,11 +350,15 @@ const PAGE_CONFIG = {
       'bottomCtaSecondary',
     ],
   },
+  CONTACT: {
+    label: 'Contact Page',
+    keyOrder: CONTACT_KEY_ORDER,
+  },
 }
 
 const FAQ_STRUCTURED_KEY_REGEX = /^(?:categoryOrder|category.+Title|item\d+(?:Category|Question|Answer))$/
 
-const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ']
+const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ', 'CONTACT']
 
 export default function ContentAdminClient({ records, fallbackByPage }) {
   const t = useTranslations('Admin.content')
@@ -405,7 +447,20 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
   }
 
   const isLongField = (key) => {
-    const longKeyWords = ['Body', 'Subtitle', 'Description', 'Quote', 'Intro', 'Note', 'Disclaimer']
+    const longKeyWords = [
+      'Body',
+      'Subtitle',
+      'Description',
+      'Quote',
+      'Intro',
+      'Note',
+      'Disclaimer',
+      'Thanks',
+      'Invite',
+      'Address',
+      'Footnote',
+    ]
+    if (key === 'hoursValue') return true
     return longKeyWords.some((word) => key.includes(word))
   }
 
@@ -585,7 +640,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
       if (event.origin !== window.location.origin) return
 
       const eventType = event.data?.type
-      if (eventType === 'ABOUT_PREVIEW_SELECT' || eventType === 'HOME_PREVIEW_SELECT') {
+      if (eventType === 'ABOUT_PREVIEW_SELECT' || eventType === 'HOME_PREVIEW_SELECT' || eventType === 'CONTACT_PREVIEW_SELECT') {
         const key = event.data?.payload?.key
         const locale = event.data?.payload?.locale || previewLocale
         if (!key) return

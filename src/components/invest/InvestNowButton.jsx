@@ -5,10 +5,34 @@ import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { isPropertyOpenForInvestment } from '@/lib/propertyFunding'
 
-export default function InvestNowButton({ propertyId, className }) {
+function closedLabel(t, propertyStatus) {
+  if (propertyStatus === 'FUNDED') return t('investFullyFunded')
+  if (propertyStatus === 'COMPLETED') return t('investCompleted')
+  return t('investClosed')
+}
+
+export default function InvestNowButton({ propertyId, propertyStatus, className }) {
   const { data: session, status } = useSession()
   const t = useTranslations('PropertyDetails')
+  const open = isPropertyOpenForInvestment(propertyStatus)
+
+  if (!open) {
+    return (
+      <span
+        className={cn(
+          buttonVariants({ variant: 'outline', size: 'cta' }),
+          'w-full cursor-not-allowed opacity-70',
+          className
+        )}
+        aria-disabled
+      >
+        {closedLabel(t, propertyStatus)}
+      </span>
+    )
+  }
+
   const label = t('investNow')
 
   if (status === 'loading') {

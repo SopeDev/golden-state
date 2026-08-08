@@ -7,6 +7,7 @@ import AdminNav from '../components/AdminNav'
 import ContentAdminClient from './ContentAdminClient'
 import {
   getAboutFallbackByLocale,
+  getContactFallbackByLocale,
   getFaqFallbackByLocale,
   getHomeFallbackByLocale,
 } from '@/lib/pageContent'
@@ -26,7 +27,7 @@ export default async function ContentAdminPage() {
     const records = await prisma.pageContent.findMany({
       where: {
         pageKey: {
-          in: ['HOME', 'ABOUT', 'FAQ'],
+          in: ['HOME', 'ABOUT', 'FAQ', 'CONTACT'],
         },
       },
       orderBy: [{ pageKey: 'asc' }, { locale: 'asc' }],
@@ -36,6 +37,7 @@ export default async function ContentAdminPage() {
       HOME: getHomeFallbackByLocale(),
       ABOUT: getAboutFallbackByLocale(),
       FAQ: getFaqFallbackByLocale(),
+      CONTACT: getContactFallbackByLocale(),
     }
 
     return (

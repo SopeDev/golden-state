@@ -6,6 +6,7 @@ import { resolvePropertyProgressFields } from '@/lib/propertyStatusUi'
 import {
   assertCanEnterExecutionStatus,
   assertCanSetFundedStatus,
+  PLATFORM_MIN_INVESTMENT,
   withFundingFields,
 } from '@/lib/propertyFunding'
 import {
@@ -117,7 +118,6 @@ export async function POST(request) {
       'address',
       'price',
       'unitCount',
-      'minInvestment',
       'estimatedROI',
       'estimatedMonths',
       'summary',
@@ -143,7 +143,7 @@ export async function POST(request) {
         investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
         price: parseRequiredInt(body.price, 'price'),
         unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
-        minInvestment: parseRequiredInt(body.minInvestment, 'minInvestment'),
+        minInvestment: PLATFORM_MIN_INVESTMENT,
         estimatedROI: parseRequiredFloat(body.estimatedROI, 'estimatedROI'),
         estimatedMonths: String(body.estimatedMonths).trim(),
       }

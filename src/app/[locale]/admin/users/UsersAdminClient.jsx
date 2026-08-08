@@ -1,17 +1,21 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { adminAccountStatusLabel, adminUserTypeLabel } from '@/lib/admin/adminLabels'
+import { adminUserTypeLabel } from '@/lib/admin/adminLabels'
 import {
-  getAccountStatusBadgeClass,
   getAccreditedStatusBadgeClass,
 } from '@/lib/auth/userStatus'
+import {
+  getInvestorAdminPhase,
+  getInvestorAdminPhaseBadgeClass,
+} from '@/lib/admin/userTimeline'
 import { cn } from '@/lib/utils'
+import { useMessaging } from '@/hooks/useMessaging'
 import UserEditor from './UserEditor'
 
 const filterChipClass = (active) =>
@@ -22,12 +26,14 @@ const filterChipClass = (active) =>
       : 'border-border text-muted-foreground hover:text-primary'
   )
 
-/** Sidebar badge for investors: account status, or accreditation overlay when ACTIVE. */
+/** Sidebar badge for investors: onboarding phase, or accreditation overlay when ACTIVE. */
 function getInvestorListBadge(user, t) {
-  if (user.accountStatus !== 'ACTIVE') {
+  const phase = getInvestorAdminPhase(user)
+
+  if (phase && phase !== 'ACTIVE') {
     return {
-      label: adminAccountStatusLabel(t, user.accountStatus),
-      className: getAccountStatusBadgeClass(user.accountStatus),
+      label: t(`accountPhase.${phase}`),
+      className: getInvestorAdminPhaseBadgeClass(phase),
     }
   }
 
@@ -47,24 +53,18 @@ function getInvestorListBadge(user, t) {
 
   return {
     label: t('filter.active'),
-    className: getAccountStatusBadgeClass('ACTIVE'),
+    className: getInvestorAdminPhaseBadgeClass('ACTIVE'),
   }
 }
 
 export default function UsersAdminClient({ users }) {
   const t = useTranslations('Admin')
-  const locale = useLocale()
-
-  const formatDate = (date) =>
-    new Date(date).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
+  const { alert, confirm } = useMessaging()
 
   const ACCOUNT_STATUS_FILTERS = [
     { id: 'ALL', label: t('common.all') },
     { id: 'PENDING_EMAIL', label: t('filter.email') },
+    { id: 'PENDING_PROFILE', label: t('filter.profile') },
     { id: 'PENDING_ADMIN', label: t('filter.approval') },
     { id: 'ACTIVE', label: t('filter.active') },
     { id: 'REJECTED', label: t('filter.rejected') },
@@ -93,9 +93,10 @@ export default function UsersAdminClient({ users }) {
   const filteredUsers = useMemo(() => {
     let list = usersList
     if (accountStatusFilter !== 'ALL') {
-      list = list.filter(
-        (u) => u.type === 'INVESTOR' && u.accountStatus === accountStatusFilter
-      )
+      list = list.filter((u) => {
+        if (u.type !== 'INVESTOR') return false
+        return getInvestorAdminPhase(u) === accountStatusFilter
+      })
     }
     if (accreditationFilter === 'PENDING_REVIEW') {
       list = list.filter(
@@ -147,28 +148,63 @@ export default function UsersAdminClient({ users }) {
   }
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm(t('common.confirmDeleteUser'))) return
+    const confirmed = await confirm({
+      message: t('common.confirmDeleteUser'),
+      variant: 'destructive',
+      confirmLabel: t('common.deleteUser'),
+    })
+    if (!confirmed) return
 
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
+      const deleteOnce = async (force) => {
+        const url = force
+          ? `/api/admin/users/${userId}?force=true`
+          : `/api/admin/users/${userId}`
+        return fetch(url, {
+          method: 'DELETE',
+          credentials: 'include',
+        })
+      }
 
-      if (response.ok) {
-        setUsersList((prev) => prev.filter((u) => u.id !== userId))
-        if (selectedId === userId) {
-          setSelectedId(null)
-          setIsCreating(false)
+      let response = await deleteOnce(false)
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        const message = error.error || error.message || t('common.errorDeleteUser')
+
+        if (error.code === 'HAS_INVESTMENTS') {
+          const forceConfirmed = await confirm({
+            message: t('common.confirmForceDeleteUser'),
+            variant: 'destructive',
+            confirmLabel: t('common.deleteUser'),
+          })
+          if (!forceConfirmed) return
+
+          response = await deleteOnce(true)
+          if (!response.ok) {
+            const forceError = await response.json().catch(() => ({}))
+            await alert(
+              t('common.failedDeleteUser', {
+                message: forceError.error || forceError.message || t('common.errorDeleteUser'),
+              })
+            )
+            return
+          }
+        } else {
+          await alert(t('common.failedDeleteUser', { message }))
+          return
         }
-      } else {
-        const error = await response.json()
-        alert(t('common.failedUpdateUser', { message: error.message }))
+      }
+
+      setUsersList((prev) => prev.filter((u) => u.id !== userId))
+      if (selectedId === userId) {
+        setSelectedId(null)
+        setIsCreating(false)
       }
     } catch (error) {
       console.error('Error deleting user:', error)
-      alert(t('common.errorDeleteUser'))
+      await alert(t('common.errorDeleteUser'))
     } finally {
       setIsLoading(false)
     }
@@ -205,15 +241,16 @@ export default function UsersAdminClient({ users }) {
         }
       } else {
         const error = await response.json()
-        alert(
+        const message = error.error || error.message || t('common.actionFailed')
+        await alert(
           isEdit
-            ? t('common.failedUpdateUser', { message: error.message })
-            : t('common.failedCreateUser', { message: error.message })
+            ? t('common.failedUpdateUser', { message })
+            : t('common.failedCreateUser', { message })
         )
       }
     } catch (error) {
       console.error('Error saving user:', error)
-      alert(t('common.errorSaveUser'))
+      await alert(t('common.errorSaveUser'))
     } finally {
       setIsLoading(false)
     }
@@ -319,7 +356,7 @@ export default function UsersAdminClient({ users }) {
                             {user.email}
                           </span>
                           <span className="block truncate text-[11px] text-muted-foreground">
-                            #{user.id} · {t('common.joined', { date: formatDate(user.createdAt) })}
+                            #{user.id}
                           </span>
                         </div>
                         {isAdmin ? (

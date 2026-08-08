@@ -63,15 +63,14 @@ export function getAccreditedStatusBadgeClass(status) {
 }
 
 export const canAccessPortfolio = (user) =>
-  user?.type === 'ADMIN' || user?.accountStatus === ACCOUNT_STATUS.ACTIVE
+  user?.type === 'ADMIN' ||
+  (user?.accountStatus === ACCOUNT_STATUS.ACTIVE &&
+    user?.accreditedStatus === ACCREDITED_STATUS.APPROVED)
 
 export const canAccessDashboard = (user) =>
   Boolean(user && (user.type === 'ADMIN' || user.type === 'INVESTOR'))
 
-export const canInvest = (user) =>
-  user?.type === 'ADMIN' ||
-  (user?.accountStatus === ACCOUNT_STATUS.ACTIVE &&
-    user?.accreditedStatus === ACCREDITED_STATUS.APPROVED)
+export const canInvest = (user) => canAccessPortfolio(user)
 
 export const needsEmailVerification = (user) =>
   user?.type !== 'ADMIN' &&
@@ -107,15 +106,27 @@ export function resolvePortfolioAccessRedirect(user) {
   if (needsEmailVerification(user)) return '/register/check-email'
   if (!user.profileComplete) return '/account/complete-profile'
   if (user.accountStatus === ACCOUNT_STATUS.PENDING_ADMIN) return '/account/pending'
+  // Account approved but not accredited — portfolio stays empty until then
+  if (user.accountStatus === ACCOUNT_STATUS.ACTIVE) {
+    return '/dashboard/account/accreditation'
+  }
   return '/account/pending'
 }
 
 export function resolveProtectedPortfolioHref(user) {
+  return resolveAccreditedAreaHref(user, '/dashboard/portfolio')
+}
+
+export function resolveProtectedInvestmentsHref(user) {
+  return resolveAccreditedAreaHref(user, '/dashboard/investments')
+}
+
+function resolveAccreditedAreaHref(user, target) {
   if (!user) return '/login'
-  if (user.type === 'ADMIN') return '/dashboard/portfolio'
+  if (user.type === 'ADMIN') return target
   const redirectPath = resolvePortfolioAccessRedirect(user)
   if (redirectPath) return redirectPath
-  return '/dashboard/portfolio'
+  return target
 }
 
 /** Nav + route guards: where an investor should go instead of a protected destination. */
@@ -124,6 +135,9 @@ export function resolveProtectedInvestorHref(user, target = '/dashboard') {
   if (user.type === 'ADMIN') return target
   if (target === '/dashboard/portfolio' || target.startsWith('/dashboard/portfolio/')) {
     return resolveProtectedPortfolioHref(user)
+  }
+  if (target === '/dashboard/investments' || target.startsWith('/dashboard/investments/')) {
+    return resolveProtectedInvestmentsHref(user)
   }
   if (target === '/dashboard' || target === '/dashboard/account' || target.startsWith('/dashboard/account')) {
     return target

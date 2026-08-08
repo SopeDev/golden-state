@@ -267,7 +267,7 @@ async function main() {
       address: '2741 Hornblend St, San Diego, CA 92109',
       price: 3700000,
       unitCount: 4,
-      minInvestment: 50000,
+      minInvestment: 5000,
       estimatedROI: 4.5,
       estimatedMonths: '18',
       summary: 'Premium residential development in the heart of San Diego. This project features 4 luxury units with modern amenities and stunning ocean views.',
@@ -306,7 +306,7 @@ async function main() {
       address: '123 Main St, Los Angeles, CA 90012',
       price: 8500000,
       unitCount: 12,
-      minInvestment: 100000,
+      minInvestment: 5000,
       estimatedROI: 6.2,
       estimatedMonths: '24',
       summary: 'Mixed-use development in downtown Los Angeles featuring 12 residential units with ground-floor retail space.',
@@ -343,7 +343,7 @@ async function main() {
       address: '4100 Clairemont Mesa Blvd, San Diego, CA 92117',
       price: 100000,
       unitCount: 2,
-      minInvestment: 50000,
+      minInvestment: 5000,
       estimatedROI: 5.8,
       estimatedMonths: '12-18',
       summary:
@@ -374,7 +374,7 @@ async function main() {
       address: 'Near Otay Mesa POE, CA',
       price: 14200000,
       unitCount: 1,
-      minInvestment: 250000,
+      minInvestment: 5000,
       estimatedROI: 7.1,
       estimatedMonths: '36-48',
       summary:
@@ -404,7 +404,7 @@ async function main() {
       address: 'Km 38 Rosarito–Ensenada corridor',
       price: 6800000,
       unitCount: 1,
-      minInvestment: 150000,
+      minInvestment: 5000,
       estimatedROI: 6.4,
       estimatedMonths: '30-42',
       summary:
@@ -434,7 +434,7 @@ async function main() {
       address: '7200 Fay Ave, La Jolla, CA 92037',
       price: 5400000,
       unitCount: 6,
-      minInvestment: 60000,
+      minInvestment: 5000,
       estimatedROI: 18.4,
       estimatedMonths: '22',
       summary:
@@ -463,7 +463,7 @@ async function main() {
       address: '1480 N Coast Hwy 101, Encinitas, CA 92024',
       price: 1850000,
       unitCount: 1,
-      minInvestment: 40000,
+      minInvestment: 5000,
       estimatedROI: 14.1,
       estimatedMonths: '11',
       summary:
@@ -491,7 +491,7 @@ async function main() {
       address: 'Zona Río, Tijuana',
       price: 9800000,
       unitCount: 1,
-      minInvestment: 120000,
+      minInvestment: 5000,
       estimatedROI: 12.7,
       estimatedMonths: '34',
       summary:
@@ -538,7 +538,7 @@ async function main() {
 
   const seedInvestorIds = [investorUser.id, mariaUser.id, jamesUser.id]
 
-  await prisma.investment.deleteMany({
+  await prisma.fundingContribution.deleteMany({
     where: { userId: { in: seedInvestorIds } },
   })
 
@@ -549,8 +549,8 @@ async function main() {
     }
 
     const property = await prisma.property.findUnique({ where: { id: propertyId } })
-    const fundedAgg = await prisma.investment.aggregate({
-      where: { propertyId },
+    const fundedAgg = await prisma.fundingContribution.aggregate({
+      where: { propertyId, status: 'ACTIVE' },
       _sum: { amount: true },
     })
     const currentFunded = Number(fundedAgg._sum.amount || 0)
@@ -560,11 +560,12 @@ async function main() {
       )
     }
 
-    const investment = await prisma.investment.create({
+    const investment = await prisma.fundingContribution.create({
       data: {
         userId: holding.userId,
         propertyId,
         amount: holding.amount,
+        source: 'INVESTOR',
       },
     })
     console.log(`✅ Holding: user ${holding.userId} → ${holding.slug} ($${investment.amount})`)
@@ -575,8 +576,8 @@ async function main() {
     const propertyId = propertyBySlug[slug]
     const property = await prisma.property.findUnique({ where: { id: propertyId } })
     if (!property || (property.status !== 'FUNDING' && property.status !== 'FUNDED')) continue
-    const fundedAgg = await prisma.investment.aggregate({
-      where: { propertyId },
+    const fundedAgg = await prisma.fundingContribution.aggregate({
+      where: { propertyId, status: 'ACTIVE' },
       _sum: { amount: true },
     })
     const funded = Number(fundedAgg._sum.amount || 0)

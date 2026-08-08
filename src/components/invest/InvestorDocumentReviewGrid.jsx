@@ -47,7 +47,10 @@ export default function InvestorDocumentReviewGrid({
   onToggleKind,
   selectLabel,
 }) {
-  const documentsByKind = Object.fromEntries(documents.map((doc) => [doc.kind, doc]))
+  const documentsByKind = INVESTOR_DOCUMENT_FIELDS.reduce((acc, field) => {
+    acc[field.kind] = documents.filter((doc) => doc.kind === field.kind)
+    return acc
+  }, {})
   const [preview, setPreview] = useState(null)
   const selectedSet = new Set(selectedKinds)
 
@@ -56,33 +59,41 @@ export default function InvestorDocumentReviewGrid({
       <div className="overflow-x-auto">
         <div className="grid min-w-[28rem] grid-cols-4 gap-2">
           {INVESTOR_DOCUMENT_FIELDS.map((field) => {
-            const doc = documentsByKind[field.kind]
+            const docs = documentsByKind[field.kind] || []
             const isSelected = selectedSet.has(field.kind)
+            const categoryTitle = t(field.labelKey)
 
             return (
               <div key={field.kind} className="min-w-0">
                 <p className="line-clamp-2 text-[11px] font-medium leading-tight text-primary">
-                  {t(field.labelKey)}
+                  {categoryTitle}
+                  {docs.length > 1 ? (
+                    <span className="ml-1 font-normal text-muted-foreground">({docs.length})</span>
+                  ) : null}
                 </p>
-                {doc ? (
+                {docs.length > 0 ? (
                   <div
                     className={cn(
-                      'mt-1.5 rounded border',
+                      'mt-1.5 space-y-1.5 rounded border',
                       isSelected ? 'border-main-gold/60 bg-main-gold/[0.04] p-1' : 'border-transparent'
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setPreview({ doc, title: t(field.labelKey) })}
-                      className="group block w-full cursor-pointer overflow-hidden rounded border border-border/70 bg-background text-left transition-colors hover:border-main-gold/40 hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                      aria-label={`${viewLabel}: ${doc.fileName}`}
-                    >
-                      <div className="aspect-[4/3] w-full overflow-hidden">
-                        <DocumentThumbnail doc={doc} />
-                      </div>
-                    </button>
+                    {docs.map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setPreview({ doc, title: categoryTitle })}
+                        className="group block w-full cursor-pointer overflow-hidden rounded border border-border/70 bg-background text-left transition-colors hover:border-main-gold/40 hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        aria-label={`${viewLabel}: ${doc.fileName}`}
+                        title={doc.fileName}
+                      >
+                        <div className="aspect-[4/3] w-full overflow-hidden">
+                          <DocumentThumbnail doc={doc} />
+                        </div>
+                      </button>
+                    ))}
                     {selectable ? (
-                      <label className="mt-1.5 flex cursor-pointer items-center gap-1.5 px-0.5">
+                      <label className="flex cursor-pointer items-center gap-1.5 px-0.5">
                         <input
                           type="checkbox"
                           checked={isSelected}

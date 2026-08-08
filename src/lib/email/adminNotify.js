@@ -1,4 +1,5 @@
-import { sendEmail } from '@/lib/email/mailer'
+import { sendAdminEmail } from '@/lib/email/mailer'
+import { meetingChannelPlainLabel } from '@/lib/investMeetingLinks'
 
 const CORPORATE_ADMIN_EMAIL = 'admin@goldenstatecapitalmgt.com'
 
@@ -82,7 +83,7 @@ ${visaInterest ? `<li><strong>Investor Visa interest:</strong> ${visaInterest}</
 
   const text = `${subject}\n${adminUrl}`
 
-  await Promise.all(recipients.map((to) => sendEmail({ to, subject, html, text })))
+  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
 
   return { ok: true, count: recipients.length }
 }
@@ -124,7 +125,7 @@ export async function notifyAdminsAccreditationSubmitted({
 
   const text = `${subject}\n${adminUrl}`
 
-  await Promise.all(recipients.map((to) => sendEmail({ to, subject, html, text })))
+  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
 
   return { ok: true, count: recipients.length }
 }
@@ -178,7 +179,119 @@ export async function notifyAdminsReviewRequested({ investor, scope, locale = 'e
 
   const text = `${subject}\n${adminUrl}`
 
-  await Promise.all(recipients.map((to) => sendEmail({ to, subject, html, text })))
+  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
+
+  return { ok: true, count: recipients.length }
+}
+
+export async function notifyAdminsMeetingRequested({
+  investor,
+  property,
+  channel,
+  intendedAmount,
+  locale = 'en',
+}) {
+  const recipients = getAdminNotifyEmails()
+  const adminUrl = `${getBaseUrl()}/${locale}/admin/investments`
+  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
+  const name = escapeHtml(profile.fullName || investor.email)
+  const email = escapeHtml(investor.email)
+  const propertyLabel = escapeHtml(
+    property?.investmentId
+      ? `#${property.investmentId} · ${property.name}`
+      : property?.name || '—'
+  )
+  const channelLabel = meetingChannelPlainLabel(channel, locale)
+  const amountLabel =
+    intendedAmount != null && Number.isFinite(Number(intendedAmount))
+      ? `$${Number(intendedAmount).toLocaleString('en-US')}`
+      : '—'
+
+  const subject =
+    locale === 'es'
+      ? `Solicitud de reunión de inversión — ${name}`
+      : `Investment meeting request — ${name}`
+
+  const html =
+    locale === 'es'
+      ? `<p>Un inversionista acreditado solicitó una reunión de inversión por WhatsApp. Confirme en WhatsApp que la reunión quedó agendada antes de aprobar para invertir:</p>
+<ul>
+<li><strong>Nombre:</strong> ${name}</li>
+<li><strong>Correo:</strong> ${email}</li>
+<li><strong>Propiedad:</strong> ${propertyLabel}</li>
+<li><strong>Modalidad:</strong> ${escapeHtml(channelLabel)}</li>
+<li><strong>Monto estimado:</strong> ${escapeHtml(amountLabel)}</li>
+</ul>
+<p><a href="${adminUrl}">Abrir solicitudes de reunión</a></p>`
+      : `<p>An accredited investor requested an investment meeting via WhatsApp. Confirm in WhatsApp that a meeting is actually scheduled before approving for investment:</p>
+<ul>
+<li><strong>Name:</strong> ${name}</li>
+<li><strong>Email:</strong> ${email}</li>
+<li><strong>Property:</strong> ${propertyLabel}</li>
+<li><strong>Modality:</strong> ${escapeHtml(channelLabel)}</li>
+<li><strong>Intended amount:</strong> ${escapeHtml(amountLabel)}</li>
+</ul>
+<p><a href="${adminUrl}">Open meeting requests</a></p>`
+
+  const text = `${subject}\n${adminUrl}`
+
+  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
+
+  return { ok: true, count: recipients.length }
+}
+
+export async function notifyAdminsDepositSubmitted({
+  investor,
+  property,
+  amount,
+  reference,
+  locale = 'en',
+}) {
+  const recipients = getAdminNotifyEmails()
+  const adminUrl = `${getBaseUrl()}/${locale}/admin/investments`
+  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
+  const name = escapeHtml(profile.fullName || investor.email)
+  const email = escapeHtml(investor.email)
+  const propertyLabel = escapeHtml(
+    property?.investmentId
+      ? `#${property.investmentId} · ${property.name}`
+      : property?.name || '—'
+  )
+  const amountLabel =
+    amount != null && Number.isFinite(Number(amount))
+      ? `$${Number(amount).toLocaleString('en-US')}`
+      : '—'
+  const referenceLabel = escapeHtml(reference || '—')
+
+  const subject =
+    locale === 'es'
+      ? `Comprobante de depósito enviado — ${name}`
+      : `Deposit proof submitted — ${name}`
+
+  const html =
+    locale === 'es'
+      ? `<p>Un inversionista acreditado envió comprobante de depósito para revisión:</p>
+<ul>
+<li><strong>Nombre:</strong> ${name}</li>
+<li><strong>Correo:</strong> ${email}</li>
+<li><strong>Propiedad:</strong> ${propertyLabel}</li>
+<li><strong>Monto:</strong> ${escapeHtml(amountLabel)}</li>
+<li><strong>Referencia:</strong> ${referenceLabel}</li>
+</ul>
+<p><a href="${adminUrl}">Abrir solicitudes de inversión</a></p>`
+      : `<p>An accredited investor submitted deposit proof for review:</p>
+<ul>
+<li><strong>Name:</strong> ${name}</li>
+<li><strong>Email:</strong> ${email}</li>
+<li><strong>Property:</strong> ${propertyLabel}</li>
+<li><strong>Amount:</strong> ${escapeHtml(amountLabel)}</li>
+<li><strong>Reference:</strong> ${referenceLabel}</li>
+</ul>
+<p><a href="${adminUrl}">Open investment requests</a></p>`
+
+  const text = `${subject}\n${adminUrl}`
+
+  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
 
   return { ok: true, count: recipients.length }
 }

@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { PrismaClient } from '@prisma/client'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getPrivateObject } from '@/lib/storage/r2'
+
+const prisma = new PrismaClient()
+
+export async function GET(_request, { params }) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = await params
+    const deposit = await prisma.depositRequest.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        receiptStorageKey: true,
+        receiptFileName: true,
+        receiptMimeType: true,
+      },
+    })
+
+    if (!deposit?.receiptStorageKey) {
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 })
+    }
+
+    const isAdmin = session.user.type === 'ADMIN'
+    const isOwner = Number(session.user.id) === deposit.userId
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { body, contentType } = await getPrivateObject(deposit.receiptStorageKey)
+    const headers = new Headers()
+    headers.set('Content-Type', deposit.receiptMimeType || contentType || 'application/octet-stream')
+    headers.set(
+      'Content-Disposition',
+      `inline; filename="${encodeURIComponent(deposit.receiptFileName || 'receipt')}"`
+    )
+    headers.set('Cache-Control', 'private, no-store')
+
+    return new NextResponse(body, { status: 200, headers })
+  } catch (error) {
+    console.error('Error streaming deposit receipt:', error)
+    return NextResponse.json({ error: 'Failed to load receipt' }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
+  }
+}

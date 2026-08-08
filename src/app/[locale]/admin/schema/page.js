@@ -25,7 +25,7 @@ export default async function SchemaPage() {
           { name: 'type', type: 'UserType', description: 'ADMIN or INVESTOR' },
           { name: 'createdAt', type: 'DateTime', description: 'Account creation date' },
         ],
-        relations: ['investments'],
+        relations: ['fundingContributions', 'createdContributions', 'depositRequests'],
       },
       {
         name: 'Property',
@@ -40,9 +40,9 @@ export default async function SchemaPage() {
           { name: 'city', type: 'String', description: 'Property city' },
           { name: 'state', type: 'String', description: 'Property state' },
           { name: 'address', type: 'String', description: 'Full property address' },
-          { name: 'price', type: 'Int', description: 'Total project cost in cents' },
+          { name: 'price', type: 'Int', description: 'Investment goal / raise target' },
           { name: 'unitCount', type: 'Int', description: 'Number of units' },
-          { name: 'minInvestment', type: 'Int', description: 'Minimum investment amount' },
+          { name: 'minInvestment', type: 'Int', description: 'Legacy field; always stored as platform minimum ($5,000)' },
           { name: 'estimatedROI', type: 'Float', description: 'Expected return percentage' },
           { name: 'estimatedMonths', type: 'String', description: 'Project timeline display value (e.g. 24-36)' },
           { name: 'summary', type: 'String', description: 'Executive summary' },
@@ -57,7 +57,7 @@ export default async function SchemaPage() {
           { name: 'createdAt', type: 'DateTime', description: 'Record creation date' },
           { name: 'updatedAt', type: 'DateTime', description: 'Last update timestamp' },
         ],
-        relations: ['propertyType', 'investments'],
+        relations: ['propertyType', 'fundingContributions', 'depositRequests'],
       },
       {
         name: 'PropertyType',
@@ -76,16 +76,33 @@ export default async function SchemaPage() {
         relations: ['properties'],
       },
       {
-        name: 'Investment',
-        description: 'User investments in properties',
+        name: 'FundingContribution',
+        description: 'Capital raise ledger event (investor holding or manual amount)',
         fields: [
           { name: 'id', type: 'String', description: 'Primary key, CUID' },
-          { name: 'userId', type: 'Int', description: 'Foreign key to User' },
           { name: 'propertyId', type: 'String', description: 'Foreign key to Property' },
-          { name: 'amount', type: 'Float', description: 'Investment amount' },
-          { name: 'createdAt', type: 'DateTime', description: 'Investment date' },
+          { name: 'userId', type: 'Int?', description: 'Investor user id; null for MANUAL' },
+          { name: 'amount', type: 'Float', description: 'Contribution amount' },
+          { name: 'source', type: 'FundingContributionSource', description: 'INVESTOR or MANUAL' },
+          { name: 'status', type: 'FundingContributionStatus', description: 'ACTIVE or CANCELLED' },
+          { name: 'label', type: 'String?', description: 'Required label for MANUAL rows' },
+          { name: 'note', type: 'String?', description: 'Optional admin note' },
+          { name: 'createdAt', type: 'DateTime', description: 'Event timestamp' },
         ],
-        relations: ['user', 'property'],
+        relations: ['user', 'property', 'depositRequest'],
+      },
+      {
+        name: 'DepositRequest',
+        description: 'Bank-transfer deposit awaiting admin confirm/reject',
+        fields: [
+          { name: 'id', type: 'String', description: 'Primary key, CUID' },
+          { name: 'userId', type: 'Int', description: 'Investor' },
+          { name: 'propertyId', type: 'String', description: 'Property' },
+          { name: 'amount', type: 'Float', description: 'Claimed deposit amount' },
+          { name: 'reference', type: 'String?', description: 'Bank reference' },
+          { name: 'status', type: 'DepositRequestStatus', description: 'PENDING / CONFIRMED / REJECTED' },
+        ],
+        relations: ['user', 'property', 'contribution'],
       },
     ],
     enums: [
@@ -96,6 +113,18 @@ export default async function SchemaPage() {
       {
         name: 'PropertyStatus',
         values: ['FUNDING', 'FUNDED', 'PLANNING', 'IN_PROGRESS', 'COMPLETED'],
+      },
+      {
+        name: 'FundingContributionSource',
+        values: ['INVESTOR', 'MANUAL'],
+      },
+      {
+        name: 'FundingContributionStatus',
+        values: ['ACTIVE', 'CANCELLED'],
+      },
+      {
+        name: 'DepositRequestStatus',
+        values: ['PENDING', 'CONFIRMED', 'REJECTED'],
       },
     ],
   }

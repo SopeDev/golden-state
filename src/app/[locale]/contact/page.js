@@ -1,16 +1,19 @@
-import { getTranslations } from 'next-intl/server'
 import ContactPageClient from './ContactPageClient'
+import { getContactContent } from '@/lib/pageContent'
 
 export async function generateMetadata({ params }) {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'Contact' })
+  const contactContent = await getContactContent(locale)
 
   return {
-    title: t('metaTitle'),
-    description: t('metaDescription'),
+    title: contactContent.metaTitle,
+    description: contactContent.metaDescription,
   }
 }
 
-export default function ContactPage() {
-  return <ContactPageClient />
+export default async function ContactPage({ params }) {
+  const { locale } = await params
+  const contactContent = await getContactContent(locale)
+
+  return <ContactPageClient content={contactContent} />
 }

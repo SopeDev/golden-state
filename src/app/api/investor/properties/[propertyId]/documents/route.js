@@ -6,6 +6,7 @@ import {
   groupPropertyDocumentsByKind,
   toClientPropertyDocuments,
 } from '@/lib/propertyDocuments'
+import { investorHoldingWhere } from '@/lib/fundingContributions'
 
 const prisma = new PrismaClient()
 
@@ -23,11 +24,8 @@ export async function GET(_request, { params }) {
   try {
     const isAdmin = session.user.type === 'ADMIN'
     if (!isAdmin) {
-      const holding = await prisma.investment.findFirst({
-        where: {
-          propertyId,
-          userId: Number(session.user.id),
-        },
+      const holding = await prisma.fundingContribution.findFirst({
+        where: investorHoldingWhere(Number(session.user.id), { propertyId }),
         select: { id: true },
       })
       if (!holding) {

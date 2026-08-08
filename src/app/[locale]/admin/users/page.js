@@ -26,7 +26,7 @@ export default async function UsersAdminPage() {
         investorDocuments: { orderBy: { uploadedAt: 'desc' } },
         _count: {
           select: {
-            investments: true,
+            fundingContributions: true,
           },
         },
       },

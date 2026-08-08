@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
+import { formatUsd } from '@/lib/formatMoney'
 import {
   formatPropertyDate,
   getPropertyStatusBadgeClass,
@@ -92,14 +93,6 @@ function MetaLines({
   )
 }
 
-function formatMoney(amount, locale) {
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(Number(amount) || 0)
-}
-
 /**
  * @param {'tile' | 'inline'} [variant='inline']
  */
@@ -145,8 +138,8 @@ export default function PropertyProgressSummary({
   const fundingCaption =
     goal > 0
       ? t('fundingRaisedOfGoal', {
-          raised: formatMoney(fundedAmount, locale),
-          goal: formatMoney(goal, locale),
+          raised: formatUsd(fundedAmount),
+          goal: formatUsd(goal),
         })
       : null
 

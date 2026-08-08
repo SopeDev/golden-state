@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import RequiredLabel from '@/components/ui/RequiredLabel'
+import PhoneInputField from '@/components/auth/PhoneInputField'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
 import {
   EXPERIENCE_OPTIONS,
@@ -54,6 +55,9 @@ export default function ProfileQuestionnaireFields({
       <div>
         <h3 className="font-heading text-lg font-semibold text-primary">{t('profileTitle')}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{t('profileSubtitle')}</p>
+        <p className="mt-3 rounded-lg border border-border/70 bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          {t('profilePrivacyNote')}
+        </p>
       </div>
 
       <div className="space-y-6">
@@ -68,7 +72,14 @@ export default function ProfileQuestionnaireFields({
           </div>
           <div className="space-y-2">
             <Label htmlFor={field('phone')}>{t('phone')}</Label>
-            <Input id={field('phone')} name="phone" type="tel" autoComplete="tel" />
+            <PhoneInputField
+              id={field('phone')}
+              name="phone"
+              locale={locale}
+              defaultCountry={location === 'MX' ? 'MX' : location === 'US' ? 'US' : undefined}
+              countryLabel={t('phoneCountryCode')}
+              numberPlaceholder={t('phoneNumberPlaceholder')}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor={field('referralSource')}>{t('referralSource')}</Label>
@@ -93,7 +104,7 @@ export default function ProfileQuestionnaireFields({
             {errors.location ? <p className="text-xs text-destructive">{t('errorRequired')}</p> : null}
           </div>
           {location === 'MX' ? (
-            <div className="sm:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/80 bg-background px-3 py-2.5 text-sm transition-colors hover:border-main-gold/40">
                 <input
                   type="checkbox"
@@ -102,6 +113,9 @@ export default function ProfileQuestionnaireFields({
                 />
                 <span>{t('interestedInInvestorVisa')}</span>
               </label>
+              <p className="px-1 text-xs leading-relaxed text-muted-foreground">
+                {t('interestedInInvestorVisaDisclaimer')}
+              </p>
             </div>
           ) : null}
         </div>

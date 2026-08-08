@@ -36,6 +36,7 @@ export async function GET() {
         provider: true,
         type: true,
         accountStatus: true,
+        emailVerifiedAt: true,
         profile: true,
         accreditedStatus: true,
         accreditedSubmittedAt: true,

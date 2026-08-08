@@ -3,6 +3,10 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import PortfolioClient from './PortfolioClient'
 import { attachFundingToProperties } from '@/lib/propertyFunding'
+import {
+  aggregateHoldingsByProperty,
+  investorHoldingWhere,
+} from '@/lib/fundingContributions'
 import { propertyTypeInclude, toClientProperties } from '@/lib/propertyTypes'
 
 const prisma = new PrismaClient()
@@ -13,27 +17,27 @@ export default async function PortfolioPage() {
   try {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        investments: {
-          include: {
-            property: { include: propertyTypeInclude },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
+      select: { id: true },
     })
 
     if (!user) {
       return <PortfolioClient investments={[]} />
     }
 
-    const properties = user.investments.map((row) => row.property).filter(Boolean)
+    const contributions = await prisma.fundingContribution.findMany({
+      where: investorHoldingWhere(user.id),
+      include: {
+        property: { include: propertyTypeInclude },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const holdings = aggregateHoldingsByProperty(contributions)
+    const properties = holdings.map((row) => row.property).filter(Boolean)
     const withFunding = await attachFundingToProperties(prisma, toClientProperties(properties))
     const byId = Object.fromEntries(withFunding.map((p) => [p.id, p]))
 
-    const investments = user.investments.map((row) => ({
+    const investments = holdings.map((row) => ({
       ...row,
       property: byId[row.propertyId] || row.property,
     }))

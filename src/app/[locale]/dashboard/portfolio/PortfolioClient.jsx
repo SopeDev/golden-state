@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
@@ -64,7 +65,7 @@ export default function PortfolioClient({ investments }) {
                 <div>
                   <p className="text-sm text-muted-foreground">{t('totalInvested')}</p>
                   <p className="text-3xl font-semibold text-primary">
-                    ${totalInvested.toLocaleString()}
+                    ${formatMoneyAmount(totalInvested)}
                   </p>
                 </div>
                 <div className="text-main-gold">
@@ -85,6 +86,9 @@ export default function PortfolioClient({ investments }) {
                 <div>
                   <p className="text-sm text-muted-foreground">{t('averageRoi')}</p>
                   <p className="text-3xl font-semibold text-main-gold">{averageROI.toFixed(1)}%</p>
+                  <p className="mt-1 max-w-[14rem] text-[11px] leading-snug text-muted-foreground">
+                    {t('averageRoiDisclaimer')}
+                  </p>
                 </div>
                 <div className="text-main-gold">
                   <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
@@ -167,7 +171,7 @@ export default function PortfolioClient({ investments }) {
                       <div className="text-left sm:text-right">
                         <p className="text-sm text-muted-foreground">{t('investmentAmount')}</p>
                         <p className="text-2xl font-semibold text-main-gold">
-                          ${investment.amount.toLocaleString()}
+                          ${formatMoneyAmount(investment.amount)}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">

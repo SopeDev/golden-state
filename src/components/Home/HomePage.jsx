@@ -74,14 +74,6 @@ const _overlapTailwindSafelist =
   'h-24 sm:h-28 md:h-32 lg:h-44 -mt-24 sm:-mt-28 md:-mt-32 lg:-mt-44'
 void _overlapTailwindSafelist
 
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(amount))
-
 function Eyebrow({ children }) {
   return (
     <p className="text-xs font-semibold uppercase tracking-[0.25em] text-main-gold">
@@ -110,7 +102,7 @@ function StatsIntro({ content, titleClassName = 'text-primary' }) {
   )
 }
 
-function StatsGrid({ cells, variant = 'overlap' }) {
+function StatsGrid({ cells, variant = 'overlap', disclaimer }) {
   const cellClass =
     variant === 'solid'
       ? 'rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 px-4 py-5'
@@ -121,16 +113,25 @@ function StatsGrid({ cells, variant = 'overlap' }) {
   const valueClass = variant === 'solid' ? 'text-main-gold' : 'text-main-gold'
   const labelClass =
     variant === 'solid' ? 'text-primary-foreground/75' : 'text-muted-foreground'
+  const disclaimerClass =
+    variant === 'solid' ? 'text-primary-foreground/60' : 'text-muted-foreground'
 
   return (
-    <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-      {cells.map((cell, index) => (
-        <div key={index} className={cellClass}>
-          <p className={cn('font-heading text-3xl font-semibold md:text-4xl', valueClass)}>{cell.value}</p>
-          <p className={cn('mt-1 text-sm', labelClass)}>{cell.label}</p>
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+        {cells.map((cell, index) => (
+          <div key={index} className={cellClass}>
+            <p className={cn('font-heading text-3xl font-semibold md:text-4xl', valueClass)}>
+              {cell.value}
+            </p>
+            <p className={cn('mt-1 text-sm', labelClass)}>{cell.label}</p>
+          </div>
+        ))}
+      </div>
+      {disclaimer ? (
+        <p className={cn('mt-4 max-w-4xl text-xs leading-relaxed', disclaimerClass)}>{disclaimer}</p>
+      ) : null}
+    </>
   )
 }
 
@@ -224,15 +225,17 @@ function HomeHero({ content, statsLayout = HOME_STATS_LAYOUT }) {
 }
 
 function HomeStats({ content, layout = HOME_STATS_LAYOUT }) {
+  const t = useTranslations('Home')
   const cells = getStatsCells(content)
   if (cells.length === 0) return null
+  const disclaimer = content.statsDisclaimer || t('statsDisclaimer')
 
   if (layout === 'solid') {
     return (
       <section className="border-b border-border bg-primary text-primary-foreground">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <StatsIntro content={content} titleClassName="text-primary-foreground" />
-          <StatsGrid cells={cells} variant="solid" />
+          <StatsGrid cells={cells} variant="solid" disclaimer={disclaimer} />
         </div>
       </section>
     )
@@ -243,7 +246,7 @@ function HomeStats({ content, layout = HOME_STATS_LAYOUT }) {
       <section className="border-b border-border bg-muted/40">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-14">
           <StatsIntro content={content} />
-          <StatsGrid cells={cells} variant="light-strip" />
+          <StatsGrid cells={cells} variant="light-strip" disclaimer={disclaimer} />
         </div>
       </section>
     )
@@ -255,7 +258,7 @@ function HomeStats({ content, layout = HOME_STATS_LAYOUT }) {
       <div className="mx-auto max-w-6xl px-4 pb-6 md:pb-8">
         <div className="rounded-2xl border border-border/80 bg-card px-5 py-8 shadow-xl sm:px-8 md:px-10 md:py-10">
           <StatsIntro content={content} />
-          <StatsGrid cells={cells} variant="overlap" />
+          <StatsGrid cells={cells} variant="overlap" disclaimer={disclaimer} />
         </div>
       </div>
     </section>
@@ -416,6 +419,7 @@ function HomeStrategies({ content, propertyTypes = [] }) {
 }
 
 function HomeLiveOpportunities({ content, liveOpportunities }) {
+  const t = useTranslations('Home')
   const tProjects = useTranslations('Projects')
   const locale = useLocale()
 
@@ -479,20 +483,17 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
                       </Link>
                     </div>
 
-                    <dl className="grid grid-cols-3 gap-3 text-center">
-                      <div>
-                        <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {content.liveCardOpens}
-                        </dt>
-                        <dd className="mt-1 text-sm font-semibold text-primary">
-                          {formatCurrency(property.minInvestment)}
-                        </dd>
-                      </div>
+                    <dl className="grid grid-cols-2 gap-3 text-center">
                       <div>
                         <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
                           {content.liveCardRoi}
                         </dt>
-                        <dd className="mt-1 text-sm font-semibold text-main-gold">{property.estimatedROI}%</dd>
+                        <dd className="mt-1 text-sm font-semibold text-main-gold">
+                          {property.estimatedROI}%
+                        </dd>
+                        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+                          {content.estimatedReturnsNote || t('estimatedReturnsNote')}
+                        </p>
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -673,7 +674,7 @@ function HomeReasons({ content }) {
 }
 
 function HomeTrackRecord({ content, completedDeals }) {
-  const tProjects = useTranslations('Projects')
+  const t = useTranslations('Home')
   const locale = useLocale()
 
   return (
@@ -756,6 +757,10 @@ function HomeTrackRecord({ content, completedDeals }) {
           })}
         </div>
       )}
+
+      <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+        {content.trackRecordDisclaimer || t('trackRecordDisclaimer')}
+      </p>
 
       {content.trackCta ? (
         <div className="mt-10 flex justify-center">

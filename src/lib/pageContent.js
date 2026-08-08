@@ -92,6 +92,43 @@ export const getHomeContent = async (locale) => {
   }
 }
 
+const CONTACT_FALLBACK = {
+  en: enMessages.Contact || {},
+  es: esMessages.Contact || {},
+}
+
+export const getContactFallbackByLocale = () => CONTACT_FALLBACK
+
+export const getContactContent = async (locale) => {
+  const normalizedLocale = normalizeLocale(locale)
+  const fallback = CONTACT_FALLBACK[normalizedLocale] || CONTACT_FALLBACK.en
+
+  try {
+    const record = await prisma.pageContent.findUnique({
+      where: {
+        pageKey_locale: {
+          pageKey: 'CONTACT',
+          locale: normalizedLocale,
+        },
+      },
+    })
+
+    if (!record?.content || typeof record.content !== 'object' || Array.isArray(record.content)) {
+      return fallback
+    }
+
+    return {
+      ...fallback,
+      ...record.content,
+    }
+  } catch (error) {
+    console.error('Error loading Contact content:', error)
+    return fallback
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
 export const getFaqContent = async (locale) => {
   const normalizedLocale = normalizeLocale(locale)
   const fallback = FAQ_FALLBACK[normalizedLocale] || FAQ_FALLBACK.en

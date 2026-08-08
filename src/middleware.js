@@ -43,11 +43,13 @@ export default async function middleware(request) {
   const { pathname } = request.nextUrl
   const { locale, pathname: pathWithoutLocale } = parsePathname(pathname)
 
-  const isPortfolioRoute =
+  const isAccreditedAreaRoute =
     pathWithoutLocale === '/dashboard/portfolio' ||
-    pathWithoutLocale.startsWith('/dashboard/portfolio/')
+    pathWithoutLocale.startsWith('/dashboard/portfolio/') ||
+    pathWithoutLocale === '/dashboard/investments' ||
+    pathWithoutLocale.startsWith('/dashboard/investments/')
 
-  if (isPortfolioRoute) {
+  if (isAccreditedAreaRoute) {
     const user = await fetchSessionUser(request)
     const redirectPath = resolvePortfolioAccessRedirect(user)
 

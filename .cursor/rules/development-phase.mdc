@@ -1,0 +1,15 @@
+---
+description: Golden State is pre-release; all domain data is placeholder/dev-only
+alwaysApply: true
+---
+
+# Development phase (pre-release)
+
+This platform is **not live**. Until official release:
+
+- All **users**, **properties**, **investments**, **deposits**, and related ledger data are **placeholder / test data only**.
+- Prefer practical **dev/admin tooling** that helps reset and re-test workflows (e.g. force-delete with confirmation) over production-hardening that blocks legitimate test resets.
+- Still protect against accidental self-harm (e.g. don’t let an admin delete their own session account) and keep clear confirmations for destructive actions.
+- Do **not** invent production compliance constraints that conflict with testing (e.g. treating seed investors as real capital that must never be wiped).
+- Copy, disclaimers, and UX may stay investment-platform accurate, but assume the **database contents are disposable** until launch.
+- When release approaches, revisit soft-delete, audit retention, and stricter delete policies — not before unless explicitly asked.

@@ -21,7 +21,7 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            investments: true
+            fundingContributions: true
           }
         }
       }
@@ -103,7 +103,7 @@ export async function POST(request) {
       include: {
         _count: {
           select: {
-            investments: true
+            fundingContributions: true
           }
         }
       }

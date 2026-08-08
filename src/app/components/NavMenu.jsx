@@ -1,25 +1,28 @@
 'use client'
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
-import { resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
+import { resolveProtectedInvestmentsHref, resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
 import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
+import AccountNavMenu from './AccountNavMenu'
 
 export default function NavMenu({ session: serverSession, propertyTypes = [] }) {
   const t = useTranslations('Navbar')
   const tProjects = useTranslations('Projects')
   const locale = useLocale()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: clientSession } = useSession()
   const user = clientSession?.user ?? serverSession?.user
-  const dashboardHref = user ? '/dashboard' : '/login'
+  const dashboardHref = '/dashboard'
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
-  const myAccountHref = user ? '/dashboard/account' : '/login'
+  const investmentsHref = user ? resolveProtectedInvestmentsHref(user) : '/login'
+  const myAccountHref = '/dashboard/account'
 
   const projectTypeLinks = propertyTypes.map((type) => ({
     href: `/projects/${type.slug}`,
@@ -32,6 +35,15 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
     { divider: true },
     { href: '/projects/completed', text: tProjects('completed') },
   ]
+
+  const closeMenu = () => setMenuOpen(false)
+
+  const handleMobileSignOut = async () => {
+    closeMenu()
+    await signOut({ redirect: false })
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <div
@@ -75,17 +87,6 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
                 {t('contact')}
               </Link>
             </li>
-            {user && (
-              <DropdownNavItem
-                label="account"
-                t={t}
-                links={[
-                  { href: dashboardHref, label: 'dashboard' },
-                  { href: portfolioHref, label: 'portfolio' },
-                  { href: myAccountHref, label: 'myAccount' },
-                ]}
-              />
-            )}
           </ul>
         </nav>
 
@@ -101,7 +102,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               Admin
             </Link>
           )}
-          <AuthButton t={t} />
+          {user ? <AccountNavMenu user={user} /> : <AuthButton t={t} />}
         </div>
 
         <div className="flex shrink-0 items-center lg:hidden">
@@ -129,32 +130,32 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
       </div>
 
       {menuOpen && (
-        <div className="mt-3 flex flex-col gap-2 bg-background px-4 lg:hidden">
+        <div className="mt-3 flex flex-col gap-2 bg-background px-4 pb-4 lg:hidden">
           <hr />
           <span className="text-lg">Info</span>
-          <Link href="/about" onClick={() => setMenuOpen(false)}>
+          <Link href="/about" onClick={closeMenu}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('about')}</div>
           </Link>
-          <Link href="/faq" onClick={() => setMenuOpen(false)}>
+          <Link href="/faq" onClick={closeMenu}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('faq')}</div>
           </Link>
-          <Link href="/contact" onClick={() => setMenuOpen(false)}>
+          <Link href="/contact" onClick={closeMenu}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('contact')}</div>
           </Link>
           <hr />
           <span className="text-lg">{t('projects')}</span>
-          <Link href="/projects" onClick={() => setMenuOpen(false)}>
+          <Link href="/projects" onClick={closeMenu}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('allProjects')}</div>
           </Link>
           {projectTypeLinks.map((item) => (
-            <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
+            <Link key={item.href} href={item.href} onClick={closeMenu}>
               <div className="py-1 text-sm text-primary hover:text-secondary-blue">
                 {item.text}
               </div>
             </Link>
           ))}
           <hr className="border-border" />
-          <Link href="/projects/completed" onClick={() => setMenuOpen(false)}>
+          <Link href="/projects/completed" onClick={closeMenu}>
             <div className="py-1 text-sm text-primary hover:text-secondary-blue">
               {tProjects('completed')}
             </div>
@@ -163,21 +164,43 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
             <>
               <hr />
               <span className="text-lg">{t('account')}</span>
-              <Link href={dashboardHref} onClick={() => setMenuOpen(false)}>
+              {user.email ? (
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              ) : null}
+              <Link href={dashboardHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('dashboard')}</div>
               </Link>
-              <Link href={portfolioHref} onClick={() => setMenuOpen(false)}>
+              <Link href={portfolioHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('portfolio')}</div>
               </Link>
-              <Link href={myAccountHref} onClick={() => setMenuOpen(false)}>
+              <Link href={investmentsHref} onClick={closeMenu}>
+                <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('investments')}</div>
+              </Link>
+              <Link href={myAccountHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('myAccount')}</div>
               </Link>
+              {user.type === 'ADMIN' && (
+                <Link href="/admin/properties" onClick={closeMenu}>
+                  <div className="py-1 text-sm text-main-gold hover:text-secondary-gold">Admin</div>
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={handleMobileSignOut}
+                className="mt-1 cursor-pointer py-1 text-left text-sm text-destructive"
+              >
+                {t('signOut')}
+              </button>
             </>
           )}
-          <hr />
-          <div className="flex justify-center sm:justify-end">
-            <AuthButton t={t} />
-          </div>
+          {!user && (
+            <>
+              <hr />
+              <div className="flex justify-center sm:justify-end">
+                <AuthButton t={t} />
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
