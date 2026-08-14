@@ -4,7 +4,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import PropertiesAdminClient from './PropertiesAdminClient'
-import AdminNav from '../components/AdminNav'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { attachFundingToProperties } from '@/lib/propertyFunding'
@@ -21,7 +20,10 @@ const prisma = new PrismaClient()
 export default async function PropertiesAdminPage({ searchParams }) {
   const t = await getTranslations('Admin.properties')
   const session = await getServerSession(authOptions)
-  const { includeArchived } = (await searchParams) || {}
+  const params = (await searchParams) || {}
+  const { includeArchived } = params
+  const initialSelectedId =
+    typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
   // Redirect if not authenticated as admin
   if (!session || session.user?.type !== 'ADMIN') {
@@ -41,10 +43,10 @@ export default async function PropertiesAdminPage({ searchParams }) {
 
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <PropertiesAdminClient
           properties={withFunding}
           propertyTypes={propertyTypes.map(toClientPropertyType)}
+          initialSelectedId={initialSelectedId}
         />
       </div>
     )
@@ -52,7 +54,6 @@ export default async function PropertiesAdminPage({ searchParams }) {
     console.error('Error fetching properties:', error)
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>

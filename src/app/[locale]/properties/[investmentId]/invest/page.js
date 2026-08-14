@@ -4,9 +4,8 @@ import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import { resolveInvestorOnboardingPath } from '@/lib/auth/userStatus'
 import {
-  getPropertyFundedAmount,
+  enrichPropertyWithFunding,
   isPropertyOpenForInvestment,
-  withFundingFields,
 } from '@/lib/propertyFunding'
 import { propertyTypeInclude, toClientProperty } from '@/lib/propertyTypes'
 import InvestFlowClient from './InvestFlowClient'
@@ -41,12 +40,11 @@ export default async function InvestPage({ params }) {
     await redirect(`/properties/${property.investmentId}`)
   }
 
-  const fundedAmount = await getPropertyFundedAmount(prisma, property.id)
+  const enrichedProperty = await enrichPropertyWithFunding(
+    prisma,
+    toClientProperty(property)
+  )
   await prisma.$disconnect()
 
-  return (
-    <InvestFlowClient
-      property={withFundingFields(toClientProperty(property), fundedAmount)}
-    />
-  )
+  return <InvestFlowClient property={enrichedProperty} />
 }

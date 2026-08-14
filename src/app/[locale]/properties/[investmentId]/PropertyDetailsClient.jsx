@@ -13,13 +13,27 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
+import {
+  getActualDurationMonths,
+  getPropertyDisplayFlags,
+} from '@/lib/propertyStatusUi'
+import { getOrderedPropertyEntries } from '@/lib/propertyDetailEntries'
+import { getLocalizedPropertySummary } from '@/lib/propertySummary'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import InvestNowButton from '@/components/invest/InvestNowButton'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
+import ViewProgressDocumentsButton from '@/components/invest/ViewProgressDocumentsButton'
+import PropertyImageGallery from '@/components/invest/PropertyImageGallery'
 
-export default function PropertyDetailsClient({ property }) {
+export default function PropertyDetailsClient({ property, canViewProgressDocuments = false }) {
   const t = useTranslations('PropertyDetails')
+  const tProjects = useTranslations('Projects')
   const locale = useLocale()
+  const flags = getPropertyDisplayFlags(property)
+  const actualMonths = getActualDurationMonths(property?.startDate, property?.completedAt)
+  const estimatedMonths = property?.estimatedMonths
+    ? String(property.estimatedMonths).trim()
+    : ''
   const formatFactLabel = (rawKey) => {
     return String(rawKey)
       .replace(/([A-Z])/g, ' $1')
@@ -45,6 +59,35 @@ export default function PropertyDetailsClient({ property }) {
       value: localized.value == null ? '' : String(localized.value),
     }
   }
+
+  const getLocalizedSummary = (summary, preferredLocale) => {
+    if (!summary) return ''
+    if (typeof summary === 'string') return summary.trim()
+    if (typeof summary !== 'object' || Array.isArray(summary)) return ''
+    const text =
+      summary[preferredLocale] || summary.en || summary.es || ''
+    return String(text).trim()
+  }
+
+  const getMeaningfulEntries = (bag, preferredLocale) => {
+    return getOrderedPropertyEntries(bag).filter(([key, value]) => {
+      const localized = getLocalizedEntry(key, value, preferredLocale)
+      return Boolean(String(localized.label || '').trim() && String(localized.value || '').trim())
+    })
+  }
+
+  const propertyFactsEntries = getMeaningfulEntries(property?.propertyFacts, locale)
+  const investmentDetailsEntries = getMeaningfulEntries(property?.investmentDetails, locale)
+  const propertyFactsIntro = getLocalizedSummary(property?.propertyFactsSummary, locale)
+  const investmentDetailsIntro = getLocalizedSummary(
+    property?.investmentDetailsSummary,
+    locale
+  )
+  const executiveSummary = getLocalizedPropertySummary(property, locale)
+  const showPropertyFacts = Boolean(propertyFactsIntro || propertyFactsEntries.length > 0)
+  const showInvestmentDetails = Boolean(
+    investmentDetailsIntro || investmentDetailsEntries.length > 0
+  )
 
   if (!property) {
     return (
@@ -97,87 +140,90 @@ export default function PropertyDetailsClient({ property }) {
       <div className="container mx-auto px-4 py-10 md:py-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
           <div className="lg:col-span-2 space-y-8">
-            {property.images && property.images.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {property.images.map((image, index) => (
-                  <div
-                    key={index}
-                    className="h-64 overflow-hidden rounded-xl border border-border/80 bg-muted"
-                  >
-                    <img
-                      src={image}
-                      alt={`${property.name} - ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            {property.images && property.images.length > 0 ? (
+              <PropertyImageGallery images={property.images} propertyName={property.name} />
+            ) : null}
 
-            {property.summary && (
+            {executiveSummary ? (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader>
                   <CardTitle className="font-heading text-2xl text-primary">{t('executiveSummary')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="leading-relaxed text-muted-foreground">{property.summary}</p>
+                  <p className="whitespace-pre-line leading-relaxed text-foreground/85">
+                    {executiveSummary}
+                  </p>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {property.propertyFacts && (
+            {showPropertyFacts ? (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader>
                   <CardTitle className="font-heading text-2xl text-primary">{t('propertyFacts')}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
-                    {Object.entries(property.propertyFacts).map(([key, value]) => {
-                      const localized = getLocalizedEntry(key, value, locale)
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
-                        >
-                          <span className="font-medium capitalize text-primary">
-                            {localized.label}
-                          </span>
-                          <span className="text-right text-muted-foreground">{localized.value}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
+                <CardContent className="space-y-5">
+                  {propertyFactsIntro ? (
+                    <p className="whitespace-pre-line leading-relaxed text-foreground/85">
+                      {propertyFactsIntro}
+                    </p>
+                  ) : null}
+                  {propertyFactsEntries.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+                      {propertyFactsEntries.map(([key, value]) => {
+                        const localized = getLocalizedEntry(key, value, locale)
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
+                          >
+                            <span className="font-medium capitalize text-primary">
+                              {localized.label}
+                            </span>
+                            <span className="text-right text-muted-foreground">{localized.value}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {property.investmentDetails && (
+            {showInvestmentDetails ? (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader>
                   <CardTitle className="font-heading text-2xl text-primary">{t('investmentBreakdown')}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
-                    {Object.entries(property.investmentDetails).map(([key, value]) => {
-                      const localized = getLocalizedEntry(key, value, locale)
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
-                        >
-                          <span className="font-medium capitalize text-primary">
-                            {localized.label}
-                          </span>
-                          <span className="text-right font-semibold text-main-gold">
-                            {localized.value}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
+                <CardContent className="space-y-5">
+                  {investmentDetailsIntro ? (
+                    <p className="whitespace-pre-line leading-relaxed text-foreground/85">
+                      {investmentDetailsIntro}
+                    </p>
+                  ) : null}
+                  {investmentDetailsEntries.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+                      {investmentDetailsEntries.map(([key, value]) => {
+                        const localized = getLocalizedEntry(key, value, locale)
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-b-0"
+                          >
+                            <span className="font-medium capitalize text-primary">
+                              {localized.label}
+                            </span>
+                            <span className="text-right font-semibold text-main-gold">
+                              {localized.value}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
-            )}
+            ) : null}
           </div>
 
           <aside className="lg:col-span-1">
@@ -186,36 +232,63 @@ export default function PropertyDetailsClient({ property }) {
                 <CardTitle className="font-heading text-xl text-primary">{t('investmentDetails')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <PropertyProgressSummary property={property} variant="tile" showDuration />
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t('totalPrice')}</p>
-                  <p className="text-2xl font-semibold text-primary">${formatMoneyAmount(property.price)}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t('units')}</p>
-                  <p className="text-2xl font-semibold text-primary">{property.unitCount}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t('estimatedRoi')}</p>
-                  <p className="text-2xl font-semibold text-main-gold">{property.estimatedROI}%</p>
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                    {t('roiDisclaimer')}
-                  </p>
-                </div>
+                <PropertyProgressSummary property={property} variant="tile" />
+                {flags.showInvestmentGoal ? (
+                  <div className="rounded-lg bg-muted/50 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">{t('totalPrice')}</p>
+                    <p className="text-2xl font-semibold text-primary">
+                      ${formatMoneyAmount(property.price)}
+                    </p>
+                  </div>
+                ) : null}
+                {flags.showTimelineStat && estimatedMonths ? (
+                  <div className="rounded-lg bg-muted/50 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">{t('timeline')}</p>
+                    <p className="text-2xl font-semibold text-primary">
+                      {tProjects('estimatedDurationValue', { months: estimatedMonths })}
+                    </p>
+                  </div>
+                ) : null}
+                {flags.showActualDuration && actualMonths ? (
+                  <div className="rounded-lg bg-muted/50 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">{t('duration')}</p>
+                    <p className="text-2xl font-semibold text-primary">
+                      {tProjects('durationValue', { months: actualMonths })}
+                    </p>
+                  </div>
+                ) : null}
+                {flags.showEstimatedRoi ? (
+                  <div className="rounded-lg bg-muted/50 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">{t('estimatedRoi')}</p>
+                    <p className="text-2xl font-semibold text-main-gold">
+                      {property.estimatedROI}%
+                    </p>
+                    <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                      {t('roiDisclaimer')}
+                    </p>
+                  </div>
+                ) : null}
+                {flags.showActualRoi && Number.isFinite(Number(property?.actualRoi)) ? (
+                  <div className="rounded-lg bg-muted/50 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">{t('actualRoi')}</p>
+                    <p className="text-2xl font-semibold text-main-gold">
+                      {Number(property.actualRoi)}%
+                    </p>
+                  </div>
+                ) : null}
               </CardContent>
               <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/30">
                 <InvestNowButton
                   propertyId={property.investmentId}
                   propertyStatus={property.status}
+                  executionStatus={property.executionStatus}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="w-full border-main-gold text-main-gold hover:border-main-gold hover:bg-main-gold/10 hover:text-main-gold"
-                >
-                  {t('downloadProspectus')}
-                </Button>
+                <ViewProgressDocumentsButton
+                  propertyId={property.id}
+                  investmentId={property.investmentId}
+                  propertyStatus={property.status}
+                  canView={canViewProgressDocuments}
+                />
                 <Button type="button" variant="outline" size="lg" className="w-full">
                   {t('scheduleCall')}
                 </Button>

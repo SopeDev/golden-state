@@ -23,7 +23,7 @@ import { resolveInvestorOnboardingPath } from '@/lib/auth/userStatus'
 
 const resolvePostLoginPath = (user) => {
   if (!user) return '/dashboard'
-  if (user.type === 'ADMIN') return '/admin/users'
+  if (user.type === 'ADMIN') return '/admin'
   if (user.accountStatus === 'REJECTED') return '/account/rejected'
   const onboardingPath = resolveInvestorOnboardingPath(user)
   if (onboardingPath) return onboardingPath

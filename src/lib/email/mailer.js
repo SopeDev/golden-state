@@ -248,7 +248,7 @@ export function dashboardLink(locale = 'en') {
 }
 
 export function accountInvestmentRequestsLink(locale = 'en') {
-  return `${getBaseUrl()}/${locale}/dashboard/investments`
+  return `${getBaseUrl()}/${locale}/dashboard/activity`
 }
 
 export function propertyInvestLink(locale = 'en', investmentId) {

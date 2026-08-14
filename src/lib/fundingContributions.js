@@ -29,6 +29,13 @@ export const contributionInclude = {
       depositedAt: true,
     },
   },
+  reinvestmentRequest: {
+    select: {
+      id: true,
+      status: true,
+      amount: true,
+    },
+  },
 }
 
 export function activeContributionWhere(extra = {}) {

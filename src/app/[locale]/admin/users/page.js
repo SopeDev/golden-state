@@ -4,16 +4,16 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import UsersAdminClient from './UsersAdminClient'
-import AdminNav from '../components/AdminNav'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toClientInvestorDocuments } from '@/lib/storage/r2'
 
 const prisma = new PrismaClient()
 
-export default async function UsersAdminPage() {
+export default async function UsersAdminPage({ searchParams }) {
   const t = await getTranslations('Admin.users')
   const session = await getServerSession(authOptions)
-  
+  const params = (await searchParams) || {}
+
   // Redirect if not authenticated as admin
   if (!session || session.user?.type !== 'ADMIN') {
     await redirect('/')
@@ -39,15 +39,26 @@ export default async function UsersAdminPage() {
 
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
-        <UsersAdminClient users={usersForClient} />
+        <UsersAdminClient
+          users={usersForClient}
+          initialAccountStatusFilter={params.accountStatus || 'ALL'}
+          initialAccreditationFilter={params.accreditation || 'ALL'}
+          initialSelectedId={
+            Array.isArray(params.id)
+              ? String(params.id[0] || '').trim()
+              : typeof params.id === 'string'
+                ? params.id.trim()
+                : params.id != null
+                  ? String(params.id).trim()
+                  : ''
+          }
+        />
       </div>
     )
   } catch (error) {
     console.error('Error fetching users:', error)
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>

@@ -1,17 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
+import { matchesAdminQuery } from '@/lib/adminSearch'
 import { cn } from '@/lib/utils'
 import { formatUsd } from '@/lib/formatMoney'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
+import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 import AdminInvestmentIntentsPanel from './AdminInvestmentIntentsPanel'
 import { useMessaging } from '@/hooks/useMessaging'
 
@@ -39,18 +43,20 @@ export default function InvestmentsAdminClient({
   properties,
   investors,
   locale,
-  initialTab = 'intents',
+  section = 'intents',
   initialPropertyId = '',
 }) {
   const t = useTranslations('Admin.investments')
   const tc = useTranslations('Admin.common')
   const { confirm, prompt } = useMessaging()
 
-  const [tab, setTab] = useState(initialTab)
   const [contributions, setContributions] = useState(initialContributions || [])
   const [deposits, setDeposits] = useState(initialDeposits || [])
+  const [query, setQuery] = useState('')
   const [propertyFilter, setPropertyFilter] = useState(initialPropertyId)
-  const [sourceFilter, setSourceFilter] = useState('')
+  const [investorFilter, setInvestorFilter] = useState('')
+  const [intentStatusFilter, setIntentStatusFilter] = useState('MEETING_REQUESTED')
+  const [contributionStatusFilter, setContributionStatusFilter] = useState('')
   const [depositStatusFilter, setDepositStatusFilter] = useState('PENDING')
   const [showContributionForm, setShowContributionForm] = useState(false)
   const [showDepositForm, setShowDepositForm] = useState(false)
@@ -64,59 +70,119 @@ export default function InvestmentsAdminClient({
   }))
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [meetingRequestCount, setMeetingRequestCount] = useState(0)
-  const [pendingDepositCount, setPendingDepositCount] = useState(
-    () => (initialDeposits || []).filter((d) => d.status === 'PENDING').length
-  )
+  const [listPage, setListPage] = useState(1)
 
-  const refreshPendingCounts = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/users/pending-count', { credentials: 'include' })
-      if (!res.ok) return
-      const data = await res.json()
-      setMeetingRequestCount(data.meetingRequests ?? 0)
-      setPendingDepositCount(data.pendingDeposits ?? 0)
-    } catch {
-      // ignore
-    }
-  }, [])
+  const pageTitle =
+    section === 'intents'
+      ? t('intentsTitle')
+      : section === 'contributions'
+        ? t('contributionsTitle')
+        : t('depositsTitle')
+  const pageSubtitle =
+    section === 'intents'
+      ? t('intentsDesc')
+      : section === 'contributions'
+        ? t('contributionsDesc')
+        : t('depositsDesc')
 
   const refreshContributions = useCallback(async () => {
-    const params = new URLSearchParams({ includeCancelled: '1' })
+    const params = new URLSearchParams()
     if (propertyFilter) params.set('propertyId', propertyFilter)
-    if (sourceFilter) params.set('source', sourceFilter)
+    if (investorFilter === 'MANUAL') {
+      params.set('source', 'MANUAL')
+    } else if (investorFilter) {
+      params.set('userId', investorFilter)
+    }
+    if (contributionStatusFilter) {
+      params.set('status', contributionStatusFilter)
+      if (contributionStatusFilter === 'CANCELLED') params.set('includeCancelled', '1')
+    } else {
+      params.set('includeCancelled', '1')
+    }
     const res = await fetch(`/api/admin/funding-contributions?${params}`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed to load contributions')
     setContributions(await res.json())
-  }, [propertyFilter, sourceFilter])
+  }, [propertyFilter, investorFilter, contributionStatusFilter])
 
   const refreshDeposits = useCallback(async () => {
     const params = new URLSearchParams()
     if (depositStatusFilter) params.set('status', depositStatusFilter)
     if (propertyFilter) params.set('propertyId', propertyFilter)
+    if (investorFilter) params.set('userId', investorFilter)
     const res = await fetch(`/api/admin/deposit-requests?${params}`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed to load deposits')
     setDeposits(await res.json())
-  }, [depositStatusFilter, propertyFilter])
+  }, [depositStatusFilter, propertyFilter, investorFilter])
 
   useEffect(() => {
-    if (tab === 'contributions') {
+    if (section === 'contributions') {
       refreshContributions().catch(() => setStatus(t('errorLoad')))
-    } else if (tab === 'deposits') {
+    } else if (section === 'deposits') {
       refreshDeposits().catch(() => setStatus(t('errorLoad')))
     }
-  }, [tab, refreshContributions, refreshDeposits, t])
+  }, [section, refreshContributions, refreshDeposits, t])
 
   useEffect(() => {
-    refreshPendingCounts()
-    const onRefresh = () => refreshPendingCounts()
-    window.addEventListener('admin-pending-count-changed', onRefresh)
-    return () => window.removeEventListener('admin-pending-count-changed', onRefresh)
-  }, [refreshPendingCounts])
+    setListPage(1)
+    setShowContributionForm(false)
+    setShowDepositForm(false)
+    setStatus('')
+  }, [
+    section,
+    query,
+    propertyFilter,
+    investorFilter,
+    intentStatusFilter,
+    contributionStatusFilter,
+    depositStatusFilter,
+  ])
+
+  const filteredContributions = useMemo(
+    () =>
+      contributions.filter((row) =>
+        matchesAdminQuery(
+          query,
+          row.user?.email,
+          row.label,
+          row.note,
+          row.property?.name,
+          row.property?.investmentId,
+          row.amount,
+          row.source,
+          row.status
+        )
+      ),
+    [contributions, query]
+  )
+
+  const filteredDeposits = useMemo(
+    () =>
+      deposits.filter((row) =>
+        matchesAdminQuery(
+          query,
+          row.user?.email,
+          row.property?.name,
+          row.property?.investmentId,
+          row.amount,
+          row.reference,
+          row.status
+        )
+      ),
+    [deposits, query]
+  )
+
+  const contributionPagination = useMemo(
+    () => paginateItems(filteredContributions, listPage),
+    [filteredContributions, listPage]
+  )
+  const depositPagination = useMemo(
+    () => paginateItems(filteredDeposits, listPage),
+    [filteredDeposits, listPage]
+  )
 
   const submitContribution = async (event) => {
     event.preventDefault()
@@ -247,119 +313,141 @@ export default function InvestmentsAdminClient({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant={tab === 'intents' ? 'default' : 'outline'}
-          onClick={() => setTab('intents')}
-        >
-          {t('tabIntents')}
-          {meetingRequestCount > 0 ? (
-            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-secondary-blue px-1.5 text-[10px] font-bold text-white">
-              {meetingRequestCount > 99 ? '99+' : meetingRequestCount}
-            </span>
-          ) : null}
-        </Button>
-        <Button
-          type="button"
-          variant={tab === 'deposits' ? 'default' : 'outline'}
-          onClick={() => setTab('deposits')}
-        >
-          {t('tabDeposits')}
-          {pendingDepositCount > 0 ? (
-            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-secondary-blue px-1.5 text-[10px] font-bold text-white">
-              {pendingDepositCount > 99 ? '99+' : pendingDepositCount}
-            </span>
-          ) : null}
-        </Button>
-        <Button
-          type="button"
-          variant={tab === 'contributions' ? 'default' : 'outline'}
-          onClick={() => setTab('contributions')}
-        >
-          {t('tabContributions')}
-        </Button>
-      </div>
-
-      {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-
-      <Card>
-        <CardHeader className="flex flex-col gap-4 border-b border-border/60 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <CardTitle className="font-heading text-xl text-primary">
-              {tab === 'intents'
-                ? t('intentsTitle')
-                : tab === 'contributions'
-                  ? t('contributionsTitle')
-                  : t('depositsTitle')}
-            </CardTitle>
-            <CardDescription>
-              {tab === 'intents'
-                ? t('intentsDesc')
-                : tab === 'contributions'
-                  ? t('contributionsDesc')
-                  : t('depositsDesc')}
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              className={adminSelectClassName('w-full min-w-[12rem] sm:w-auto')}
-              value={propertyFilter}
-              onChange={(e) => setPropertyFilter(e.target.value)}
+    <AdminPageFrame>
+      <AdminPageHeader
+        className="mb-6"
+        eyebrow={t('eyebrow')}
+        title={pageTitle}
+        description={pageSubtitle}
+        actions={
+          section !== 'intents' ? (
+            <Button
+              type="button"
+              className="gap-1.5"
+              onClick={() =>
+                section === 'contributions'
+                  ? setShowContributionForm((v) => !v)
+                  : setShowDepositForm((v) => !v)
+              }
             >
-              <option value="">{t('allProperties')}</option>
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  #{property.investmentId} · {property.name}
-                </option>
-              ))}
-            </select>
-            {tab === 'contributions' ? (
+              <Plus className="size-4" aria-hidden />
+              {section === 'contributions' ? t('addContribution') : t('addDeposit')}
+            </Button>
+          ) : null
+        }
+      />
+
+      {status ? <p className="mb-4 text-sm text-muted-foreground">{status}</p> : null}
+
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader className="space-y-3 border-b border-border/60 pb-4">
+          <CardTitle className="text-base text-primary">
+            {section === 'intents'
+              ? t('tabIntents')
+              : section === 'contributions'
+                ? t('tabContributions')
+                : t('tabDeposits')}
+          </CardTitle>
+          <div className="flex flex-row flex-wrap items-center gap-2 sm:flex-nowrap">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="pl-8"
+              />
+            </div>
+            <div className="flex shrink-0 flex-row flex-wrap items-center gap-2">
               <select
-                className={adminSelectClassName('w-full min-w-[10rem] sm:w-auto')}
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
+                className={adminSelectClassName('w-auto min-w-[12rem]')}
+                value={propertyFilter}
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                aria-label={t('property')}
               >
-                <option value="">{t('allSources')}</option>
-                <option value="INVESTOR">{t('sourceInvestor')}</option>
-                <option value="MANUAL">{t('sourceManual')}</option>
+                <option value="">{t('allProperties')}</option>
+                {properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    #{property.investmentId} · {property.name}
+                  </option>
+                ))}
               </select>
-            ) : null}
-            {tab === 'deposits' ? (
               <select
-                className={adminSelectClassName('w-full min-w-[10rem] sm:w-auto')}
-                value={depositStatusFilter}
-                onChange={(e) => setDepositStatusFilter(e.target.value)}
+                className={adminSelectClassName('w-auto min-w-[14rem]')}
+                value={investorFilter}
+                onChange={(e) => setInvestorFilter(e.target.value)}
+                aria-label={t('investor')}
               >
-                <option value="">{t('allStatuses')}</option>
-                <option value="PENDING">{t('statusPending')}</option>
-                <option value="CONFIRMED">{t('statusConfirmed')}</option>
-                <option value="REJECTED">{t('statusRejected')}</option>
+                <option value="">{t('allInvestors')}</option>
+                {section === 'contributions' ? (
+                  <option value="MANUAL">{t('sourceManual')}</option>
+                ) : null}
+                {investors.map((investor) => (
+                  <option key={investor.id} value={String(investor.id)}>
+                    {investor.email}
+                  </option>
+                ))}
               </select>
-            ) : null}
-            {tab !== 'intents' ? (
-              <Button
-                type="button"
-                onClick={() =>
-                  tab === 'contributions'
-                    ? setShowContributionForm((v) => !v)
-                    : setShowDepositForm((v) => !v)
-                }
-              >
-                <Plus className="size-4" aria-hidden />
-                {tab === 'contributions' ? t('addContribution') : t('addDeposit')}
-              </Button>
-            ) : null}
+              {section === 'intents' ? (
+                <select
+                  className={adminSelectClassName('w-auto min-w-[12rem]')}
+                  value={intentStatusFilter}
+                  onChange={(e) => setIntentStatusFilter(e.target.value)}
+                  aria-label={t('status')}
+                >
+                  <option value="">{t('allStatuses')}</option>
+                  <option value="MEETING_REQUESTED">{t('intentMeetingRequested')}</option>
+                  <option value="AWAITING_WIRE">{t('intentAwaitingWire')}</option>
+                  <option value="READY">{t('intentReady')}</option>
+                  <option value="COMPLETED">{t('intentCompleted')}</option>
+                  <option value="CANCELLED">{t('intentCancelled')}</option>
+                </select>
+              ) : null}
+              {section === 'contributions' ? (
+                <select
+                  className={adminSelectClassName('w-auto min-w-[10rem]')}
+                  value={contributionStatusFilter}
+                  onChange={(e) => setContributionStatusFilter(e.target.value)}
+                  aria-label={t('status')}
+                >
+                  <option value="">{t('allStatuses')}</option>
+                  <option value="ACTIVE">{t('statusActive')}</option>
+                  <option value="CANCELLED">{t('statusCancelled')}</option>
+                </select>
+              ) : null}
+              {section === 'deposits' ? (
+                <select
+                  className={adminSelectClassName('w-auto min-w-[10rem]')}
+                  value={depositStatusFilter}
+                  onChange={(e) => setDepositStatusFilter(e.target.value)}
+                  aria-label={t('status')}
+                >
+                  <option value="">{t('allStatuses')}</option>
+                  <option value="PENDING">{t('statusPending')}</option>
+                  <option value="CONFIRMED">{t('statusConfirmed')}</option>
+                  <option value="REJECTED">{t('statusRejected')}</option>
+                </select>
+              ) : null}
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-6">
-          {tab === 'intents' ? (
-            <AdminInvestmentIntentsPanel propertyFilter={propertyFilter} locale={locale} />
+        <CardContent className="space-y-6 p-0 pt-0 sm:p-0">
+          <div className="space-y-6 p-4 sm:p-6">
+          {section === 'intents' ? (
+            <AdminInvestmentIntentsPanel
+              propertyFilter={propertyFilter}
+              investorFilter={investorFilter}
+              statusFilter={intentStatusFilter}
+              searchQuery={query}
+              locale={locale}
+            />
           ) : null}
 
-          {tab === 'contributions' && showContributionForm ? (
+          {section === 'contributions' && showContributionForm ? (
             <form
               onSubmit={submitContribution}
               className="grid gap-4 rounded-lg border border-border/70 p-4 md:grid-cols-2"
@@ -469,7 +557,7 @@ export default function InvestmentsAdminClient({
             </form>
           ) : null}
 
-          {tab === 'deposits' && showDepositForm ? (
+          {section === 'deposits' && showDepositForm ? (
             <form
               onSubmit={submitDeposit}
               className="grid gap-4 rounded-lg border border-border/70 p-4 md:grid-cols-2"
@@ -567,7 +655,8 @@ export default function InvestmentsAdminClient({
             </form>
           ) : null}
 
-          {tab === 'contributions' ? (
+          {section === 'contributions' ? (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <thead className="border-b border-border text-muted-foreground">
@@ -580,23 +669,23 @@ export default function InvestmentsAdminClient({
                     <th className="px-2 py-2 font-medium">{t('actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {contributions.length === 0 ? (
+                <tbody className="divide-y divide-border/60">
+                  {filteredContributions.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-2 py-8 text-center text-muted-foreground">
                         {t('emptyContributions')}
                       </td>
                     </tr>
                   ) : (
-                    contributions.map((row) => (
-                      <tr key={row.id} className="border-b border-border/60">
+                    contributionPagination.items.map((row) => (
+                      <tr key={row.id}>
                         <td className="px-2 py-3 whitespace-nowrap">
                           {new Date(row.createdAt).toLocaleDateString(
                             locale === 'es' ? 'es-ES' : 'en-US'
                           )}
                         </td>
                         <td className="px-2 py-3">
-                          #{row.property?.investmentId} · {row.property?.name}
+                          <AdminPropertyLink property={row.property} />
                         </td>
                         <td className="px-2 py-3">
                           <span
@@ -609,9 +698,11 @@ export default function InvestmentsAdminClient({
                           >
                             {row.source === 'MANUAL' ? t('sourceManual') : t('sourceInvestor')}
                           </span>
-                          {row.source === 'MANUAL'
-                            ? row.label
-                            : row.user?.email || '—'}
+                          {row.source === 'MANUAL' ? (
+                            row.label
+                          ) : (
+                            <AdminInvestorLink user={row.user} />
+                          )}
                         </td>
                         <td className="px-2 py-3 font-medium">
                           {formatUsd(row.amount)}
@@ -640,9 +731,19 @@ export default function InvestmentsAdminClient({
                 </tbody>
               </table>
             </div>
+            <AdminListPagination
+              page={contributionPagination.page}
+              totalPages={contributionPagination.totalPages}
+              total={contributionPagination.total}
+              from={contributionPagination.from}
+              to={contributionPagination.to}
+              onPageChange={setListPage}
+            />
+            </>
           ) : null}
 
-          {tab === 'deposits' ? (
+          {section === 'deposits' ? (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <thead className="border-b border-border text-muted-foreground">
@@ -656,25 +757,27 @@ export default function InvestmentsAdminClient({
                     <th className="px-2 py-2 font-medium">{t('actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {deposits.length === 0 ? (
+                <tbody className="divide-y divide-border/60">
+                  {filteredDeposits.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-2 py-8 text-center text-muted-foreground">
                         {t('emptyDeposits')}
                       </td>
                     </tr>
                   ) : (
-                    deposits.map((row) => (
-                      <tr key={row.id} className="border-b border-border/60">
+                    depositPagination.items.map((row) => (
+                      <tr key={row.id}>
                         <td className="px-2 py-3 whitespace-nowrap">
                           {new Date(row.createdAt).toLocaleDateString(
                             locale === 'es' ? 'es-ES' : 'en-US'
                           )}
                         </td>
                         <td className="px-2 py-3">
-                          #{row.property?.investmentId} · {row.property?.name}
+                          <AdminPropertyLink property={row.property} />
                         </td>
-                        <td className="px-2 py-3">{row.user?.email}</td>
+                        <td className="px-2 py-3">
+                          <AdminInvestorLink user={row.user} />
+                        </td>
                         <td className="px-2 py-3 font-medium">
                           {formatUsd(row.amount)}
                         </td>
@@ -731,9 +834,19 @@ export default function InvestmentsAdminClient({
                 </tbody>
               </table>
             </div>
+            <AdminListPagination
+              page={depositPagination.page}
+              totalPages={depositPagination.totalPages}
+              total={depositPagination.total}
+              from={depositPagination.from}
+              to={depositPagination.to}
+              onPageChange={setListPage}
+            />
+            </>
           ) : null}
+          </div>
         </CardContent>
       </Card>
-    </div>
+    </AdminPageFrame>
   )
 }

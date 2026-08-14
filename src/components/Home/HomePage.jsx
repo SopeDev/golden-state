@@ -23,6 +23,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 import { getPropertyTypeDescription, getPropertyTypeLabel } from '@/lib/propertyTypes'
+import { getActualDurationMonths } from '@/lib/propertyStatusUi'
+import PropertyCardHighlights from '@/components/invest/PropertyCardHighlights'
 
 const STRATEGY_ICON_BY_SLUG = {
   'build-to-sell': Building2,
@@ -503,6 +505,8 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
                       </div>
                     </dl>
 
+                    <PropertyCardHighlights property={property} locale={locale} />
+
                     <Link
                       href={`/properties/${property.investmentId}`}
                       className={cn(buttonVariants({ variant: 'gold', size: 'sm' }), 'mt-auto w-full')}
@@ -701,6 +705,11 @@ function HomeTrackRecord({ content, completedDeals }) {
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {completedDeals.map((property) => {
             const typeLabel = resolvePropertyTypeLabel(property, locale)
+            const durationMonths = getActualDurationMonths(
+              property.startDate,
+              property.completedAt
+            )
+            const realizedRoi = Number(property.actualRoi)
             return (
               <Card
                 key={property.id}
@@ -739,7 +748,7 @@ function HomeTrackRecord({ content, completedDeals }) {
                         {content.trackCardReturn}
                       </dt>
                       <dd className="mt-1 text-base font-semibold text-main-gold">
-                        {property.estimatedROI}%
+                        {Number.isFinite(realizedRoi) ? `${realizedRoi}%` : '—'}
                       </dd>
                     </div>
                     <div>
@@ -747,10 +756,12 @@ function HomeTrackRecord({ content, completedDeals }) {
                         {content.trackCardTimeline}
                       </dt>
                       <dd className="mt-1 text-base font-semibold text-primary">
-                        {property.estimatedMonths} mo
+                        {durationMonths != null ? `${durationMonths} mo` : '—'}
                       </dd>
                     </div>
                   </dl>
+
+                  <PropertyCardHighlights property={property} locale={locale} />
                 </CardContent>
               </Card>
             )

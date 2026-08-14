@@ -480,12 +480,12 @@ export function meetingRequestedEmailContent({
 }) {
   if (locale === 'es') {
     return {
-      subject: `Solicitud de reunión registrada — ${propertyName} | Golden State Capital`,
+      subject: `Solicitud de inversión registrada — ${propertyName} | Golden State Capital`,
       html: buildTransactionalEmail({
         locale: 'es',
-        preheader: 'Recibimos su solicitud de reunión de inversión.',
+        preheader: 'Recibimos su solicitud de inversión.',
         eyebrow: 'Solicitud de inversión',
-        heading: 'Solicitud de reunión guardada',
+        heading: 'Solicitud de inversión guardada',
         paragraphs: [
           `Registramos su interés en invertir en ${propertyName}.`,
           amountLabel
@@ -503,7 +503,7 @@ export function meetingRequestedEmailContent({
         ],
       }),
       text: [
-        'Golden State Capital — Solicitud de reunión guardada',
+        'Golden State Capital — Solicitud de inversión guardada',
         '',
         `Propiedad: ${propertyName}`,
         amountLabel ? `Monto estimado: ${amountLabel}` : '',
@@ -519,12 +519,12 @@ export function meetingRequestedEmailContent({
   }
 
   return {
-    subject: `Meeting request saved — ${propertyName} | Golden State Capital`,
+    subject: `Investment request saved — ${propertyName} | Golden State Capital`,
     html: buildTransactionalEmail({
       locale: 'en',
-      preheader: 'We received your investment meeting request.',
+      preheader: 'We received your investment request.',
       eyebrow: 'Investment request',
-      heading: 'Meeting request saved',
+      heading: 'Investment request saved',
       paragraphs: [
         `We recorded your interest in investing in ${propertyName}.`,
         amountLabel
@@ -542,7 +542,7 @@ export function meetingRequestedEmailContent({
       ],
     }),
     text: [
-      'Golden State Capital — Meeting request saved',
+      'Golden State Capital — Investment request saved',
       '',
       `Property: ${propertyName}`,
       amountLabel ? `Intended amount: ${amountLabel}` : '',

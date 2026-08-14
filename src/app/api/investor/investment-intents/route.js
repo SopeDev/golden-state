@@ -225,7 +225,7 @@ export async function PATCH(request) {
 
     if (!canInvestorCancelMeetingRequest(existing.status)) {
       return NextResponse.json(
-        { error: 'Only a pending meeting request can be cancelled' },
+        { error: 'Only a pending investment request can be cancelled' },
         { status: 400 }
       )
     }

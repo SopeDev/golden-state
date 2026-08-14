@@ -1,7 +1,10 @@
 /**
  * Capital raise helpers: funded amount = sum of ACTIVE FundingContribution.amount;
  * goal = Property.price.
+ * Investor ROI (actualRoi) = ledger profit ROI from ACTIVE investor capital vs ACTIVE returns.
  */
+
+import { getLedgerRoiPercent } from '@/lib/portfolioGrowth'
 
 export const RAISE_STATUSES = ['FUNDING', 'FUNDED']
 export const EXECUTION_STATUSES = ['PLANNING', 'IN_PROGRESS', 'COMPLETED']
@@ -14,8 +17,10 @@ export function isExecutionStatus(status) {
   return EXECUTION_STATUSES.includes(status)
 }
 
-/** New investments only while the raise is open (not fully funded / execution). */
-export function isPropertyOpenForInvestment(status) {
+/** New investments only while the capital raise is open. Execution status is independent. */
+export function isPropertyOpenForInvestment(statusOrProperty) {
+  const status =
+    typeof statusOrProperty === 'string' ? statusOrProperty : statusOrProperty?.status
   return status === 'FUNDING'
 }
 
@@ -70,7 +75,17 @@ export function getEffectiveMinInvestment({
   return Math.min(stated, remaining)
 }
 
-export function withFundingFields(property, fundedAmount) {
+export function roundLedgerRoiPercent(value) {
+  if (value == null || !Number.isFinite(Number(value))) return null
+  return Math.round(Number(value) * 10) / 10
+}
+
+/** Profit ROI from investor capital + credited returns (same formula as portfolio holdings). */
+export function computePropertyActualRoi(investorCapital, totalReturns) {
+  return roundLedgerRoiPercent(getLedgerRoiPercent(investorCapital, totalReturns))
+}
+
+export function withFundingFields(property, fundedAmount, extras = {}) {
   if (!property) return property
   const amount = Number(fundedAmount) || 0
   const goal = Number(property.price) || 0
@@ -80,7 +95,7 @@ export function withFundingFields(property, fundedAmount) {
     goal,
     fundedAmount: amount,
   })
-  return {
+  const next = {
     ...property,
     fundedAmount: amount,
     fundingPercent: getFundingPercent(amount, goal),
@@ -89,6 +104,18 @@ export function withFundingFields(property, fundedAmount) {
     statedMinInvestment: statedMin,
     effectiveMinInvestment: effectiveMin,
   }
+
+  if (Object.prototype.hasOwnProperty.call(extras, 'actualRoi')) {
+    next.actualRoi = extras.actualRoi
+  }
+  if (Object.prototype.hasOwnProperty.call(extras, 'investorCapital')) {
+    next.investorCapital = extras.investorCapital
+  }
+  if (Object.prototype.hasOwnProperty.call(extras, 'totalReturns')) {
+    next.totalReturns = extras.totalReturns
+  }
+
+  return next
 }
 
 export async function getPropertyFundedAmount(prisma, propertyId) {
@@ -99,19 +126,82 @@ export async function getPropertyFundedAmount(prisma, propertyId) {
   return Number(agg._sum.amount || 0)
 }
 
-/** Attach fundedAmount + fundingPercent to a list of properties (one groupBy). */
+export async function getPropertyInvestorCapital(prisma, propertyId) {
+  const agg = await prisma.fundingContribution.aggregate({
+    where: { propertyId, status: 'ACTIVE', source: 'INVESTOR' },
+    _sum: { amount: true },
+  })
+  return Number(agg._sum.amount || 0)
+}
+
+export async function getPropertyReturnedAmount(prisma, propertyId) {
+  const agg = await prisma.returnDistribution.aggregate({
+    where: { propertyId, status: 'ACTIVE' },
+    _sum: { amount: true },
+  })
+  return Number(agg._sum.amount || 0)
+}
+
+export async function getPropertyActualRoi(prisma, propertyId) {
+  const [investorCapital, totalReturns] = await Promise.all([
+    getPropertyInvestorCapital(prisma, propertyId),
+    getPropertyReturnedAmount(prisma, propertyId),
+  ])
+  return {
+    investorCapital,
+    totalReturns,
+    actualRoi: computePropertyActualRoi(investorCapital, totalReturns),
+  }
+}
+
+/** Attach fundedAmount, fundingPercent, and ledger-derived actualRoi (one batch). */
 export async function attachFundingToProperties(prisma, properties) {
   if (!properties?.length) return properties || []
   const ids = properties.map((p) => p.id)
-  const grouped = await prisma.fundingContribution.groupBy({
-    by: ['propertyId'],
-    where: { propertyId: { in: ids }, status: 'ACTIVE' },
-    _sum: { amount: true },
-  })
-  const byId = Object.fromEntries(
-    grouped.map((row) => [row.propertyId, Number(row._sum.amount || 0)])
+  const [fundedGrouped, investorGrouped, returnGrouped] = await Promise.all([
+    prisma.fundingContribution.groupBy({
+      by: ['propertyId'],
+      where: { propertyId: { in: ids }, status: 'ACTIVE' },
+      _sum: { amount: true },
+    }),
+    prisma.fundingContribution.groupBy({
+      by: ['propertyId'],
+      where: { propertyId: { in: ids }, status: 'ACTIVE', source: 'INVESTOR' },
+      _sum: { amount: true },
+    }),
+    prisma.returnDistribution.groupBy({
+      by: ['propertyId'],
+      where: { propertyId: { in: ids }, status: 'ACTIVE' },
+      _sum: { amount: true },
+    }),
+  ])
+
+  const fundedById = Object.fromEntries(
+    fundedGrouped.map((row) => [row.propertyId, Number(row._sum.amount || 0)])
   )
-  return properties.map((p) => withFundingFields(p, byId[p.id] || 0))
+  const investedById = Object.fromEntries(
+    investorGrouped.map((row) => [row.propertyId, Number(row._sum.amount || 0)])
+  )
+  const returnedById = Object.fromEntries(
+    returnGrouped.map((row) => [row.propertyId, Number(row._sum.amount || 0)])
+  )
+
+  return properties.map((p) => {
+    const investorCapital = investedById[p.id] || 0
+    const totalReturns = returnedById[p.id] || 0
+    return withFundingFields(p, fundedById[p.id] || 0, {
+      investorCapital,
+      totalReturns,
+      actualRoi: computePropertyActualRoi(investorCapital, totalReturns),
+    })
+  })
+}
+
+/** Single-property funding + ledger ROI enricher. */
+export async function enrichPropertyWithFunding(prisma, property) {
+  if (!property) return property
+  const [enriched] = await attachFundingToProperties(prisma, [property])
+  return enriched
 }
 
 export function assertNoOverfunding({ goal, currentFunded, additionalAmount }) {
@@ -181,7 +271,7 @@ export async function syncPropertyFundingStatus(prisma, propertyId) {
   if (property.status === 'FUNDING' && fullyFunded) {
     return prisma.property.update({
       where: { id: propertyId },
-      data: { status: 'FUNDED', progressPercent: 0 },
+      data: { status: 'FUNDED' },
     })
   }
 
@@ -196,25 +286,11 @@ export async function syncPropertyFundingStatus(prisma, propertyId) {
 }
 
 /**
- * Block entering Planning / In progress / Completed unless fully funded
- * when coming from Funding/Funded or creating as an execution status.
+ * Execution (planning / in progress / completed) is independent of the raise.
+ * Kept as a no-op so existing callers stay valid.
  */
-export async function assertCanEnterExecutionStatus(
-  prisma,
-  { propertyId, nextStatus, goalPrice, previousStatus = null }
-) {
-  if (!isExecutionStatus(nextStatus)) return
-  if (previousStatus && isExecutionStatus(previousStatus)) return
-
-  const funded = propertyId ? await getPropertyFundedAmount(prisma, propertyId) : 0
-  const goal = Number(goalPrice) || 0
-  if (goal <= 0 || funded < goal - 1e-6) {
-    const err = new Error(
-      'Property must be fully funded before Planning, In progress, or Completed'
-    )
-    err.code = 'NOT_FULLY_FUNDED'
-    throw err
-  }
+export async function assertCanEnterExecutionStatus() {
+  return
 }
 
 /**

@@ -46,6 +46,8 @@ export default async function middleware(request) {
   const isAccreditedAreaRoute =
     pathWithoutLocale === '/dashboard/portfolio' ||
     pathWithoutLocale.startsWith('/dashboard/portfolio/') ||
+    pathWithoutLocale === '/dashboard/activity' ||
+    pathWithoutLocale.startsWith('/dashboard/activity/') ||
     pathWithoutLocale === '/dashboard/investments' ||
     pathWithoutLocale.startsWith('/dashboard/investments/')
 

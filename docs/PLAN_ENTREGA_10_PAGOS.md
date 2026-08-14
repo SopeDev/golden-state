@@ -1,6 +1,6 @@
 ---
 name: Plan de entrega en 10 pagos
-overview: "Plan en español: pago 2 = Quiénes somos + pulido + arquitectura; pago 3 = landing, idioma, FAQ, contacto y resto de navegación; analítica y publicación en pago 10."
+overview: "Plan vivo: pago 6 = captación (dinero in); pago 7 = dividendos/reinversión + rediseño admin; pago 8 = notificaciones; pago 9 = legales + Work with us; pago 10 = publicación/analítica."
 todos:
   - id: payment-2
     content: "Página Quiénes somos (About) bilingüe; pulido de pantallas ya existentes; arquitectura front + shadcn/Magic alineados a reglas Cursor"
@@ -15,16 +15,16 @@ todos:
     content: Estado del proyecto, porcentaje de avance y fechas en la web y en el panel admin
     status: in_progress
   - id: payment-6
-    content: Subida real de imágenes y documentos; descarga segura para inversionistas
-    status: pending
+    content: "Archivos reales + flujo de captación: reunión, depósito bancario entrante y confirmación manual (dinero hacia la plataforma)"
+    status: completed
   - id: payment-7
-    content: "Herramientas admin para asignar inversiones: depósito bancario y confirmación manual"
+    content: "Rediseño del panel admin; distribuciones/dividendos a inversionistas, historial y base de reinversión (dinero hacia el cliente)"
     status: pending
   - id: payment-8
     content: Notificaciones de avances (en plataforma; correo opcional)
     status: pending
   - id: payment-9
-    content: Pagos a inversionistas, historial y base para reinversión (versión inicial)
+    content: "Páginas estáticas: legales (términos, privacidad, avisos) y Trabaja con nosotros / Work with us"
     status: pending
   - id: payment-10
     content: "Publicación / salida del sitio: Google Analytics (u otra analítica), métricas, SEO y metadatos para compartir en redes alineados al go-live"
@@ -86,7 +86,7 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 
 - **Usuarios / inversionistas** — alta, edición, **aprobación o rechazo de cuenta**, **revisión de documentos de acreditación** (**pago 4**).
 - **Propiedades / proyectos** — alta, edición y baja desde el panel admin + API (imágenes hoy como URLs en formulario; archivos reales en **pago 6**).
-- **Vista de datos** (`/admin/data`) — resumen legible de propiedades, usuarios e inversiones existentes en BD (no sustituye herramientas de **asignación de inversiones** del **pago 7**).
+- **Vista de datos** (`/admin/data`) — resumen legible de propiedades, usuarios e inversiones existentes en BD (el rediseño admin y las herramientas de **distribuciones** van en **pago 7**).
 - **Esquema / documentación interna** (`/admin/schema`) — referencia del modelo de datos para el equipo.
 
 **Detrás de escena**
@@ -96,9 +96,10 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 
 **Qué todavía no hay como producto (y está en pagos posteriores del plan)**
 
-- Crear o editar **inversiones** (asignar proyecto + monto a un usuario) desde el admin — hoy suele depender de **datos semilla** u operación directa en BD; **pago 7**.
-- **Quiénes somos**, **FAQ**, **contacto**, **navegación cerrada** en menú/pie, enlaces huérfanos — **pagos 2 y 3**.
-
+- **Distribuciones / dividendos**, historial de pagos al inversionista y **reinversión**, más **rediseño del panel admin** — **pago 7**.
+- **Quiénes somos**, **FAQ**, **contacto**, **navegación cerrada** en menú/pie, enlaces huérfanos — **pagos 2 y 3** (según calendario original; varias ya entregadas).
+- Páginas **legales** completas y **Trabaja con nosotros** — **pago 9**.
+- **Notificaciones** de avances de proyecto — **pago 8**.
 La página **Quiénes somos** se entrega en el **pago 2**. La **landing principal** (inicio del sitio público, cotizada en la Fase 1) **aún no forma parte de lo recibido**: va en el **pago 3**, junto con **FAQ**, **contacto** y el cierre de **navegación**; allí también va **idioma sugerido por ubicación**. **Analítica, métricas y el paquete SEO / redes para el lanzamiento** se entregan en el **pago 10**, con el cierre de **publicación** del sitio.
 
 En conjunto: ya existe la **base técnica** y el recorrido de proyectos y panel; falta el **sitio informativo completo** (incluida la home pública), el resto de la **Fase 1** en la página y, más adelante, lo de la cotización como **producto terminado** y **operación diaria**.
@@ -200,13 +201,14 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 |------|------|
 | Almacenamiento seguro de documentos y descargas firmadas | 6 |
 | Avance % y estado de proyectos en fichas y portafolio | 5 |
-| Depósito bancario, confirmación manual y creación real de inversiones | 7 |
+| Captación: reunión, depósito bancario entrante y confirmación (dinero in) | 6 |
+| Distribuciones/dividendos, reinversión y rediseño admin (dinero out) | 7 |
 | Centro de notificaciones y correos de avances de proyecto | 8 |
-| Historial de pagos al inversionista y base de reinversión | 9 |
+| Páginas legales y Trabaja con nosotros | 9 |
 
 **Qué verán ustedes**
 
-Un proceso de alta e ingreso **confiable**, un área **Mi cuenta** para gestionar lo esencial, y un camino claro para convertirse en **inversionista acreditado** antes de operar con dinero (operación real en **pago 7**).
+Un proceso de alta e ingreso **confiable**, un área **Mi cuenta** para gestionar lo esencial, y un camino claro para convertirse en **inversionista acreditado** antes de operar con dinero (captación en **pago 6**; pagos al inversionista en **pago 7**).
 
 ---
 
@@ -224,29 +226,32 @@ Cumplimiento directo de la promesa: **“consultar el progreso de los proyectos�
 
 ---
 
-### Pago 6 — Imágenes y documentos como archivos reales
+### Pago 6 — Archivos reales + captación de capital (dinero in)
 
 **Qué entregamos**
 
 - Posibilidad de **subir archivos** (imágenes y documentos) desde el panel administrativo.
 - Enlaces de **descarga seguros** para inversionistas con derecho a esa información (por ejemplo desde el portafolio o la ficha del proyecto).
+- Flujo operativo de **captación**: solicitud de reunión, declaración de depósito bancario por el inversionista y **confirmación manual** por el admin (**sin** pasarela de pago en línea), con creación de aportes / portafolio.
 
 **Qué verán ustedes**
 
-Misma idea que en la cotización: **material de proyecto** disponible de forma controlada, no solo texto pegado en formularios.
+Material de proyecto disponible de forma controlada, y el **núcleo de entrada de capital** validado manualmente por operaciones.
 
 ---
 
-### Pago 7 — Asignación de inversiones y depósito bancario con confirmación manual
+### Pago 7 — Pagos al inversionista, reinversión y rediseño del admin
 
 **Qué entregamos**
 
-- Herramientas para que el administrador **registre o modifique** la relación inversionista–proyecto–monto, con reglas claras (mínimos, duplicados, etc.).
-- Flujo para que el inversionista **declare un depósito** (monto, referencia, fecha) y el administrador **confirme** o rechace, **sin integración de pagos en línea**.
+- **Rediseño del panel administrativo** (navegación, layout y consistencia de las herramientas de ops).
+- Registro de **distribuciones, dividendos o pagos** asociados a cada inversión (monto, fecha, concepto) — dinero **hacia el cliente**.
+- Pantallas para que el inversionista vea **historial** y resúmenes (sustituye el placeholder de returns).
+- **Primera versión de reinversión**: por ejemplo solicitud registrada o anotación administrativa (automatización total puede quedar como evolución futura).
 
 **Qué verán ustedes**
 
-El **núcleo operativo**: el portafolio refleja la realidad negocial que ustedes validen manualmente.
+Ops con un admin más usable, y transparencia en **resultados / pagos recibidos**, con punto de partida para **reinvertir**.
 
 ---
 
@@ -264,17 +269,17 @@ Cumplimiento de **“notificar a los usuarios sobre avances o cambios”**.
 
 ---
 
-### Pago 9 — Pagos al inversionista, historial y base para reinvertir
+### Pago 9 — Páginas legales y Trabaja con nosotros
 
 **Qué entregamos**
 
-- Registro de **distribuciones o pagos** asociados a cada inversión (monto, fecha, concepto).
-- Pantallas para que el inversionista vea **historial** y resúmenes en su tablero.
-- **Primera versión** de lo relativo a **reinvertir**: por ejemplo solicitud registrada o anotación administrativa (la versión totalmente automática puede quedar como evolución futura si así lo acordamos).
+- Páginas **legales** bilingües (p. ej. términos de servicio, política de privacidad, avisos / disclaimers) enlazadas desde el pie y los flujos de registro.
+- Página **Trabaja con nosotros / Work with us** (u oportunidad de colaboración) como superficie estática de marca.
+- Integración en **navegación / pie** sin enlaces rotos.
 
 **Qué verán ustedes**
 
-Transparencia en **resultados e historial**, y punto de partida para **reinversión** según la cotización.
+Sitio institucional completo en lo legal y de talento/colaboración, no solo el producto de inversión.
 
 ---
 
@@ -302,8 +307,10 @@ El sitio **medible** para el público y **presentado de forma profesional** en b
 ## Cómo se agrupan las entregas (visión por etapas de la cotización original)
 
 - **Pagos 2 y 3:** **Fase 1** en sitio visible (**pago 2:** **Quiénes somos**, pulido de lo existente, base shadcn/Magic/reglas Cursor; **pago 3:** landing, **FAQ**, **contacto**, menú y pie **sin enlaces rotos**, terminados/en desarrollo, idioma por ubicación).
-- **Pagos 4 a 7:** núcleo de la **Fase 2** (acceso seguro, **Mi cuenta y acreditación**, avance de proyectos, archivos, operación de inversiones y depósitos).
-- **Pagos 8 y 9:** **comunicación** y **visibilidad financiera** (notificaciones, historial, base de reinversión).
+- **Pagos 4 a 6:** núcleo de la **Fase 2** (acceso seguro, **Mi cuenta y acreditación**, avance de proyectos, archivos, **captación** de inversiones y depósitos entrantes).
+- **Pago 7:** **visibilidad financiera saliente** (dividendos / historial / reinversión) + **rediseño del admin**.
+- **Pago 8:** **comunicación** (notificaciones de avances).
+- **Pago 9:** **páginas estáticas** legales y Trabaja con nosotros.
 - **Pago 10:** **cotización / extensión de Fase 1** en su parte de **analítica**: mediciones y metadatos de **lanzamiento**, junto con el cierre orientado a **publicación**.
 
 ---
@@ -327,10 +334,10 @@ flowchart LR
     F[Landing_FAQ_contacto_nav_idioma]
     G[Registro_activacion_mi_cuenta_acreditacion]
     H[Estado_y_avance]
-    I[Archivos_y_descargas]
-    J[Inversiones_y_depositos]
+    I[Archivos_y_captacion_dinero_in]
+    J[Dividendos_reinversion_admin_UI]
     K[Notificaciones]
-    L[Historial_y_reinvertir]
+    L[Legales_y_work_with_us]
     M[Publicacion_analitica_SEO]
   end
   entregado --> pendiente

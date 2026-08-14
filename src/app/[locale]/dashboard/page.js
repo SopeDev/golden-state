@@ -1,13 +1,14 @@
 import { getServerSession } from 'next-auth'
 import { getTranslations } from 'next-intl/server'
 import { PrismaClient } from '@prisma/client'
-import { ArrowRight, Briefcase, Building2, ClipboardList, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowRight, Activity, Briefcase, Building2, ShieldCheck, UserRound } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatUsd } from '@/lib/formatMoney'
 import { investorHoldingWhere } from '@/lib/fundingContributions'
+import { getWalletBalance } from '@/lib/investorWallet'
 import {
   canAccessPortfolio,
   resolveProtectedPortfolioHref,
@@ -63,11 +64,12 @@ export default async function DashboardPage() {
   let holdingCount = 0
   let openRequests = []
   let profile = null
+  let walletAvailable = 0
 
   try {
     if (user?.id && !isAdmin) {
       const userId = Number(user.id)
-      const [agg, intents, dbUser] = await Promise.all([
+      const [agg, intents, dbUser, wallet] = await Promise.all([
         prisma.fundingContribution.aggregate({
           where: investorHoldingWhere(userId),
           _sum: { amount: true },
@@ -90,11 +92,13 @@ export default async function DashboardPage() {
           where: { id: userId },
           select: { profile: true },
         }),
+        getWalletBalance(prisma, userId),
       ])
       totalInvested = Number(agg._sum.amount || 0)
       holdingCount = agg._count._all || 0
       openRequests = intents
       profile = dbUser?.profile && typeof dbUser.profile === 'object' ? dbUser.profile : null
+      walletAvailable = wallet.available
     } else if (user?.id && isAdmin) {
       const dbUser = await prisma.user.findUnique({
         where: { id: Number(user.id) },
@@ -189,7 +193,7 @@ export default async function DashboardPage() {
     }
   } else if (meetingRequested) {
     nextStep = {
-      href: '/dashboard/investments',
+      href: '/dashboard/activity',
       title: t('nextStepMeetingEyebrow'),
       body: t('nextStepMeetingBody'),
       note: t('nextStepMeetingNote'),
@@ -216,8 +220,8 @@ export default async function DashboardPage() {
       disabled: !portfolioUnlocked,
     },
     {
-      href: '/dashboard/investments',
-      icon: ClipboardList,
+      href: '/dashboard/activity',
+      icon: Activity,
       title: t('investmentsTitle'),
       desc: investmentsUnlocked ? t('investmentsDesc') : t('investmentsLockedDesc'),
       cta: investmentsUnlocked ? t('investmentsCta') : t('investmentsLockedCta'),
@@ -297,7 +301,7 @@ export default async function DashboardPage() {
               <p className="mt-1 text-sm text-muted-foreground">{t('statRequestsHint')}</p>
               {investmentsUnlocked ? (
                 <Link
-                  href="/dashboard/investments"
+                  href="/dashboard/activity"
                   className="mt-3 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
                   {t('statRequestsCta')}
@@ -319,8 +323,16 @@ export default async function DashboardPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {t('statReturns')}
               </p>
-              <p className="mt-2 font-heading text-3xl font-semibold text-primary">—</p>
+              <p className="mt-2 font-heading text-3xl font-semibold text-primary">
+                {formatUsd(walletAvailable, { fallback: '$0' })}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">{t('statReturnsHint')}</p>
+              <Link
+                href="/dashboard/activity"
+                className="mt-3 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {t('statReturnsCta')}
+              </Link>
             </div>
           </div>
         ) : null}

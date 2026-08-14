@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from '../ProjectsClient'
 import {
-  ACTIVE_PROPERTY_STATUSES,
+  activeProjectWhere,
+  completedProjectWhere,
   getPropertyTypeBySlug,
   isCompletedProjectsSlug,
   notDeletedProperty,
@@ -72,7 +73,7 @@ export default async function ProjectsByTypePage({ params }) {
   try {
     if (isCompleted) {
       properties = await prisma.property.findMany({
-        where: { ...notDeletedProperty, status: 'COMPLETED' },
+        where: { ...notDeletedProperty, ...completedProjectWhere },
         include: propertyTypeInclude,
         orderBy: { updatedAt: 'desc' },
       })
@@ -81,7 +82,7 @@ export default async function ProjectsByTypePage({ params }) {
         where: {
           ...notDeletedProperty,
           typeId: propertyType.id,
-          status: { in: ACTIVE_PROPERTY_STATUSES },
+          ...activeProjectWhere,
         },
         include: propertyTypeInclude,
         orderBy: { createdAt: 'desc' },

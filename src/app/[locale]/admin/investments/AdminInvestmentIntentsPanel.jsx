@@ -1,33 +1,64 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { adminSelectClassName } from '@/lib/adminFormClasses'
 import { formatUsd } from '@/lib/formatMoney'
+import { matchesAdminQuery } from '@/lib/adminSearch'
 import { meetingChannelLabelKey } from '@/lib/investMeetingLinks'
+import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
+import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 
-export default function AdminInvestmentIntentsPanel({ propertyFilter, locale }) {
+export default function AdminInvestmentIntentsPanel({
+  propertyFilter,
+  investorFilter = '',
+  statusFilter = 'MEETING_REQUESTED',
+  searchQuery = '',
+  locale,
+}) {
   const t = useTranslations('Admin.investments')
   const [intents, setIntents] = useState([])
-  const [statusFilter, setStatusFilter] = useState('MEETING_REQUESTED')
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [page, setPage] = useState(1)
 
   const refresh = useCallback(async () => {
     const params = new URLSearchParams()
     if (statusFilter) params.set('status', statusFilter)
     if (propertyFilter) params.set('propertyId', propertyFilter)
+    if (investorFilter) params.set('userId', investorFilter)
     const res = await fetch(`/api/admin/investment-intents?${params}`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed')
     setIntents(await res.json())
-  }, [statusFilter, propertyFilter])
+  }, [statusFilter, propertyFilter, investorFilter])
 
   useEffect(() => {
     refresh().catch(() => setStatus(t('errorLoad')))
   }, [refresh, t])
+
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter, propertyFilter, investorFilter, searchQuery])
+
+  const filteredIntents = useMemo(
+    () =>
+      intents.filter((row) =>
+        matchesAdminQuery(
+          searchQuery,
+          row.user?.email,
+          row.property?.name,
+          row.property?.investmentId,
+          row.intendedAmount,
+          row.status,
+          row.meetingChannel
+        )
+      ),
+    [intents, searchQuery]
+  )
+
+  const pagination = useMemo(() => paginateItems(filteredIntents, page), [filteredIntents, page])
 
   const setIntentStatus = async (id, nextStatus) => {
     setIsLoading(true)
@@ -53,21 +84,6 @@ export default function AdminInvestmentIntentsPanel({ propertyFilter, locale }) 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <select
-          className={adminSelectClassName('w-full min-w-[12rem] sm:w-auto')}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">{t('allStatuses')}</option>
-          <option value="MEETING_REQUESTED">{t('intentMeetingRequested')}</option>
-          <option value="AWAITING_WIRE">{t('intentAwaitingWire')}</option>
-          <option value="READY">{t('intentReady')}</option>
-          <option value="COMPLETED">{t('intentCompleted')}</option>
-          <option value="CANCELLED">{t('intentCancelled')}</option>
-        </select>
-      </div>
-
       {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
 
       <div className="overflow-x-auto">
@@ -83,24 +99,26 @@ export default function AdminInvestmentIntentsPanel({ propertyFilter, locale }) 
               <th className="px-2 py-2 font-medium">{t('actions')}</th>
             </tr>
           </thead>
-          <tbody>
-            {intents.length === 0 ? (
+          <tbody className="divide-y divide-border/60">
+            {filteredIntents.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-2 py-8 text-center text-muted-foreground">
                   {t('emptyIntents')}
                 </td>
               </tr>
             ) : (
-              intents.map((row) => (
-                <tr key={row.id} className="border-b border-border/60">
+              pagination.items.map((row) => (
+                <tr key={row.id}>
                   <td className="px-2 py-3 whitespace-nowrap">
                     {new Date(row.meetingRequestedAt || row.updatedAt).toLocaleDateString(
                       locale === 'es' ? 'es-ES' : 'en-US'
                     )}
                   </td>
-                  <td className="px-2 py-3">{row.user?.email}</td>
                   <td className="px-2 py-3">
-                    #{row.property?.investmentId} · {row.property?.name}
+                    <AdminInvestorLink user={row.user} />
+                  </td>
+                  <td className="px-2 py-3">
+                    <AdminPropertyLink property={row.property} />
                   </td>
                   <td className="px-2 py-3">
                     {(() => {
@@ -145,6 +163,14 @@ export default function AdminInvestmentIntentsPanel({ propertyFilter, locale }) 
           </tbody>
         </table>
       </div>
+      <AdminListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        from={pagination.from}
+        to={pagination.to}
+        onPageChange={setPage}
+      />
     </div>
   )
 }

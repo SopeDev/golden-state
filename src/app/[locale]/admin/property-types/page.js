@@ -3,7 +3,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { getTranslations } from 'next-intl/server'
 import { PrismaClient } from '@prisma/client'
-import AdminNav from '../components/AdminNav'
 import PropertyTypesAdminClient from './PropertyTypesAdminClient'
 import { toClientPropertyType } from '@/lib/propertyTypes'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,18 +40,14 @@ export default async function PropertyTypesAdminPage() {
 
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
-        <div className="container mx-auto px-4 py-8">
-          <PropertyTypesAdminClient initialTypes={typesWithCounts} />
-        </div>
+        <PropertyTypesAdminClient initialTypes={typesWithCounts} />
       </div>
     )
   } catch (error) {
     console.error('Property types admin error:', error)
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
-        <div className="container mx-auto px-4 py-8">
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
           <Card className="border-destructive/40">
             <CardHeader>
               <CardTitle>{t('loadErrorTitle')}</CardTitle>

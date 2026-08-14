@@ -1,15 +1,19 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Archive, Plus, RotateCcw } from 'lucide-react'
+import { Archive, ArrowLeft, Plus, RotateCcw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
+import { adminSelectClassName } from '@/lib/adminFormClasses'
+import { matchesAdminQuery } from '@/lib/adminSearch'
 import { slugifyPropertyType } from '@/lib/propertyTypes'
+import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 
 const emptyForm = {
   labelEn: '',
@@ -32,6 +36,9 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
   const [status, setStatus] = useState('')
   const [removeMode, setRemoveMode] = useState(null)
   const [propertyDecisions, setPropertyDecisions] = useState({})
+  const [page, setPage] = useState(1)
+  const [query, setQuery] = useState('')
+  const [visibilityFilter, setVisibilityFilter] = useState('')
 
   const selected = useMemo(
     () => types.find((type) => type.id === selectedId) || null,
@@ -42,6 +49,26 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
     () => types.filter((type) => !type.deletedAt),
     [types]
   )
+
+  const filteredTypes = useMemo(() => {
+    let list = types
+    if (visibilityFilter === 'LIVE') list = list.filter((type) => !type.deletedAt)
+    if (visibilityFilter === 'ARCHIVED') list = list.filter((type) => Boolean(type.deletedAt))
+    return list.filter((type) =>
+      matchesAdminQuery(
+        query,
+        type.labelEn,
+        type.labelEs,
+        type.slug,
+        type.descriptionEn,
+        type.descriptionEs
+      )
+    )
+  }, [types, query, visibilityFilter])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, visibilityFilter])
 
   const reassignOptions = useMemo(
     () => activeTypes.filter((type) => type.id !== selectedId),
@@ -237,37 +264,73 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
 
   const editorOpen = isCreating || selected
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-semibold text-primary">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
-        </div>
-        <Button type="button" onClick={startCreate} className="gap-1.5">
-          <Plus className="size-4" aria-hidden />
-          {t('create')}
-        </Button>
-      </div>
+  const pagination = useMemo(() => paginateItems(filteredTypes, page), [filteredTypes, page])
 
-      <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+  const backToList = () => {
+    setIsCreating(false)
+    setSelectedId(null)
+    setRemoveMode(null)
+    setPropertyDecisions({})
+    setStatus('')
+  }
+
+  if (!editorOpen) {
+    return (
+      <AdminPageFrame>
+        <AdminPageHeader
+          className="mb-6"
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('subtitle')}
+          actions={
+            <Button type="button" onClick={startCreate} className="gap-1.5">
+              <Plus className="size-4" aria-hidden />
+              {t('create')}
+            </Button>
+          }
+        />
+
         <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/70 py-4">
-            <CardTitle className="text-base">{t('listTitle', { count: types.length })}</CardTitle>
+          <CardHeader className="space-y-3 border-b border-border/70 pb-4">
+            <CardTitle className="text-base text-primary">
+              {t('listTitle', { count: filteredTypes.length })}
+            </CardTitle>
+            <div className="flex flex-row flex-wrap items-center gap-2 sm:flex-nowrap">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t('searchPlaceholder')}
+                  className="pl-8"
+                />
+              </div>
+              <select
+                className={adminSelectClassName('w-auto min-w-[10rem] shrink-0')}
+                value={visibilityFilter}
+                onChange={(e) => setVisibilityFilter(e.target.value)}
+                aria-label={t('visibilityFilter')}
+              >
+                <option value="">{t('allStatuses')}</option>
+                <option value="LIVE">{t('filterLive')}</option>
+                <option value="ARCHIVED">{t('filterArchived')}</option>
+              </select>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ul>
-              {types.map((type) => {
-                const isActive = !isCreating && type.id === selectedId
-                return (
+            {filteredTypes.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-muted-foreground">{t('emptyDesc')}</p>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {pagination.items.map((type) => (
                   <li key={type.id}>
                     <button
                       type="button"
                       onClick={() => selectType(type)}
-                      className={cn(
-                        'flex w-full cursor-pointer items-start justify-between gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
-                        isActive && 'border-l-main-gold bg-main-gold/10'
-                      )}
+                      className="flex w-full cursor-pointer items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-primary">{type.labelEn}</p>
@@ -282,21 +345,29 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
                       ) : null}
                     </button>
                   </li>
-                )
-              })}
-            </ul>
+                ))}
+              </ul>
+            )}
+            <AdminListPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              from={pagination.from}
+              to={pagination.to}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
+      </AdminPageFrame>
+    )
+  }
 
-        <div className={cn(editorOpen ? 'block' : 'hidden lg:block')}>
-          {!editorOpen ? (
-            <Card className="border-dashed border-border/80">
-              <CardHeader>
-                <CardTitle>{t('emptyTitle')}</CardTitle>
-                <CardDescription>{t('emptyDesc')}</CardDescription>
-              </CardHeader>
-            </Card>
-          ) : (
+  return (
+    <AdminPageFrame>
+      <Button type="button" variant="ghost" size="sm" onClick={backToList} className="mb-4 gap-1.5">
+        <ArrowLeft className="size-4" aria-hidden />
+        {t('backToList')}
+      </Button>
             <Card className="border-border/80 shadow-sm">
               <CardHeader className="border-b border-border/70">
                 <CardTitle>
@@ -402,7 +473,7 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
                             className="rounded-md border border-border/70 bg-background p-3"
                           >
                             <p className="text-sm font-medium text-primary">
-                              #{property.investmentId} · {property.name}
+                              <AdminPropertyLink property={property} />
                             </p>
                             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                               <select
@@ -511,9 +582,6 @@ export default function PropertyTypesAdminClient({ initialTypes }) {
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
-      </div>
-    </div>
+    </AdminPageFrame>
   )
 }

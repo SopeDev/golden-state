@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
-import AdminNav from '../components/AdminNav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatUsd } from '@/lib/formatMoney'
 import { getPropertyTypeLabel, propertyTypeInclude, toClientProperties } from '@/lib/propertyTypes'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 
 const prisma = new PrismaClient()
 
@@ -64,12 +65,13 @@ export default async function DataPage() {
 
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">{t('title')}</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl">{t('subtitle')}</p>
-          </div>
+        <AdminPageFrame>
+          <AdminPageHeader
+            className="mb-8"
+            eyebrow={t('eyebrow')}
+            title={t('title')}
+            description={t('subtitle')}
+          />
 
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">
@@ -80,7 +82,9 @@ export default async function DataPage() {
                 <Card key={property.id}>
                   <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b pb-4">
                     <div>
-                      <CardTitle className="text-lg">{property.name}</CardTitle>
+                    <CardTitle className="text-lg">
+                      <AdminPropertyLink property={property} />
+                    </CardTitle>
                     </div>
                     <span className={badgeClass}>
                       {getPropertyTypeLabel(property.propertyType, locale)}
@@ -118,7 +122,9 @@ export default async function DataPage() {
               {users.map((user) => (
                 <Card key={user.id}>
                   <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b pb-4">
-                    <CardTitle className="text-lg">{user.email}</CardTitle>
+                    <CardTitle className="text-lg">
+                      <AdminInvestorLink user={user} />
+                    </CardTitle>
                     <span className={badgeClass}>{user.type}</span>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
@@ -153,7 +159,12 @@ export default async function DataPage() {
                 <Card key={investment.id}>
                   <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b pb-4">
                     <CardTitle className="text-base font-medium leading-snug">
-                      {investment.user?.email || 'Manual'} → {investment.property.name}
+                      {investment.user ? (
+                        <AdminInvestorLink user={investment.user} />
+                      ) : (
+                        'Manual'
+                      )}{' '}
+                      → <AdminPropertyLink property={investment.property} />
                       {investment.source === 'MANUAL' ? ` (${investment.label || 'manual'})` : ''}
                     </CardTitle>
                     <span className={badgeClass}>{formatCurrency(investment.amount)}</span>
@@ -165,7 +176,9 @@ export default async function DataPage() {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{t('property')}</p>
-                      <p className="text-muted-foreground">{investment.property.name}</p>
+                      <p className="text-muted-foreground">
+                        <AdminPropertyLink property={investment.property} />
+                      </p>
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{t('date')}</p>
@@ -176,7 +189,7 @@ export default async function DataPage() {
               ))}
             </div>
           </div>
-        </div>
+        </AdminPageFrame>
       </div>
     )
   } catch (error) {
@@ -184,7 +197,6 @@ export default async function DataPage() {
     const tErr = await getTranslations('Admin.data')
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>

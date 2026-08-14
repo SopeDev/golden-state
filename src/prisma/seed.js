@@ -3,6 +3,32 @@ const { hash } = require('bcryptjs')
 
 const prisma = new PrismaClient()
 
+/** UTC afternoon so calendar dates stay on the intended day in US Pacific. */
+function seedUtcDate(isoDate, hour = 18) {
+  return new Date(`${isoDate}T${String(hour).padStart(2, '0')}:00:00.000Z`)
+}
+
+function slugifyPropertyName(value) {
+  return (
+    String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'property'
+  )
+}
+
+function bilingualSummary(text) {
+  const value = String(text || '').trim()
+  return {
+    summary: value,
+    summaryEn: value,
+    summaryEs: value,
+  }
+}
+
 const PROPERTY_TYPES = [
   {
     code: 'BUILD_TO_SELL',
@@ -166,7 +192,7 @@ async function main() {
         location: 'MX',
         interestedInInvestorVisa: true,
         investmentGoals: 'Diversified coastal and hospitality exposure.',
-        experience: 'intermediate',
+        experience: 'some',
         investmentRange: '250k_500k',
         projectTypes: ['BUILD_TO_RENT', 'US_TO_MEX', 'FLIPHOUSE'],
         referralSource: 'Web search',
@@ -189,7 +215,7 @@ async function main() {
         location: 'MX',
         interestedInInvestorVisa: true,
         investmentGoals: 'Diversified coastal and hospitality exposure.',
-        experience: 'intermediate',
+        experience: 'some',
         investmentRange: '250k_500k',
         projectTypes: ['BUILD_TO_RENT', 'US_TO_MEX', 'FLIPHOUSE'],
         referralSource: 'Web search',
@@ -249,15 +275,17 @@ async function main() {
 
   console.log('✅ Investor user created:', jamesUser.email)
 
-  // Create sample properties
-  // IN_PROGRESS and COMPLETED projects always include startDate
+  // Create sample properties — capital status is independent of execution:
+  // - FUNDING/FUNDED + NONE: raise only
+  // - FUNDING + PLANNING / IN_PROGRESS: still raising while construction starts
+  // - FUNDED + PLANNING / IN_PROGRESS / COMPLETED
   const properties = [
     {
       investmentId: 1001,
       name: 'Hornblend Street Development',
-      slug: 'hornblend-street-development',
       typeId: typeIdByCode.BUILD_TO_SELL,
       status: 'FUNDING',
+      executionStatus: 'NONE',
       progressPercent: 0,
       startDate: null,
       targetCompletionDate: null,
@@ -270,7 +298,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 4.5,
       estimatedMonths: '18',
-      summary: 'Premium residential development in the heart of San Diego. This project features 4 luxury units with modern amenities and stunning ocean views.',
+      ...bilingualSummary(
+        'Premium residential development in the heart of San Diego. This project features 4 luxury units with modern amenities and stunning ocean views.'
+      ),
       propertyFacts: {
         lotSize: '0.25 acres',
         zoning: 'R-2',
@@ -294,9 +324,9 @@ async function main() {
     {
       investmentId: 1002,
       name: 'Downtown LA Mixed-Use',
-      slug: 'downtown-la-mixed-use',
       typeId: typeIdByCode.BUILD_TO_RENT,
       status: 'FUNDING',
+      executionStatus: 'NONE',
       progressPercent: 0,
       startDate: null,
       targetCompletionDate: null,
@@ -309,7 +339,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 6.2,
       estimatedMonths: '24',
-      summary: 'Mixed-use development in downtown Los Angeles featuring 12 residential units with ground-floor retail space.',
+      ...bilingualSummary(
+        'Mixed-use development in downtown Los Angeles featuring 12 residential units with ground-floor retail space.'
+      ),
       propertyFacts: {
         lotSize: '0.5 acres',
         zoning: 'C-2',
@@ -331,9 +363,9 @@ async function main() {
     {
       investmentId: 1003,
       name: 'Pacific Flip — Claremont Villas',
-      slug: 'pacific-flip-claremont-villas',
       typeId: typeIdByCode.FLIPHOUSE,
       status: 'FUNDED',
+      executionStatus: 'NONE',
       progressPercent: 0,
       startDate: null,
       targetCompletionDate: null,
@@ -346,8 +378,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 5.8,
       estimatedMonths: '12-18',
-      summary:
-        'Strategic flip opportunity with cosmetic renovation scope and defined resale timeline in an established coastal submarket.',
+      ...bilingualSummary(
+        'Strategic flip opportunity with cosmetic renovation scope and defined resale timeline in an established coastal submarket.'
+      ),
       propertyFacts: {
         acquisitionPrice: '850000',
         renovationBudget: '425000',
@@ -362,9 +395,9 @@ async function main() {
     {
       investmentId: 1004,
       name: 'CrossBorder Logistics Park',
-      slug: 'crossborder-logistics-park-mex-us',
       typeId: typeIdByCode.MEX_TO_US,
-      status: 'FUNDING',
+      status: 'FUNDED',
+      executionStatus: 'PLANNING',
       progressPercent: 0,
       startDate: null,
       targetCompletionDate: null,
@@ -377,8 +410,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 7.1,
       estimatedMonths: '36-48',
-      summary:
-        'Mexico-to-US corridor industrial exposure with phased leasing and hedged FX assumptions.',
+      ...bilingualSummary(
+        'Mexico-to-US corridor industrial exposure with phased leasing and hedged FX assumptions. Raise complete; pre-construction planning.'
+      ),
       propertyFacts: {
         footprint: '210000 sq ft phase 1',
         corridor: 'Tijuana–San Diego',
@@ -392,11 +426,11 @@ async function main() {
     {
       investmentId: 1005,
       name: 'Baja Coastal Hospitality Co-Invest',
-      slug: 'baja-coastal-hospitality-co-invest',
       typeId: typeIdByCode.US_TO_MEX,
       status: 'FUNDING',
-      progressPercent: 0,
-      startDate: null,
+      executionStatus: 'PLANNING',
+      progressPercent: 5,
+      startDate: new Date('2026-02-01'),
       targetCompletionDate: null,
       completedAt: null,
       city: 'Rosarito',
@@ -407,8 +441,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 6.4,
       estimatedMonths: '30-42',
-      summary:
-        'US-to-Mexico hospitality repositioning with staged capex and operator-led revenue management.',
+      ...bilingualSummary(
+        'US-to-Mexico hospitality repositioning with staged capex and operator-led revenue management. Kickoff dated; target TBD.'
+      ),
       propertyFacts: {
         keys: '84 keys',
         flag: 'Independent boutique',
@@ -420,14 +455,43 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-1-HighDefinition.webp'],
     },
     {
+      investmentId: 902,
+      name: 'Encinitas Coastal Flip Series',
+      typeId: typeIdByCode.FLIPHOUSE,
+      status: 'FUNDING',
+      executionStatus: 'IN_PROGRESS',
+      progressPercent: 48,
+      startDate: new Date('2025-09-01'),
+      targetCompletionDate: new Date('2026-08-01'),
+      completedAt: null,
+      city: 'Encinitas',
+      state: 'CA',
+      address: '1480 N Coast Hwy 101, Encinitas, CA 92024',
+      price: 1850000,
+      unitCount: 1,
+      minInvestment: 5000,
+      estimatedROI: 14.1,
+      estimatedMonths: '11',
+      ...bilingualSummary(
+        'Cosmetic repositioning of a coastal asset currently under renovation with a scheduled resale exit.'
+      ),
+      propertyFacts: {
+        renovationScope: { en: { label: 'Renovation Scope', value: 'Cosmetic + layout' }, es: { label: 'Alcance de renovación', value: 'Cosmético + distribución' } },
+      },
+      investmentDetails: {
+        exitType: { en: { label: 'Exit', value: 'Retail resale' }, es: { label: 'Salida', value: 'Reventa' } },
+      },
+      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
+    },
+    {
       investmentId: 901,
       name: 'La Jolla Coastal Townhomes',
-      slug: 'la-jolla-coastal-townhomes',
       typeId: typeIdByCode.BUILD_TO_SELL,
-      status: 'COMPLETED',
+      status: 'FUNDED',
+      executionStatus: 'COMPLETED',
       progressPercent: 100,
       startDate: new Date('2023-01-10'),
-      targetCompletionDate: new Date('2024-11-01'),
+      targetCompletionDate: null,
       completedAt: new Date('2024-11-15'),
       city: 'La Jolla',
       state: 'CA',
@@ -437,8 +501,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 18.4,
       estimatedMonths: '22',
-      summary:
-        'Six-unit luxury townhome development delivered on schedule and sold out within four months of completion.',
+      ...bilingualSummary(
+        'Six-unit luxury townhome development delivered and sold out within four months of completion.'
+      ),
       propertyFacts: {
         finalSalePrice: { en: { label: 'Final Sale Price', value: '6,720,000' }, es: { label: 'Precio final de venta', value: '6,720,000' } },
         timeline: { en: { label: 'Total Timeline', value: '22 months' }, es: { label: 'Tiempo total', value: '22 meses' } },
@@ -449,39 +514,11 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-2-Large.avif'],
     },
     {
-      investmentId: 902,
-      name: 'Encinitas Coastal Flip Series',
-      slug: 'encinitas-coastal-flip-series',
-      typeId: typeIdByCode.FLIPHOUSE,
-      status: 'COMPLETED',
-      progressPercent: 100,
-      startDate: new Date('2023-09-01'),
-      targetCompletionDate: new Date('2024-08-01'),
-      completedAt: new Date('2024-08-20'),
-      city: 'Encinitas',
-      state: 'CA',
-      address: '1480 N Coast Hwy 101, Encinitas, CA 92024',
-      price: 1850000,
-      unitCount: 1,
-      minInvestment: 5000,
-      estimatedROI: 14.1,
-      estimatedMonths: '11',
-      summary:
-        'Cosmetic repositioning of a coastal asset with a clean resale exit and tightly managed renovation scope.',
-      propertyFacts: {
-        renovationScope: { en: { label: 'Renovation Scope', value: 'Cosmetic + layout' }, es: { label: 'Alcance de renovación', value: 'Cosmético + distribución' } },
-      },
-      investmentDetails: {
-        netInvestorReturn: { en: { label: 'Net Investor Return', value: '14.1%' }, es: { label: 'Retorno neto al inversor', value: '14.1%' } },
-      },
-      images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
-    },
-    {
       investmentId: 903,
       name: 'Tijuana Riverfront Logistics',
-      slug: 'tijuana-riverfront-logistics',
       typeId: typeIdByCode.MEX_TO_US,
-      status: 'COMPLETED',
+      status: 'FUNDED',
+      executionStatus: 'COMPLETED',
       progressPercent: 100,
       startDate: new Date('2022-03-15'),
       targetCompletionDate: new Date('2024-12-01'),
@@ -494,8 +531,9 @@ async function main() {
       minInvestment: 5000,
       estimatedROI: 12.7,
       estimatedMonths: '34',
-      summary:
-        'Cross-border logistics facility delivered fully leased; long-term anchor tenant secured at delivery.',
+      ...bilingualSummary(
+        'Cross-border logistics facility delivered fully leased; long-term anchor tenant secured at delivery.'
+      ),
       propertyFacts: {
         anchorLease: { en: { label: 'Anchor Lease', value: '10-year corporate tenant' }, es: { label: 'Contrato ancla', value: 'Inquilino corporativo a 10 años' } },
       },
@@ -507,10 +545,11 @@ async function main() {
   ]
 
   for (const propertyData of properties) {
+    const slug = slugifyPropertyName(propertyData.name)
     const property = await prisma.property.upsert({
-      where: { slug: propertyData.slug },
-      update: propertyData,
-      create: propertyData,
+      where: { investmentId: propertyData.investmentId },
+      update: { ...propertyData, slug },
+      create: { ...propertyData, slug },
     })
     console.log('✅ Property created:', property.name)
   }
@@ -518,7 +557,7 @@ async function main() {
   const propertyBySlug = Object.fromEntries(
     (
       await prisma.property.findMany({
-        where: { slug: { in: properties.map((p) => p.slug) } },
+        where: { investmentId: { in: properties.map((p) => p.investmentId) } },
         select: { id: true, slug: true },
       })
     ).map((p) => [p.slug, p.id])
@@ -531,9 +570,12 @@ async function main() {
     { userId: mariaUser.id, slug: 'downtown-la-mixed-use', amount: 150000 },
     { userId: mariaUser.id, slug: 'baja-coastal-hospitality-co-invest', amount: 200000 },
     { userId: mariaUser.id, slug: 'encinitas-coastal-flip-series', amount: 80000 },
-    { userId: jamesUser.id, slug: 'crossborder-logistics-park-mex-us', amount: 300000 },
-    { userId: jamesUser.id, slug: 'hornblend-street-development', amount: 125000 },
-    { userId: jamesUser.id, slug: 'tijuana-riverfront-logistics', amount: 180000 },
+  ]
+
+  const jamesDeposits = [
+    { slug: 'tijuana-riverfront-logistics', amount: 80000, depositedAt: '2026-01-14', reference: 'GS-JOK-260114' },
+    { slug: 'hornblend-street-development', amount: 50000, depositedAt: '2026-03-11', reference: 'GS-JOK-260311' },
+    { slug: 'crossborder-logistics-park', amount: 70000, depositedAt: '2026-05-19', reference: 'GS-JOK-260519' },
   ]
 
   const seedInvestorIds = [investorUser.id, mariaUser.id, jamesUser.id]
@@ -541,11 +583,23 @@ async function main() {
   await prisma.fundingContribution.deleteMany({
     where: { userId: { in: seedInvestorIds } },
   })
+  await prisma.cashOutRequest.deleteMany({
+    where: { userId: { in: seedInvestorIds } },
+  })
+  await prisma.reinvestRequest.deleteMany({
+    where: { userId: { in: seedInvestorIds } },
+  })
+  await prisma.returnDistribution.deleteMany({
+    where: { userId: { in: seedInvestorIds } },
+  })
+  await prisma.depositRequest.deleteMany({
+    where: { userId: { in: seedInvestorIds } },
+  })
 
-  for (const holding of sampleHoldings) {
-    const propertyId = propertyBySlug[holding.slug]
+  async function createSeedHolding({ userId, slug, amount, createdAt, depositRequestId, note, createdByAdminId }) {
+    const propertyId = propertyBySlug[slug]
     if (!propertyId) {
-      throw new Error(`Missing property for seed holding: ${holding.slug}`)
+      throw new Error(`Missing property for seed holding: ${slug}`)
     }
 
     const property = await prisma.property.findUnique({ where: { id: propertyId } })
@@ -554,21 +608,70 @@ async function main() {
       _sum: { amount: true },
     })
     const currentFunded = Number(fundedAgg._sum.amount || 0)
-    if (currentFunded + holding.amount > property.price + 1e-6) {
+    if (currentFunded + amount > property.price + 1e-6) {
       throw new Error(
-        `Seed holding would overfund ${holding.slug}: ${currentFunded + holding.amount} > ${property.price}`
+        `Seed holding would overfund ${slug}: ${currentFunded + amount} > ${property.price}`
       )
     }
 
-    const investment = await prisma.fundingContribution.create({
+    return prisma.fundingContribution.create({
       data: {
-        userId: holding.userId,
+        userId,
         propertyId,
-        amount: holding.amount,
+        amount,
         source: 'INVESTOR',
+        note: note || null,
+        createdByAdminId: createdByAdminId || null,
+        depositRequestId: depositRequestId || null,
+        ...(createdAt ? { createdAt } : {}),
       },
     })
+  }
+
+  for (const holding of sampleHoldings) {
+    const investment = await createSeedHolding(holding)
     console.log(`✅ Holding: user ${holding.userId} → ${holding.slug} ($${investment.amount})`)
+  }
+
+  for (const row of jamesDeposits) {
+    const propertyId = propertyBySlug[row.slug]
+    if (!propertyId) {
+      throw new Error(`Missing property for seed deposit: ${row.slug}`)
+    }
+
+    const depositedAt = seedUtcDate(row.depositedAt)
+    const submittedAt = seedUtcDate(row.depositedAt, 16)
+    submittedAt.setUTCDate(submittedAt.getUTCDate() - 2)
+    const reviewedAt = seedUtcDate(row.depositedAt, 20)
+
+    const deposit = await prisma.depositRequest.create({
+      data: {
+        userId: jamesUser.id,
+        propertyId,
+        amount: row.amount,
+        reference: row.reference,
+        depositedAt,
+        status: 'CONFIRMED',
+        adminNote: 'Seed confirmed wire',
+        reviewedAt,
+        reviewedById: adminUser.id,
+        createdByAdminId: adminUser.id,
+        createdAt: submittedAt,
+      },
+    })
+
+    const investment = await createSeedHolding({
+      userId: jamesUser.id,
+      slug: row.slug,
+      amount: row.amount,
+      createdAt: depositedAt,
+      depositRequestId: deposit.id,
+      note: `Wire ref: ${row.reference}`,
+      createdByAdminId: adminUser.id,
+    })
+    console.log(
+      `✅ James deposit: ${row.depositedAt} → ${row.slug} ($${investment.amount}) [${row.reference}]`
+    )
   }
 
   // Auto FUNDING → FUNDED when capital meets goal
@@ -585,7 +688,7 @@ async function main() {
     if (property.status === 'FUNDING' && fullyFunded) {
       await prisma.property.update({
         where: { id: propertyId },
-        data: { status: 'FUNDED', progressPercent: 0 },
+        data: { status: 'FUNDED' },
       })
       console.log(`✅ Auto-funded status: ${slug}`)
     } else if (property.status === 'FUNDED' && !fullyFunded) {
@@ -594,6 +697,117 @@ async function main() {
         data: { status: 'FUNDING' },
       })
     }
+  }
+
+  const sampleReturns = [
+    {
+      userId: investorUser.id,
+      slug: 'hornblend-street-development',
+      amount: 3500,
+      concept: 'Q1 distribution',
+    },
+    {
+      userId: investorUser.id,
+      slug: 'pacific-flip-claremont-villas',
+      amount: 5200,
+      concept: 'Sale proceeds share',
+    },
+    {
+      userId: mariaUser.id,
+      slug: 'downtown-la-mixed-use',
+      amount: 7800,
+      concept: 'Q2 dividend',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'tijuana-riverfront-logistics',
+      amount: 25000,
+      concept: 'Q1 operating distribution',
+      distributedAt: '2026-02-20',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'tijuana-riverfront-logistics',
+      amount: 40000,
+      concept: 'Capital return',
+      distributedAt: '2026-04-10',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'hornblend-street-development',
+      amount: 18000,
+      concept: 'Q1 preferred + catch-up',
+      distributedAt: '2026-04-28',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'tijuana-riverfront-logistics',
+      amount: 50000,
+      concept: 'Sale proceeds share',
+      distributedAt: '2026-06-18',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'hornblend-street-development',
+      amount: 22000,
+      concept: 'Q2 distribution',
+      distributedAt: '2026-06-25',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'crossborder-logistics-park',
+      amount: 28000,
+      concept: 'Lease-up preferred',
+      distributedAt: '2026-06-30',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'crossborder-logistics-park',
+      amount: 35000,
+      concept: 'Q2 operating distribution',
+      distributedAt: '2026-07-22',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'tijuana-riverfront-logistics',
+      amount: 30000,
+      concept: 'Final residual distribution',
+      distributedAt: '2026-08-04',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'crossborder-logistics-park',
+      amount: 29000,
+      concept: 'August preferred',
+      distributedAt: '2026-08-06',
+    },
+    {
+      userId: jamesUser.id,
+      slug: 'hornblend-street-development',
+      amount: 28000,
+      concept: 'Q3 distribution',
+      distributedAt: '2026-08-07',
+    },
+  ]
+
+  for (const row of sampleReturns) {
+    const propertyId = propertyBySlug[row.slug]
+    if (!propertyId) continue
+    const distributedAt = row.distributedAt ? seedUtcDate(row.distributedAt) : new Date()
+    const created = await prisma.returnDistribution.create({
+      data: {
+        userId: row.userId,
+        propertyId,
+        amount: row.amount,
+        concept: row.concept,
+        createdByAdminId: adminUser.id,
+        distributedAt,
+        createdAt: distributedAt,
+      },
+    })
+    console.log(
+      `✅ Return: user ${row.userId} ← ${row.slug} ($${created.amount})${row.distributedAt ? ` [${row.distributedAt}]` : ''}`
+    )
   }
 
   console.log('\n🎉 Database seeding completed successfully!')

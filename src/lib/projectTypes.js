@@ -5,6 +5,8 @@
 export {
   COMPLETED_PROJECTS_SLUG,
   ACTIVE_PROPERTY_STATUSES,
+  activeProjectWhere,
+  completedProjectWhere,
   isCompletedProjectsSlug,
   notDeletedProperty,
   propertyTypeInclude,

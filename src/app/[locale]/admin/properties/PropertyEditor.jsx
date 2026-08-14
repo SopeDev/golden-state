@@ -6,27 +6,29 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
 import AdminFormField from '@/components/admin/AdminFormField'
 import AdminFormSection from '@/components/admin/AdminFormSection'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
-import {
-  formatFormattedInteger,
-  looksLikeIntegerString,
-  parseFormattedInteger,
-} from '@/lib/admin/numberFormat'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import AdminPropertyDocuments from '@/components/invest/AdminPropertyDocuments'
 import AdminPropertyCapitalRaise from '@/components/invest/AdminPropertyCapitalRaise'
+import SortableKeyValueList from '@/components/admin/SortableKeyValueList'
 import {
-  PROPERTY_STATUS_VALUES,
+  normalizePropertySummary,
+  isPropertySummaryComplete,
+} from '@/lib/propertySummary'
+import {
+  EXECUTION_STATUS_VALUES,
+  FUNDING_STATUS_VALUES,
   getPropertyStatusLabelKey,
+  normalizePropertyLifecycle,
   toDateInputValue,
 } from '@/lib/propertyStatusUi'
-import { isRaisePhaseStatus, PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
+import { PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
 import { useMessaging } from '@/hooks/useMessaging'
 
 const keyToLabel = (key) => {
@@ -63,178 +65,129 @@ const emptyRow = () => ({
   valueEn: '',
   labelEs: '',
   valueEs: '',
+  showOnCard: false,
+  sortOrder: 0,
 })
+
+const isKeyValueRowEmpty = (row) =>
+  !String(row?.labelEn || '').trim() &&
+  !String(row?.valueEn || '').trim() &&
+  !String(row?.labelEs || '').trim() &&
+  !String(row?.valueEs || '').trim()
+
+const isKeyValueRowComplete = (row) =>
+  Boolean(String(row?.labelEn || '').trim()) &&
+  Boolean(String(row?.valueEn || '').trim()) &&
+  Boolean(String(row?.labelEs || '').trim()) &&
+  Boolean(String(row?.valueEs || '').trim())
 
 const objectToRows = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return [emptyRow()]
+    return []
   }
 
   const entries = Object.entries(value)
   if (!entries.length) {
-    return [emptyRow()]
+    return []
   }
 
-  return entries.map(([entryKey, entryValue]) => {
-    const fallbackLabel = keyToLabel(entryKey)
+  return entries
+    .map(([entryKey, entryValue], index) => {
+      const fallbackLabel = keyToLabel(entryKey)
 
-    if (entryValue == null || typeof entryValue !== 'object' || Array.isArray(entryValue)) {
-      const legacyValue = entryValue == null ? '' : String(entryValue)
-      return {
-        id: crypto.randomUUID(),
-        labelEn: fallbackLabel,
-        valueEn: legacyValue,
-        labelEs: fallbackLabel,
-        valueEs: legacyValue,
+      if (entryValue == null || typeof entryValue !== 'object' || Array.isArray(entryValue)) {
+        const legacyValue = entryValue == null ? '' : String(entryValue)
+        return {
+          // Stable id from the persisted key so dirty checks / discard stay consistent.
+          id: entryKey,
+          labelEn: fallbackLabel,
+          valueEn: legacyValue,
+          labelEs: fallbackLabel,
+          valueEs: legacyValue,
+          showOnCard: false,
+          sortOrder: index,
+        }
       }
-    }
 
-    const en = entryValue.en || {}
-    const es = entryValue.es || {}
-    return {
-      id: crypto.randomUUID(),
-      labelEn: en.label || fallbackLabel,
-      valueEn: en.value == null ? '' : String(en.value),
-      labelEs: es.label || fallbackLabel,
-      valueEs: es.value == null ? '' : String(es.value),
-    }
-  })
+      const en = entryValue.en || {}
+      const es = entryValue.es || {}
+      return {
+        id: entryKey,
+        labelEn: en.label || fallbackLabel,
+        valueEn: en.value == null ? '' : String(en.value),
+        labelEs: es.label || '',
+        valueEs: es.value == null ? '' : String(es.value),
+        showOnCard: Boolean(entryValue.showOnCard),
+        sortOrder: Number.isFinite(entryValue.sortOrder) ? Number(entryValue.sortOrder) : index,
+      }
+    })
+    .filter((row) => !isKeyValueRowEmpty(row))
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+/** Compare row content only — ignore ephemeral ids on newly added rows. */
+const rowsForSnapshot = (rows) =>
+  (rows || []).map(({ id: _id, ...rest }) => rest)
+
 const rowsToObject = (rows) => {
-  return rows.reduce((acc, row) => {
+  return rows.reduce((acc, row, index) => {
+    if (!isKeyValueRowComplete(row)) return acc
     const normalizedKey = labelToKey(row.labelEn)
     if (!normalizedKey) return acc
     acc[normalizedKey] = {
+      sortOrder: index,
+      showOnCard: Boolean(row.showOnCard),
       en: {
-        label: row.labelEn?.trim() || keyToLabel(normalizedKey),
-        value: row.valueEn || '',
+        label: row.labelEn.trim(),
+        value: row.valueEn.trim(),
       },
       es: {
-        label: row.labelEs?.trim() || row.labelEn?.trim() || keyToLabel(normalizedKey),
-        value: row.valueEs || '',
+        label: row.labelEs.trim(),
+        value: row.valueEs.trim(),
       },
     }
     return acc
   }, {})
 }
 
-const buildInitialFormData = (property, propertyTypes = []) => ({
-  investmentId: property?.investmentId || '',
-  name: property?.name || '',
-  slug: property?.slug || '',
-  typeId: property?.typeId || propertyTypes[0]?.id || '',
-  status: property?.status || 'FUNDING',
-  progressPercent:
-    property?.progressPercent ?? (property?.status === 'COMPLETED' ? 100 : 0),
-  startDate: toDateInputValue(property?.startDate),
-  targetCompletionDate: toDateInputValue(property?.targetCompletionDate),
-  completedAt: toDateInputValue(property?.completedAt),
-  city: property?.city || '',
-  state: property?.state || '',
-  address: property?.address || '',
-  price: property?.price ?? '',
-  unitCount: property?.unitCount ?? '',
-  estimatedROI: property?.estimatedROI ?? '',
-  estimatedMonths: property?.estimatedMonths || '',
-  summary: property?.summary || '',
-  images: property?.images || [],
-})
+const buildInitialFormData = (property, propertyTypes = []) => {
+  const lifecycle = normalizePropertyLifecycle(property || {})
+  return {
+    investmentId: property?.investmentId || '',
+    name: property?.name || '',
+    typeId: property?.typeId || propertyTypes[0]?.id || '',
+    status: lifecycle.fundingStatus,
+    executionStatus: lifecycle.executionStatus,
+    progressPercent:
+      property?.progressPercent ?? (lifecycle.executionStatus === 'COMPLETED' ? 100 : 0),
+    startDate: toDateInputValue(property?.startDate),
+    targetCompletionDate: toDateInputValue(property?.targetCompletionDate),
+    completedAt: toDateInputValue(property?.completedAt),
+    city: property?.city || '',
+    state: property?.state || '',
+    address: property?.address || '',
+    price: property?.price ?? '',
+    unitCount: property?.unitCount ?? '',
+    estimatedROI: property?.estimatedROI ?? '',
+    estimatedMonths: property?.estimatedMonths || '',
+    summary: normalizePropertySummary(
+      {
+        en: property?.summaryEn,
+        es: property?.summaryEs,
+      },
+      property?.summary
+    ),
+    propertyFactsSummary: normalizePropertySummary(property?.propertyFactsSummary),
+    investmentDetailsSummary: normalizePropertySummary(property?.investmentDetailsSummary),
+    images: property?.images || [],
+  }
+}
 
 function Field({ label, children, htmlFor, emphasis = false, hint }) {
   return (
     <AdminFormField label={label} htmlFor={htmlFor} emphasis={emphasis} hint={hint}>
       {children}
     </AdminFormField>
-  )
-}
-
-function KeyValueLocaleInput({ value, onChange, placeholder, formatAsInteger = false }) {
-  const displayValue =
-    formatAsInteger && looksLikeIntegerString(value)
-      ? formatFormattedInteger(value)
-      : value
-
-  const handleChange = (event) => {
-    const nextValue =
-      formatAsInteger && looksLikeIntegerString(event.target.value)
-        ? parseFormattedInteger(event.target.value)
-        : event.target.value
-    onChange(nextValue)
-  }
-
-  return (
-    <Input value={displayValue} placeholder={placeholder} onChange={handleChange} />
-  )
-}
-
-function KeyValueRow({ row, onChange, onRemove, placeholders }) {
-  const te = useTranslations('Admin.properties.editor')
-  return (
-    <div className="py-5 first:pt-0">
-      <div className="grid gap-5 md:grid-cols-2 md:gap-8">
-        <div className="space-y-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            English
-          </p>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium text-muted-foreground">{te('labelEn')}</Label>
-              <Input
-                value={row.labelEn}
-                placeholder={placeholders.labelEn}
-                onChange={(event) => onChange('labelEn', event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium text-muted-foreground">{te('valueEn')}</Label>
-              <KeyValueLocaleInput
-                value={row.valueEn}
-                placeholder={placeholders.valueEn}
-                formatAsInteger
-                onChange={(value) => onChange('valueEn', value)}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="space-y-3 md:border-l md:border-border/60 md:pl-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Español
-          </p>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium text-muted-foreground">{te('labelEs')}</Label>
-              <Input
-                value={row.labelEs}
-                placeholder={placeholders.labelEs}
-                onChange={(event) => onChange('labelEs', event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium text-muted-foreground">{te('valueEs')}</Label>
-              <KeyValueLocaleInput
-                value={row.valueEs}
-                placeholder={placeholders.valueEs}
-                formatAsInteger
-                onChange={(value) => onChange('valueEs', value)}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={onRemove}
-        >
-          <Trash2 className="size-4" aria-hidden />
-          {te('removeRow')}
-        </Button>
-      </div>
-    </div>
   )
 }
 
@@ -260,7 +213,14 @@ export default function PropertyEditor({
     objectToRows(property?.investmentDetails)
   )
   const [isUploadingImages, setIsUploadingImages] = useState(false)
-  const isRaisePhase = isRaisePhaseStatus(formData.status)
+  const canEditProgress =
+    formData.executionStatus === 'PLANNING' || formData.executionStatus === 'IN_PROGRESS'
+  const progressDisplayValue =
+    formData.executionStatus === 'NONE'
+      ? 0
+      : formData.executionStatus === 'COMPLETED'
+        ? 100
+        : formData.progressPercent
   const fundedAmount = Number(property?.fundedAmount) || 0
   const fundingPercent = Number.isFinite(property?.fundingPercent)
     ? property.fundingPercent
@@ -283,18 +243,24 @@ export default function PropertyEditor({
 
   // Dirty tracking: serialize the saved snapshot vs the live form so we
   // can disable "Discard changes" / "Save" when there's nothing to do.
+  // Row ids are excluded so randomUUID() on new rows / remounts don't false-dirty.
   const initialSnapshot = useMemo(
     () =>
       JSON.stringify({
         formData: buildInitialFormData(property, propertyTypes),
-        propertyFactsRows: objectToRows(property?.propertyFacts),
-        investmentDetailsRows: objectToRows(property?.investmentDetails),
+        propertyFactsRows: rowsForSnapshot(objectToRows(property?.propertyFacts)),
+        investmentDetailsRows: rowsForSnapshot(objectToRows(property?.investmentDetails)),
       }),
     [property, propertyTypes]
   )
 
   const currentSnapshot = useMemo(
-    () => JSON.stringify({ formData, propertyFactsRows, investmentDetailsRows }),
+    () =>
+      JSON.stringify({
+        formData,
+        propertyFactsRows: rowsForSnapshot(propertyFactsRows),
+        investmentDetailsRows: rowsForSnapshot(investmentDetailsRows),
+      }),
     [formData, propertyFactsRows, investmentDetailsRows]
   )
 
@@ -302,7 +268,26 @@ export default function PropertyEditor({
 
   const handleChange = (event) => {
     const { name, value } = event.target
+    if (name === 'executionStatus') {
+      setFormData((prev) => ({
+        ...prev,
+        executionStatus: value,
+        progressPercent:
+          value === 'NONE' ? 0 : value === 'COMPLETED' ? 100 : prev.progressPercent,
+      }))
+      return
+    }
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleLocaleSummaryChange = (field, localeKey, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: {
+        ...normalizePropertySummary(prev[field]),
+        [localeKey]: value,
+      },
+    }))
   }
 
   const handleKeyValueChange = (setter, id, field, value) => {
@@ -314,7 +299,17 @@ export default function PropertyEditor({
   }
 
   const removeKeyValueRow = (setter, id) => {
-    setter((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : prev))
+    setter((prev) => prev.filter((row) => row.id !== id))
+  }
+
+  const validateKeyValueRows = (rows, sectionLabel) => {
+    for (const row of rows) {
+      if (isKeyValueRowEmpty(row)) continue
+      if (!isKeyValueRowComplete(row)) {
+        return t('keyValueRowIncomplete', { section: sectionLabel })
+      }
+    }
+    return null
   }
 
   const handleImageUpload = async (event) => {
@@ -368,14 +363,37 @@ export default function PropertyEditor({
     resetForm()
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+
+    const summary = normalizePropertySummary(formData.summary)
+    if (!isPropertySummaryComplete(summary)) {
+      await alert(t('summaryBothRequired'))
+      return
+    }
+
+    const factsError = validateKeyValueRows(propertyFactsRows, t('propertyFacts'))
+    if (factsError) {
+      await alert(factsError)
+      return
+    }
+
+    const detailsError = validateKeyValueRows(investmentDetailsRows, t('investmentDetails'))
+    if (detailsError) {
+      await alert(detailsError)
+      return
+    }
+
     const submitData = {
       ...formData,
       status: formData.status || 'FUNDING',
-      progressPercent: isRaisePhaseStatus(formData.status)
-        ? 0
-        : parseInt(formData.progressPercent, 10) || 0,
+      executionStatus: formData.executionStatus || 'NONE',
+      progressPercent:
+        formData.executionStatus === 'NONE'
+          ? 0
+          : formData.executionStatus === 'COMPLETED'
+            ? 100
+            : parseInt(formData.progressPercent, 10) || 0,
       startDate: formData.startDate || null,
       targetCompletionDate: formData.targetCompletionDate || null,
       completedAt: formData.completedAt || null,
@@ -383,8 +401,13 @@ export default function PropertyEditor({
       unitCount: parseInt(formData.unitCount, 10),
       minInvestment: PLATFORM_MIN_INVESTMENT,
       estimatedROI: parseFloat(formData.estimatedROI),
-      propertyFacts: rowsToObject(propertyFactsRows),
-      investmentDetails: rowsToObject(investmentDetailsRows),
+      summary,
+      propertyFacts: rowsToObject(propertyFactsRows.filter((row) => !isKeyValueRowEmpty(row))),
+      propertyFactsSummary: normalizePropertySummary(formData.propertyFactsSummary),
+      investmentDetails: rowsToObject(
+        investmentDetailsRows.filter((row) => !isKeyValueRowEmpty(row))
+      ),
+      investmentDetailsSummary: normalizePropertySummary(formData.investmentDetailsSummary),
       images: formData.images,
     }
     onSubmit(submitData)
@@ -392,7 +415,7 @@ export default function PropertyEditor({
 
   return (
     <Card className="border-border/80 shadow-md">
-      <CardHeader className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="border-b border-border/60 pb-4">
         <div className="min-w-0">
           <CardTitle className="font-heading text-2xl text-primary">
             {isCreating ? t('createTitle') : t('editTitle')}
@@ -403,262 +426,315 @@ export default function PropertyEditor({
             </p>
           ) : null}
         </div>
-        {!isCreating && property ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onDelete?.(property.id)}
-            disabled={isLoading}
-          >
-            <Trash2 className="size-4" aria-hidden />
-            {t('deleteProperty')}
-          </Button>
-        ) : null}
       </CardHeader>
 
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <AdminFormSection title={t('basicInfo')}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label={t('investmentId')} htmlFor="prop-investmentId">
-                <Input
-                  id="prop-investmentId"
-                  type="number"
-                  name="investmentId"
-                  value={formData.investmentId}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('propertyType')} htmlFor="prop-type">
-                <select
-                  id="prop-type"
-                  name="typeId"
-                  value={formData.typeId}
-                  onChange={handleChange}
-                  className={adminSelectClassName()}
-                  required
-                >
-                  {propertyTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {getPropertyTypeLabel(type, locale)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label={t('status')} htmlFor="prop-status">
-                <select
-                  id="prop-status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className={adminSelectClassName()}
-                  required
-                >
-                  {PROPERTY_STATUS_VALUES.map((value) => (
-                    <option key={value} value={value}>
-                      {tf(getPropertyStatusLabelKey(value))}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">{t('statusHint')}</p>
-              </Field>
-              {!isCreating && property ? (
-                <Field label={t('fundingRaised')} htmlFor="prop-funding-raised">
-                  <Input
-                    id="prop-funding-raised"
-                    value={fundingLabel}
-                    readOnly
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">{t('fundingRaisedHint')}</p>
-                </Field>
+          <Tabs defaultValue="basic" className="gap-4">
+            <TabsList
+              variant="line"
+              className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border/70 bg-transparent p-0"
+            >
+              <TabsTrigger value="basic" className="px-3 py-2">
+                {t('tabBasic')}
+              </TabsTrigger>
+              <TabsTrigger value="financial" className="px-3 py-2">
+                {t('tabFinancial')}
+              </TabsTrigger>
+              <TabsTrigger value="content" className="px-3 py-2">
+                {t('tabContent')}
+              </TabsTrigger>
+              {!isCreating && property?.id ? (
+                <TabsTrigger value="capital" className="px-3 py-2">
+                  {t('tabCapital')}
+                </TabsTrigger>
               ) : null}
-              {!isRaisePhase ? (
-                <Field label={t('progressPercent')} htmlFor="prop-progress">
-                  <Input
-                    id="prop-progress"
-                    type="number"
-                    name="progressPercent"
-                    min="0"
-                    max="100"
-                    value={formData.progressPercent}
-                    onChange={handleChange}
-                    required
-                  />
-                </Field>
-              ) : (
-                <input type="hidden" name="progressPercent" value="0" />
-              )}
-              {!isRaisePhase ? (
-                <>
-              <Field label={t('startDate')} htmlFor="prop-start-date">
-                <Input
-                  id="prop-start-date"
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                />
-              </Field>
-              <Field label={t('targetCompletionDate')} htmlFor="prop-target-date">
-                <Input
-                  id="prop-target-date"
-                  type="date"
-                  name="targetCompletionDate"
-                  value={formData.targetCompletionDate}
-                  onChange={handleChange}
-                />
-              </Field>
-              <Field label={t('completedAt')} htmlFor="prop-completed-at">
-                <Input
-                  id="prop-completed-at"
-                  type="date"
-                  name="completedAt"
-                  value={formData.completedAt}
-                  onChange={handleChange}
-                />
-              </Field>
-                </>
+              {!isCreating && property?.id ? (
+                <TabsTrigger value="documents" className="px-3 py-2">
+                  {t('tabDocuments')}
+                </TabsTrigger>
               ) : null}
-              <Field label={t('propertyName')} htmlFor="prop-name">
-                <Input
-                  id="prop-name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('slug')} htmlFor="prop-slug">
-                <Input
-                  id="prop-slug"
-                  type="text"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-            </div>
-          </AdminFormSection>
+            </TabsList>
 
-          <AdminFormSection title={t('locationSection')}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label={t('city')} htmlFor="prop-city">
-                <Input
-                  id="prop-city"
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('state')} htmlFor="prop-state">
-                <Input
-                  id="prop-state"
-                  type="text"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('address')} htmlFor="prop-address">
-                <Input
-                  id="prop-address"
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-            </div>
-          </AdminFormSection>
+            <TabsContent value="basic" keepMounted className="space-y-6 outline-none">
+              <AdminFormSection title={t('basicInfo')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label={t('investmentId')} htmlFor="prop-investmentId">
+                    <Input
+                      id="prop-investmentId"
+                      type="number"
+                      name="investmentId"
+                      value={formData.investmentId}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('propertyType')} htmlFor="prop-type">
+                    <select
+                      id="prop-type"
+                      name="typeId"
+                      value={formData.typeId}
+                      onChange={handleChange}
+                      className={adminSelectClassName()}
+                      required
+                    >
+                      {propertyTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {getPropertyTypeLabel(type, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={t('fundingStatus')} htmlFor="prop-status">
+                    <select
+                      id="prop-status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className={adminSelectClassName()}
+                      required
+                    >
+                      {FUNDING_STATUS_VALUES.map((value) => (
+                        <option key={value} value={value}>
+                          {tf(getPropertyStatusLabelKey(value))}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">{t('statusHint')}</p>
+                  </Field>
+                  <Field label={t('executionStatus')} htmlFor="prop-execution">
+                    <select
+                      id="prop-execution"
+                      name="executionStatus"
+                      value={formData.executionStatus}
+                      onChange={handleChange}
+                      className={adminSelectClassName()}
+                      required
+                    >
+                      {EXECUTION_STATUS_VALUES.map((value) => (
+                        <option key={value} value={value}>
+                          {tf(getPropertyStatusLabelKey(value))}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">{t('executionStatusHint')}</p>
+                  </Field>
+                  {!isCreating && property ? (
+                    <Field label={t('fundingRaised')} htmlFor="prop-funding-raised">
+                      <Input
+                        id="prop-funding-raised"
+                        value={fundingLabel}
+                        readOnly
+                        disabled
+                        className="bg-muted"
+                      />
+                      <p className="text-xs text-muted-foreground">{t('fundingRaisedHint')}</p>
+                    </Field>
+                  ) : null}
+                  <Field label={t('progressPercent')} htmlFor="prop-progress">
+                    <Input
+                      id="prop-progress"
+                      type="number"
+                      name="progressPercent"
+                      min="0"
+                      max="100"
+                      value={progressDisplayValue}
+                      onChange={handleChange}
+                      disabled={!canEditProgress}
+                      required={canEditProgress}
+                      className={!canEditProgress ? 'bg-muted' : undefined}
+                    />
+                  </Field>
+                  <Field label={t('propertyName')} htmlFor="prop-name">
+                    <Input
+                      id="prop-name"
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                </div>
+              </AdminFormSection>
 
-          <AdminFormSection title={t('financialInfo')}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <Field label={t('investmentGoal')} htmlFor="prop-price" emphasis>
-                <AdminFormattedNumberInput
-                  id="prop-price"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('unitCount')} htmlFor="prop-unitCount">
-                <Input
-                  id="prop-unitCount"
-                  type="number"
-                  name="unitCount"
-                  value={formData.unitCount}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI" emphasis>
-                <Input
-                  id="prop-estimatedROI"
-                  type="number"
-                  step="0.1"
-                  name="estimatedROI"
-                  value={formData.estimatedROI}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-            </div>
-            <Field label={t('timelineMonths')} htmlFor="prop-estimatedMonths">
-              <Input
-                id="prop-estimatedMonths"
-                type="text"
-                name="estimatedMonths"
-                value={formData.estimatedMonths}
-                onChange={handleChange}
-                required
-                placeholder={t('timelinePlaceholder')}
-              />
-            </Field>
-          </AdminFormSection>
+              <AdminFormSection title={t('locationSection')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <Field label={t('city')} htmlFor="prop-city">
+                    <Input
+                      id="prop-city"
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('state')} htmlFor="prop-state">
+                    <Input
+                      id="prop-state"
+                      type="text"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('address')} htmlFor="prop-address">
+                    <Input
+                      id="prop-address"
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                </div>
+              </AdminFormSection>
 
-          <AdminFormSection title={t('contentSection')}>
-            <Field label={t('summary')} htmlFor="prop-summary">
-              <Textarea
-                id="prop-summary"
-                name="summary"
-                value={formData.summary}
-                onChange={handleChange}
-                rows={4}
-                required
-              />
-            </Field>
+              <AdminFormSection title={t('timelineSection')} description={t('timelineSectionDesc')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label={t('timelineMonths')} htmlFor="prop-estimatedMonths">
+                    <Input
+                      id="prop-estimatedMonths"
+                      type="text"
+                      name="estimatedMonths"
+                      value={formData.estimatedMonths}
+                      onChange={handleChange}
+                      required
+                      placeholder={t('timelinePlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('startDate')} htmlFor="prop-start-date">
+                    <Input
+                      id="prop-start-date"
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate || ''}
+                      onChange={handleChange}
+                    />
+                  </Field>
+                  <Field label={t('targetCompletionDate')} htmlFor="prop-target-date">
+                    <Input
+                      id="prop-target-date"
+                      type="date"
+                      name="targetCompletionDate"
+                      value={formData.targetCompletionDate || ''}
+                      onChange={handleChange}
+                    />
+                  </Field>
+                  <Field label={t('completedAt')} htmlFor="prop-completed-at">
+                    <Input
+                      id="prop-completed-at"
+                      type="date"
+                      name="completedAt"
+                      value={formData.completedAt || ''}
+                      onChange={handleChange}
+                    />
+                  </Field>
+                </div>
+              </AdminFormSection>
+            </TabsContent>
 
-            <Field label={t('propertyFacts')}>
-              <div className="divide-y divide-border/60">
-                {propertyFactsRows.map((row) => (
-                  <KeyValueRow
-                    key={row.id}
-                    row={row}
-                    placeholders={{
-                      labelEn: t('placeholderSizeEn'),
-                      valueEn: t('placeholderSizeValue'),
-                      labelEs: t('placeholderSizeEs'),
-                      valueEs: t('placeholderSizeValue'),
-                    }}
-                    onChange={(field, value) =>
-                      handleKeyValueChange(setPropertyFactsRows, row.id, field, value)
+            <TabsContent value="financial" keepMounted className="outline-none">
+              <AdminFormSection title={t('financialInfo')}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+                  <Field label={t('investmentGoal')} htmlFor="prop-price" emphasis>
+                    <AdminFormattedNumberInput
+                      id="prop-price"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('unitCount')} htmlFor="prop-unitCount">
+                    <Input
+                      id="prop-unitCount"
+                      type="number"
+                      name="unitCount"
+                      value={formData.unitCount}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('estimatedRoi')} htmlFor="prop-estimatedROI" emphasis>
+                    <Input
+                      id="prop-estimatedROI"
+                      type="number"
+                      step="0.1"
+                      name="estimatedROI"
+                      value={formData.estimatedROI}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Field>
+                </div>
+              </AdminFormSection>
+            </TabsContent>
+
+            <TabsContent value="content" keepMounted className="space-y-6 outline-none">
+              <AdminFormSection title={t('summary')}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label={t('summaryEn')} htmlFor="prop-summary-en">
+                    <Textarea
+                      id="prop-summary-en"
+                      rows={6}
+                      value={formData.summary?.en || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange('summary', 'en', event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                  <Field label={t('summaryEs')} htmlFor="prop-summary-es">
+                    <Textarea
+                      id="prop-summary-es"
+                      rows={6}
+                      value={formData.summary?.es || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange('summary', 'es', event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                </div>
+              </AdminFormSection>
+
+              <AdminFormSection title={t('propertyFacts')}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label={t('sectionSummaryEn')} htmlFor="prop-facts-summary-en">
+                    <Textarea
+                      id="prop-facts-summary-en"
+                      rows={3}
+                      value={formData.propertyFactsSummary?.en || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange('propertyFactsSummary', 'en', event.target.value)
+                      }
+                    />
+                  </Field>
+                  <Field label={t('sectionSummaryEs')} htmlFor="prop-facts-summary-es">
+                    <Textarea
+                      id="prop-facts-summary-es"
+                      rows={3}
+                      value={formData.propertyFactsSummary?.es || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange('propertyFactsSummary', 'es', event.target.value)
+                      }
+                    />
+                  </Field>
+                </div>
+                {propertyFactsRows.length > 0 ? (
+                  <SortableKeyValueList
+                    rows={propertyFactsRows}
+                    onChangeRow={(id, field, value) =>
+                      handleKeyValueChange(setPropertyFactsRows, id, field, value)
                     }
-                    onRemove={() => removeKeyValueRow(setPropertyFactsRows, row.id)}
+                    onRemoveRow={(id) => removeKeyValueRow(setPropertyFactsRows, id)}
+                    onReorder={setPropertyFactsRows}
                   />
-                ))}
-                <div className="pt-4">
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -669,29 +745,49 @@ export default function PropertyEditor({
                   <Plus className="size-4" aria-hidden />
                   {t('addFact')}
                 </Button>
-                </div>
-              </div>
-            </Field>
+              </AdminFormSection>
 
-            <Field label={t('investmentDetails')}>
-              <div className="divide-y divide-border/60">
-                {investmentDetailsRows.map((row) => (
-                  <KeyValueRow
-                    key={row.id}
-                    row={row}
-                    placeholders={{
-                      labelEn: t('placeholderLandEn'),
-                      valueEn: '1200000',
-                      labelEs: t('placeholderLandEs'),
-                      valueEs: '1200000',
-                    }}
-                    onChange={(field, value) =>
-                      handleKeyValueChange(setInvestmentDetailsRows, row.id, field, value)
+              <AdminFormSection title={t('investmentDetails')}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label={t('sectionSummaryEn')} htmlFor="prop-details-summary-en">
+                    <Textarea
+                      id="prop-details-summary-en"
+                      rows={3}
+                      value={formData.investmentDetailsSummary?.en || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange(
+                          'investmentDetailsSummary',
+                          'en',
+                          event.target.value
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field label={t('sectionSummaryEs')} htmlFor="prop-details-summary-es">
+                    <Textarea
+                      id="prop-details-summary-es"
+                      rows={3}
+                      value={formData.investmentDetailsSummary?.es || ''}
+                      onChange={(event) =>
+                        handleLocaleSummaryChange(
+                          'investmentDetailsSummary',
+                          'es',
+                          event.target.value
+                        )
+                      }
+                    />
+                  </Field>
+                </div>
+                {investmentDetailsRows.length > 0 ? (
+                  <SortableKeyValueList
+                    rows={investmentDetailsRows}
+                    onChangeRow={(id, field, value) =>
+                      handleKeyValueChange(setInvestmentDetailsRows, id, field, value)
                     }
-                    onRemove={() => removeKeyValueRow(setInvestmentDetailsRows, row.id)}
+                    onRemoveRow={(id) => removeKeyValueRow(setInvestmentDetailsRows, id)}
+                    onReorder={setInvestmentDetailsRows}
                   />
-                ))}
-                <div className="pt-4">
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -702,77 +798,97 @@ export default function PropertyEditor({
                   <Plus className="size-4" aria-hidden />
                   {t('addDetail')}
                 </Button>
-                </div>
-              </div>
-            </Field>
+              </AdminFormSection>
 
-            <Field label={t('projectImages')}>
-              <div className="space-y-3 rounded-md border border-border/60 p-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/avif"
-                    multiple
-                    onChange={handleImageUpload}
-                    disabled={isUploadingImages || isLoading}
-                  />
-                  {isUploadingImages ? (
-                    <span className="text-sm text-muted-foreground">{t('uploading')}</span>
-                  ) : null}
-                </div>
-
-                {formData.images.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    {formData.images.map((imageUrl) => (
-                      <div key={imageUrl} className="space-y-2 rounded border border-border/60 p-2">
-                        <div className="aspect-video overflow-hidden rounded bg-muted">
-                          <img src={imageUrl} alt={t('imageAlt')} className="h-full w-full object-cover" />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleRemoveImage(imageUrl)}
-                        >
-                          <Trash2 className="size-4" aria-hidden />
-                          {t('removeImage')}
-                        </Button>
-                      </div>
-                    ))}
+              <AdminFormSection title={t('projectImages')} description={t('projectImagesHint')}>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif"
+                      multiple
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImages || isLoading}
+                      className="block w-full min-w-0 cursor-pointer text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    {isUploadingImages ? (
+                      <span className="text-sm text-muted-foreground">{t('uploading')}</span>
+                    ) : null}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{t('noImages')}</p>
-                )}
-              </div>
-            </Field>
-          </AdminFormSection>
 
-          {!isCreating && property?.id ? (
-            <AdminFormSection title={t('capitalRaise')} description={t('capitalRaiseDesc')}>
-              <AdminPropertyCapitalRaise
-                propertyId={property.id}
-                investmentGoal={Number(property.price) || 0}
-              />
-            </AdminFormSection>
-          ) : null}
+                  {formData.images.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                      {formData.images.map((imageUrl) => (
+                        <div key={imageUrl} className="space-y-2 rounded border border-border/60 p-2">
+                          <div className="aspect-video overflow-hidden rounded bg-muted">
+                            <img
+                              src={imageUrl}
+                              alt={t('imageAlt')}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleRemoveImage(imageUrl)}
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                            {t('removeImage')}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('noImages')}</p>
+                  )}
+                </div>
+              </AdminFormSection>
+            </TabsContent>
 
-          {!isCreating && property?.id ? (
-            <AdminFormSection title={t('progressDocuments')}>
-              <AdminPropertyDocuments propertyId={property.id} />
-            </AdminFormSection>
-          ) : null}
+            {!isCreating && property?.id ? (
+              <TabsContent value="capital" keepMounted className="outline-none">
+                <AdminFormSection title={t('capitalRaise')} description={t('capitalRaiseDesc')}>
+                  <AdminPropertyCapitalRaise
+                    propertyId={property.id}
+                    investmentGoal={Number(property.price) || 0}
+                  />
+                </AdminFormSection>
+              </TabsContent>
+            ) : null}
+
+            {!isCreating && property?.id ? (
+              <TabsContent value="documents" keepMounted className="outline-none">
+                <AdminFormSection title={t('progressDocuments')} description={t('progressDocumentsHint')}>
+                  <AdminPropertyDocuments propertyId={property.id} />
+                </AdminFormSection>
+              </TabsContent>
+            ) : null}
+          </Tabs>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-            <p className="text-xs text-muted-foreground">
-              {isDirty ? (
-                <span className="text-main-gold">{tc('unsavedChanges')}</span>
-              ) : isCreating ? (
-                tc('fillFormThenCreate')
-              ) : (
-                tc('noUnsavedChanges')
-              )}
-            </p>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="text-xs text-muted-foreground">
+                {isDirty ? (
+                  <span className="text-main-gold">{tc('unsavedChanges')}</span>
+                ) : isCreating ? (
+                  tc('fillFormThenCreate')
+                ) : (
+                  tc('noUnsavedChanges')
+                )}
+              </p>
+              {!isCreating && property ? (
+                <button
+                  type="button"
+                  onClick={() => onDelete?.(property.id)}
+                  disabled={isLoading}
+                  className="w-fit text-left text-xs text-muted-foreground/80 underline-offset-2 transition-colors hover:text-destructive hover:underline disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {t('deleteProperty')}
+                </button>
+              ) : null}
+            </div>
             <div className="flex flex-wrap justify-end gap-3">
               <Button
                 type="button"

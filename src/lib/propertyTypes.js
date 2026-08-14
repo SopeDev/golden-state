@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { normalizePropertyLifecycle } from '@/lib/propertyStatusUi'
 
 const DEFAULT_TYPES = [
   {
@@ -72,6 +73,16 @@ export const ACTIVE_PROPERTY_STATUSES = [
   'IN_PROGRESS',
 ]
 
+/** Live listings: not construction-complete (handles legacy status=COMPLETED rows). */
+export const activeProjectWhere = {
+  AND: [{ executionStatus: { not: 'COMPLETED' } }, { status: { not: 'COMPLETED' } }],
+}
+
+/** Track record: construction complete (handles legacy status=COMPLETED rows). */
+export const completedProjectWhere = {
+  OR: [{ executionStatus: 'COMPLETED' }, { status: 'COMPLETED' }],
+}
+
 export const propertyTypeInclude = {
   propertyType: true,
 }
@@ -89,6 +100,33 @@ export function slugifyPropertyType(value) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
+}
+
+/** Property URL slug derived from the property name. */
+export function slugifyPropertyName(value) {
+  return slugifyPropertyType(value) || 'property'
+}
+
+/**
+ * Ensure a unique Property.slug. Appends -2, -3, … on collision.
+ */
+export async function ensureUniquePropertySlug(prisma, name, { excludeId = null } = {}) {
+  const base = slugifyPropertyName(name)
+  let candidate = base
+  let suffix = 2
+
+  while (true) {
+    const existing = await prisma.property.findFirst({
+      where: {
+        slug: candidate,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (!existing) return candidate
+    candidate = `${base}-${suffix}`.slice(0, 80)
+    suffix += 1
+  }
 }
 
 export function codeFromSlug(slug) {
@@ -131,11 +169,14 @@ export function getPropertyTypeDescription(type, locale = 'en') {
 export function toClientProperty(property) {
   if (!property) return property
   const propertyType = toClientPropertyType(property.propertyType)
+  const lifecycle = normalizePropertyLifecycle(property)
   return {
     ...property,
     type: propertyType?.code || property.type || null,
     typeId: property.typeId || propertyType?.id || null,
     propertyType,
+    status: lifecycle.fundingStatus,
+    executionStatus: lifecycle.executionStatus,
   }
 }
 

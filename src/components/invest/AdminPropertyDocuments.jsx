@@ -1,11 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
-import { FileText, Trash2, Upload } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { FileText, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
 import {
   PROPERTY_DOCUMENT_KINDS,
@@ -13,17 +11,21 @@ import {
 } from '@/lib/propertyDocuments'
 import { useMessaging } from '@/hooks/useMessaging'
 
+const fileInputClassName =
+  'block w-full min-w-0 cursor-pointer text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50'
+
+const isImageMime = (mimeType) => String(mimeType || '').startsWith('image/')
+
 export default function AdminPropertyDocuments({ propertyId }) {
   const t = useTranslations('PropertyDocuments')
   const tc = useTranslations('Admin.common')
-  const locale = useLocale()
   const { confirm } = useMessaging()
   const [documents, setDocuments] = useState([])
   const [kind, setKind] = useState('CONSTRUCTION_PHOTOS')
-  const [file, setFile] = useState(null)
   const [fileInputKey, setFileInputKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [updatingId, setUpdatingId] = useState(null)
   const [error, setError] = useState('')
 
   const loadDocuments = useCallback(async () => {
@@ -49,32 +51,71 @@ export default function AdminPropertyDocuments({ propertyId }) {
     loadDocuments()
   }, [loadDocuments])
 
-  const handleUpload = async () => {
-    if (!file || !propertyId) return
+  const uploadOneFile = async (file, documentKind) => {
+    const formData = new FormData()
+    formData.append('kind', documentKind)
+    formData.append('file', file)
+
+    const res = await fetch(`/api/admin/properties/${propertyId}/documents`, {
+      method: 'POST',
+      body: formData,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.message || t('uploadError'))
+    }
+    return data.document
+  }
+
+  const handleFilesSelected = async (event) => {
+    const files = Array.from(event.target.files || [])
+    if (!files.length || !propertyId) return
 
     setUploading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('kind', kind)
-      formData.append('file', file)
+      for (const file of files) {
+        await uploadOneFile(file, kind)
+      }
+      await loadDocuments()
+    } catch (uploadError) {
+      setError(uploadError.message || t('uploadError'))
+    } finally {
+      setUploading(false)
+      setFileInputKey((key) => key + 1)
+    }
+  }
 
-      const res = await fetch(`/api/admin/properties/${propertyId}/documents`, {
-        method: 'POST',
-        body: formData,
+  const handleKindChange = async (docId, nextKind) => {
+    const previous = documents.find((doc) => doc.id === docId)
+    if (!previous || previous.kind === nextKind) return
+
+    setUpdatingId(docId)
+    setError('')
+    setDocuments((prev) =>
+      prev.map((doc) => (doc.id === docId ? { ...doc, kind: nextKind } : doc))
+    )
+
+    try {
+      const res = await fetch(`/api/admin/properties/${propertyId}/documents/${docId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: nextKind }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data.message || t('uploadError'))
-        return
+        setDocuments((prev) =>
+          prev.map((doc) => (doc.id === docId ? { ...doc, kind: previous.kind } : doc))
+        )
+        setError(data.message || t('updateError'))
       }
-      setFile(null)
-      setFileInputKey((key) => key + 1)
-      await loadDocuments()
     } catch {
-      setError(t('uploadError'))
+      setDocuments((prev) =>
+        prev.map((doc) => (doc.id === docId ? { ...doc, kind: previous.kind } : doc))
+      )
+      setError(t('updateError'))
     } finally {
-      setUploading(false)
+      setUpdatingId(null)
     }
   }
 
@@ -101,64 +142,49 @@ export default function AdminPropertyDocuments({ propertyId }) {
     }
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    return new Intl.DateTimeFormat(locale === 'es' ? 'es-MX' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(new Date(value))
-  }
-
   if (!propertyId) {
-    return (
-      <p className="text-sm text-muted-foreground">{t('savePropertyFirst')}</p>
-    )
+    return <p className="text-sm text-muted-foreground">{t('savePropertyFirst')}</p>
   }
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">{t('adminHint')}</p>
-
-      <div className="space-y-3 rounded-lg border border-border/70 p-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="prop-doc-kind">{t('documentType')}</Label>
-            <select
-              id="prop-doc-kind"
-              value={kind}
-              onChange={(e) => setKind(e.target.value)}
-              className={adminSelectClassName()}
-            >
-              {PROPERTY_DOCUMENT_KINDS.map((value) => (
-                <option key={value} value={value}>
-                  {translatePropertyDocumentKind(t, value)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="prop-doc-file">{t('file')}</Label>
-            <Input
-              key={fileInputKey}
-              id="prop-doc-file"
-              type="file"
-              accept="application/pdf,image/jpeg,image/png,image/webp,image/avif"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              disabled={uploading}
-            />
-          </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[12rem] flex-1 space-y-1.5 sm:max-w-xs">
+          <label htmlFor="prop-doc-kind" className="text-xs font-medium text-muted-foreground">
+            {t('documentType')}
+          </label>
+          <select
+            id="prop-doc-kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+            disabled={uploading}
+            className={adminSelectClassName()}
+          >
+            {PROPERTY_DOCUMENT_KINDS.map((value) => (
+              <option key={value} value={value}>
+                {translatePropertyDocumentKind(t, value)}
+              </option>
+            ))}
+          </select>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          className="gap-1.5"
-          disabled={!file || uploading}
-          onClick={handleUpload}
-        >
-          <Upload className="size-4" aria-hidden />
-          {uploading ? t('uploading') : t('upload')}
-        </Button>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <label htmlFor="prop-doc-file" className="text-xs font-medium text-muted-foreground">
+            {t('file')}
+          </label>
+          <input
+            key={fileInputKey}
+            id="prop-doc-file"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/avif"
+            multiple
+            onChange={handleFilesSelected}
+            disabled={uploading || loading}
+            className={fileInputClassName}
+          />
+        </div>
+        {uploading ? (
+          <span className="pb-2 text-sm text-muted-foreground">{t('uploading')}</span>
+        ) : null}
       </div>
 
       {error ? (
@@ -169,45 +195,67 @@ export default function AdminPropertyDocuments({ propertyId }) {
 
       {loading ? (
         <p className="text-sm text-muted-foreground">{tc('saving')}</p>
-      ) : documents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('emptyAdmin')}</p>
-      ) : (
-        <ul className="divide-y divide-border/60 rounded-lg border border-border/70">
+      ) : documents.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {documents.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
-            >
-              <div className="min-w-0 flex items-start gap-2">
-                <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <div className="min-w-0">
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block truncate text-sm font-medium text-primary hover:underline"
-                  >
-                    {doc.fileName}
-                  </a>
-                  <p className="text-xs text-muted-foreground">
-                    {translatePropertyDocumentKind(t, doc.kind)} ·{' '}
-                    {formatDate(doc.uploadedAt)}
-                  </p>
-                </div>
-              </div>
+            <div key={doc.id} className="space-y-2 rounded border border-border/60 p-2">
+              <a
+                href={doc.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block aspect-video overflow-hidden rounded bg-muted"
+                title={doc.fileName}
+              >
+                {isImageMime(doc.mimeType) ? (
+                  <img
+                    src={doc.fileUrl}
+                    alt={doc.fileName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center">
+                    <FileText className="size-8 text-muted-foreground" aria-hidden />
+                    <span className="line-clamp-2 text-xs text-muted-foreground">{doc.fileName}</span>
+                  </div>
+                )}
+              </a>
+
+              {!isImageMime(doc.mimeType) ? null : (
+                <p className="truncate text-xs text-muted-foreground" title={doc.fileName}>
+                  {doc.fileName}
+                </p>
+              )}
+
+              <select
+                value={doc.kind}
+                onChange={(e) => handleKindChange(doc.id, e.target.value)}
+                disabled={updatingId === doc.id || uploading}
+                className={adminSelectClassName()}
+                aria-label={t('documentType')}
+              >
+                {PROPERTY_DOCUMENT_KINDS.map((value) => (
+                  <option key={value} value={value}>
+                    {translatePropertyDocumentKind(t, value)}
+                  </option>
+                ))}
+              </select>
+
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+                className="w-full gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => handleDelete(doc.id)}
+                disabled={uploading || updatingId === doc.id}
               >
                 <Trash2 className="size-4" aria-hidden />
                 {t('remove')}
               </Button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t('emptyAdmin')}</p>
       )}
     </div>
   )

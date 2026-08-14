@@ -51,11 +51,12 @@ export function MessagingProvider({ children }) {
   const alert = useCallback(
     async (input) => {
       const options = normalizeOptions(input)
-      await openDialog({
+      return openDialog({
         kind: 'alert',
         title: options.title || t('alertTitle'),
         message: options.message || '',
         confirmLabel: options.confirmLabel || t('ok'),
+        actionLabel: options.actionLabel || null,
         variant: options.variant || 'default',
       })
     },
@@ -154,6 +155,15 @@ export function MessagingProvider({ children }) {
                 ) : null}
 
                 <DialogFooter className="border-0 px-0 pb-5 pt-4">
+                  {dialog.kind === 'alert' && dialog.actionLabel ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => closeDialog('dismiss')}
+                    >
+                      {dialog.confirmLabel}
+                    </Button>
+                  ) : null}
                   {dialog.kind !== 'alert' ? (
                     <Button
                       type="button"
@@ -165,14 +175,24 @@ export function MessagingProvider({ children }) {
                   ) : null}
                   <Button
                     type="button"
-                    variant={confirmVariant}
+                    variant={
+                      dialog.kind === 'alert' && dialog.actionLabel
+                        ? 'default'
+                        : confirmVariant
+                    }
                     onClick={() => {
-                      if (dialog.kind === 'alert') closeDialog(undefined)
-                      else if (dialog.kind === 'confirm') closeDialog(true)
-                      else closeDialog(promptValue)
+                      if (dialog.kind === 'alert') {
+                        closeDialog(dialog.actionLabel ? 'action' : undefined)
+                      } else if (dialog.kind === 'confirm') {
+                        closeDialog(true)
+                      } else {
+                        closeDialog(promptValue)
+                      }
                     }}
                   >
-                    {dialog.confirmLabel}
+                    {dialog.kind === 'alert' && dialog.actionLabel
+                      ? dialog.actionLabel
+                      : dialog.confirmLabel}
                   </Button>
                 </DialogFooter>
               </div>

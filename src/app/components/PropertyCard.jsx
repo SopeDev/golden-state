@@ -7,12 +7,73 @@ import { cn } from '@/lib/utils'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
+import PropertyCardHighlights from '@/components/invest/PropertyCardHighlights'
+import { getLocalizedPropertySummary } from '@/lib/propertySummary'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
+import {
+  getActualDurationMonths,
+  getPropertyDisplayFlags,
+} from '@/lib/propertyStatusUi'
+
+function StatCell({ label, value, valueClassName }) {
+  return (
+    <div className="text-center">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={cn('text-xl font-semibold text-primary', valueClassName)}>{value}</p>
+    </div>
+  )
+}
 
 export default function PropertyCard({ property }) {
   const t = useTranslations('Projects')
   const locale = useLocale()
   const typeLabel = resolvePropertyTypeLabel(property, locale)
+  const flags = getPropertyDisplayFlags(property)
+
+  const actualMonths = getActualDurationMonths(property?.startDate, property?.completedAt)
+  const estimatedMonths = property?.estimatedMonths
+    ? String(property.estimatedMonths).trim()
+    : ''
+  const realizedRoi = Number(property?.actualRoi)
+  const hasRealizedRoi = Number.isFinite(realizedRoi)
+
+  const leftStat = flags.showInvestmentGoal
+    ? {
+        label: t('price'),
+        value: `$${formatMoneyAmount(property.price)}`,
+        valueClassName: 'text-primary',
+      }
+    : flags.showActualDuration && actualMonths
+      ? {
+          label: t('duration'),
+          value: t('durationValue', { months: actualMonths }),
+          valueClassName: 'text-primary',
+        }
+      : flags.showTimelineStat && estimatedMonths
+        ? {
+            label: t('timeline'),
+            value: t('estimatedDurationValue', { months: estimatedMonths }),
+            valueClassName: 'text-primary',
+          }
+        : null
+
+  const rightStat = flags.showActualRoi && hasRealizedRoi
+    ? {
+        label: t('actualRoi'),
+        value: `${realizedRoi}%`,
+        valueClassName: 'text-main-gold',
+      }
+    : flags.showEstimatedRoi
+      ? {
+          label: t('estRoi'),
+          value: `${property.estimatedROI}%`,
+          valueClassName: 'text-main-gold',
+        }
+      : null
+
+  const showStats = Boolean(leftStat || rightStat)
+  const twoCols = Boolean(leftStat && rightStat)
+  const summaryText = getLocalizedPropertySummary(property, locale)
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
@@ -53,37 +114,35 @@ export default function PropertyCard({ property }) {
           {property.address}, {property.city}, {property.state}
         </p>
 
-        <PropertyProgressSummary property={property} className="mb-6" showDates={false} compact />
+        <PropertyProgressSummary property={property} className="mb-6" compact />
 
-        <div className="mb-6 grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">{t('price')}</p>
-            <p className="text-xl font-semibold text-primary">${formatMoneyAmount(property.price)}</p>
+        {showStats ? (
+          <div className={cn('mb-6 grid gap-4', twoCols ? 'grid-cols-2' : 'grid-cols-1')}>
+            {leftStat ? (
+              <StatCell
+                label={leftStat.label}
+                value={leftStat.value}
+                valueClassName={leftStat.valueClassName}
+              />
+            ) : null}
+            {rightStat ? (
+              <StatCell
+                label={rightStat.label}
+                value={rightStat.value}
+                valueClassName={rightStat.valueClassName}
+              />
+            ) : null}
           </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">{t('units')}</p>
-            <p className="text-xl font-semibold text-primary">{property.unitCount}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">{t('estRoi')}</p>
-            <p className="text-xl font-semibold text-main-gold">{property.estimatedROI}%</p>
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t('roiDisclaimer')}</p>
-          </div>
-        </div>
+        ) : null}
 
-        <div className="mb-6 text-center">
-          <p className="mb-1 text-sm text-muted-foreground">{t('timeline')}</p>
-          <p className="text-lg font-medium text-primary">
-            {property.estimatedMonths} {t('months')}
-          </p>
-        </div>
+        <PropertyCardHighlights property={property} locale={locale} className="mb-6" />
 
-        {property.summary && (
+        {summaryText ? (
           <div className="mt-auto">
             <p className="mb-2 text-sm text-muted-foreground">{t('summary')}</p>
-            <p className="line-clamp-3 text-sm text-foreground">{property.summary}</p>
+            <p className="line-clamp-3 whitespace-pre-line text-sm text-foreground">{summaryText}</p>
           </div>
-        )}
+        ) : null}
       </CardContent>
 
       <CardFooter className="bg-muted/20 px-6 pb-6 pt-4">

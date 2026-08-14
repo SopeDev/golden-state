@@ -4,18 +4,23 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { resolvePropertyProgressFields } from '@/lib/propertyStatusUi'
 import {
-  assertCanEnterExecutionStatus,
   assertCanSetFundedStatus,
+  enrichPropertyWithFunding,
   PLATFORM_MIN_INVESTMENT,
-  withFundingFields,
 } from '@/lib/propertyFunding'
 import {
+  ensureUniquePropertySlug,
   getPropertyTypeByCode,
   getPropertyTypeById,
   notDeletedProperty,
   propertyTypeInclude,
   toClientProperty,
 } from '@/lib/propertyTypes'
+import {
+  isPropertySummaryComplete,
+  normalizePropertySummary,
+  toSummaryFields,
+} from '@/lib/propertySummary'
 
 const prisma = new PrismaClient()
 const parseRequiredInt = (value, field) => {
@@ -95,12 +100,24 @@ export async function POST(request) {
 
     let propertyFacts = body.propertyFacts ?? {}
     let investmentDetails = body.investmentDetails ?? {}
+    let propertyFactsSummary = body.propertyFactsSummary ?? {}
+    let investmentDetailsSummary = body.investmentDetailsSummary ?? {}
+    let summary = body.summary ?? {}
     try {
       if (typeof propertyFacts === 'string') {
         propertyFacts = JSON.parse(propertyFacts)
       }
       if (typeof investmentDetails === 'string') {
         investmentDetails = JSON.parse(investmentDetails)
+      }
+      if (typeof propertyFactsSummary === 'string') {
+        propertyFactsSummary = JSON.parse(propertyFactsSummary)
+      }
+      if (typeof investmentDetailsSummary === 'string') {
+        investmentDetailsSummary = JSON.parse(investmentDetailsSummary)
+      }
+      if (typeof summary === 'string') {
+        summary = JSON.parse(summary)
       }
     } catch (e) {
       return NextResponse.json(
@@ -109,10 +126,20 @@ export async function POST(request) {
       )
     }
 
+    summary = normalizePropertySummary(summary)
+    propertyFactsSummary = normalizePropertySummary(propertyFactsSummary)
+    investmentDetailsSummary = normalizePropertySummary(investmentDetailsSummary)
+
+    if (!isPropertySummaryComplete(summary)) {
+      return NextResponse.json(
+        { message: 'Summary is required in English and Spanish' },
+        { status: 400 }
+      )
+    }
+
     const requiredFields = [
       'investmentId',
       'name',
-      'slug',
       'city',
       'state',
       'address',
@@ -120,7 +147,6 @@ export async function POST(request) {
       'unitCount',
       'estimatedROI',
       'estimatedMonths',
-      'summary',
     ]
 
     for (const field of requiredFields) {
@@ -163,36 +189,31 @@ export async function POST(request) {
           goalPrice: parsedFields.price,
         })
       }
-      await assertCanEnterExecutionStatus(prisma, {
-        propertyId: null,
-        nextStatus: progressFields.status,
-        goalPrice: parsedFields.price,
-        previousStatus: null,
-      })
     } catch (fundingError) {
       return NextResponse.json({ message: fundingError.message }, { status: 400 })
     }
 
-    const existingProperty = await prisma.property.findFirst({
-      where: {
-        OR: [{ investmentId: parsedFields.investmentId }, { slug: body.slug }],
-      },
+    const existingByInvestmentId = await prisma.property.findFirst({
+      where: { investmentId: parsedFields.investmentId },
     })
 
-    if (existingProperty) {
+    if (existingByInvestmentId) {
       return NextResponse.json(
-        { message: 'Property with this Investment ID or slug already exists' },
+        { message: 'Property with this Investment ID already exists' },
         { status: 400 }
       )
     }
+
+    const slug = await ensureUniquePropertySlug(prisma, body.name)
 
     const property = await prisma.property.create({
       data: {
         investmentId: parsedFields.investmentId,
         name: body.name,
-        slug: body.slug,
-        typeId: propertyType.id,
+        slug,
+        propertyType: { connect: { id: propertyType.id } },
         status: progressFields.status,
+        executionStatus: progressFields.executionStatus,
         progressPercent: progressFields.progressPercent,
         startDate: progressFields.startDate,
         targetCompletionDate: progressFields.targetCompletionDate,
@@ -205,15 +226,19 @@ export async function POST(request) {
         minInvestment: parsedFields.minInvestment,
         estimatedROI: parsedFields.estimatedROI,
         estimatedMonths: parsedFields.estimatedMonths,
-        summary: body.summary,
+        ...toSummaryFields(summary),
         propertyFacts: propertyFacts,
+        propertyFactsSummary,
         investmentDetails: investmentDetails,
+        investmentDetailsSummary,
         images: body.images || [],
       },
       include: propertyTypeInclude,
     })
 
-    return NextResponse.json(withFundingFields(toClientProperty(property), 0))
+    return NextResponse.json(
+      await enrichPropertyWithFunding(prisma, toClientProperty(property))
+    )
   } catch (error) {
     console.error('Error creating property:', error)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })

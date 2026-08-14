@@ -58,7 +58,7 @@ export default function InvestFlowClient({ property }) {
       <div className="mx-auto max-w-6xl">
         {hasActiveRequest ? (
           <Link
-            href="/dashboard/investments"
+            href="/dashboard/activity"
             className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
           >
             {t('backToInvestments')}

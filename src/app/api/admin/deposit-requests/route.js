@@ -31,12 +31,17 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const propertyId = searchParams.get('propertyId')
+    const userId = searchParams.get('userId')
 
     const where = {}
     if (status && ['PENDING', 'CONFIRMED', 'REJECTED'].includes(status)) {
       where.status = status
     }
     if (propertyId) where.propertyId = propertyId
+    if (userId) {
+      const parsedUserId = Number.parseInt(userId, 10)
+      if (Number.isFinite(parsedUserId)) where.userId = parsedUserId
+    }
 
     const deposits = await prisma.depositRequest.findMany({
       where,

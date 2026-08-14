@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,17 +15,14 @@ import {
   getInvestorAdminPhase,
   getInvestorAdminPhaseBadgeClass,
 } from '@/lib/admin/userTimeline'
+import { adminUserPath } from '@/lib/adminLinks'
+import { useRouter } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 import { useMessaging } from '@/hooks/useMessaging'
+import AdminFilterCheckboxMenu from '@/components/admin/AdminFilterCheckboxMenu'
+import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import UserEditor from './UserEditor'
-
-const filterChipClass = (active) =>
-  cn(
-    'cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
-    active
-      ? 'border-main-gold bg-main-gold/15 text-main-gold'
-      : 'border-border text-muted-foreground hover:text-primary'
-  )
 
 /** Sidebar badge for investors: onboarding phase, or accreditation overlay when ACTIVE. */
 function getInvestorListBadge(user, t) {
@@ -57,61 +55,131 @@ function getInvestorListBadge(user, t) {
   }
 }
 
-export default function UsersAdminClient({ users }) {
+const ACCOUNT_STATUS_OPTION_IDS = [
+  'PENDING_EMAIL',
+  'PENDING_PROFILE',
+  'PENDING_ADMIN',
+  'ACTIVE',
+  'REJECTED',
+]
+
+const ACCREDITATION_OPTION_IDS = ['NOT_ACCREDITED', 'PENDING_REVIEW', 'APPROVED']
+
+const ACCOUNT_STATUS_LABEL_KEYS = {
+  PENDING_EMAIL: 'filter.email',
+  PENDING_PROFILE: 'filter.profile',
+  PENDING_ADMIN: 'filter.approval',
+  ACTIVE: 'filter.active',
+  REJECTED: 'filter.rejected',
+}
+
+const ACCREDITATION_LABEL_KEYS = {
+  NOT_ACCREDITED: 'filter.notAccredited',
+  PENDING_REVIEW: 'filter.pending',
+  APPROVED: 'filter.accredited',
+}
+
+function toInitialFilterArray(value, validIds) {
+  if (!value || value === 'ALL') return []
+  return validIds.includes(value) ? [value] : []
+}
+
+function matchesAccreditationFilter(user, selectedIds) {
+  if (user.type !== 'INVESTOR') return false
+  return selectedIds.some((id) => {
+    if (id === 'PENDING_REVIEW') return user.accreditedStatus === 'PENDING_REVIEW'
+    if (id === 'APPROVED') return user.accreditedStatus === 'APPROVED'
+    if (id === 'NOT_ACCREDITED') {
+      return user.accreditedStatus === 'NOT_STARTED' || user.accreditedStatus === 'REJECTED'
+    }
+    return false
+  })
+}
+
+export default function UsersAdminClient({
+  users,
+  initialAccountStatusFilter = 'ALL',
+  initialAccreditationFilter = 'ALL',
+  initialSelectedId = '',
+}) {
   const t = useTranslations('Admin')
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { alert, confirm } = useMessaging()
 
-  const ACCOUNT_STATUS_FILTERS = [
-    { id: 'ALL', label: t('common.all') },
-    { id: 'PENDING_EMAIL', label: t('filter.email') },
-    { id: 'PENDING_PROFILE', label: t('filter.profile') },
-    { id: 'PENDING_ADMIN', label: t('filter.approval') },
-    { id: 'ACTIVE', label: t('filter.active') },
-    { id: 'REJECTED', label: t('filter.rejected') },
-  ]
+  const accountStatusOptions = useMemo(
+    () =>
+      ACCOUNT_STATUS_OPTION_IDS.map((id) => ({
+        id,
+        label: t(ACCOUNT_STATUS_LABEL_KEYS[id]),
+      })),
+    [t]
+  )
 
-  const ACCREDITATION_FILTERS = [
-    { id: 'ALL', label: t('common.all') },
-    { id: 'NOT_ACCREDITED', label: t('filter.notAccredited') },
-    { id: 'PENDING_REVIEW', label: t('filter.pending') },
-    { id: 'APPROVED', label: t('filter.accredited') },
-  ]
+  const accreditationOptions = useMemo(
+    () =>
+      ACCREDITATION_OPTION_IDS.map((id) => ({
+        id,
+        label: t(ACCREDITATION_LABEL_KEYS[id]),
+      })),
+    [t]
+  )
 
   const [usersList, setUsersList] = useState(users)
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, setSelectedId] = useState(() => {
+    if (!initialSelectedId) return null
+    const normalized = String(initialSelectedId)
+    const match = users.find((user) => String(user.id) === normalized)
+    return match ? match.id : null
+  })
   const [isCreating, setIsCreating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [query, setQuery] = useState('')
-  const [accountStatusFilter, setAccountStatusFilter] = useState('ALL')
-  const [accreditationFilter, setAccreditationFilter] = useState('ALL')
+  const [accountStatusFilters, setAccountStatusFilters] = useState(() =>
+    toInitialFilterArray(initialAccountStatusFilter, ACCOUNT_STATUS_OPTION_IDS)
+  )
+  const [accreditationFilters, setAccreditationFilters] = useState(() =>
+    toInitialFilterArray(initialAccreditationFilter, ACCREDITATION_OPTION_IDS)
+  )
+  const [page, setPage] = useState(1)
+
+  const idFromUrl = searchParams.get('id') || ''
 
   const selectedUser = useMemo(
-    () => usersList.find((u) => u.id === selectedId) || null,
+    () => usersList.find((u) => String(u.id) === String(selectedId)) || null,
     [usersList, selectedId]
   )
 
+  const syncUserUrl = (userId) => {
+    router.replace(userId != null && userId !== '' ? adminUserPath(userId) : '/admin/users', {
+      scroll: false,
+    })
+  }
+
+  useEffect(() => {
+    if (isCreating) return
+    if (idFromUrl) {
+      const match = usersList.find((user) => String(user.id) === String(idFromUrl))
+      if (match) {
+        setSelectedId(match.id)
+        return
+      }
+    }
+    if (!idFromUrl) {
+      setSelectedId(null)
+    }
+  }, [idFromUrl, usersList, isCreating])
+
   const filteredUsers = useMemo(() => {
     let list = usersList
-    if (accountStatusFilter !== 'ALL') {
+    if (accountStatusFilters.length > 0) {
       list = list.filter((u) => {
         if (u.type !== 'INVESTOR') return false
-        return getInvestorAdminPhase(u) === accountStatusFilter
+        return accountStatusFilters.includes(getInvestorAdminPhase(u))
       })
     }
-    if (accreditationFilter === 'PENDING_REVIEW') {
-      list = list.filter(
-        (u) => u.type === 'INVESTOR' && u.accreditedStatus === 'PENDING_REVIEW'
-      )
-    } else if (accreditationFilter === 'APPROVED') {
-      list = list.filter(
-        (u) => u.type === 'INVESTOR' && u.accreditedStatus === 'APPROVED'
-      )
-    } else if (accreditationFilter === 'NOT_ACCREDITED') {
-      list = list.filter(
-        (u) =>
-          u.type === 'INVESTOR' &&
-          (u.accreditedStatus === 'NOT_STARTED' || u.accreditedStatus === 'REJECTED')
-      )
+    if (accreditationFilters.length > 0) {
+      list = list.filter((u) => matchesAccreditationFilter(u, accreditationFilters))
     }
     if (!query.trim()) return list
     const q = query.trim().toLowerCase()
@@ -121,30 +189,46 @@ export default function UsersAdminClient({ users }) {
         String(user.id).includes(q) ||
         user.type?.toLowerCase().includes(q)
     )
-  }, [usersList, query, accountStatusFilter, accreditationFilter])
+  }, [usersList, query, accountStatusFilters, accreditationFilters])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, accountStatusFilters, accreditationFilters])
+
+  const pagination = useMemo(() => paginateItems(filteredUsers, page), [filteredUsers, page])
 
   const editorVisible = isCreating || selectedUser
 
   const handleNewUser = () => {
     setSelectedId(null)
     setIsCreating(true)
+    syncUserUrl(null)
   }
 
   const handleSelectUser = (userId) => {
     setSelectedId(userId)
     setIsCreating(false)
+    syncUserUrl(userId)
   }
 
   const handleCancel = () => {
     setIsCreating(false)
     if (!selectedUser) {
       setSelectedId(null)
+      syncUserUrl(null)
     }
   }
 
   const handleBackToList = () => {
     setIsCreating(false)
     setSelectedId(null)
+    syncUserUrl(null)
+  }
+
+  const clearFilters = () => {
+    setQuery('')
+    setAccountStatusFilters([])
+    setAccreditationFilters([])
   }
 
   const handleDeleteUser = async (userId) => {
@@ -201,6 +285,7 @@ export default function UsersAdminClient({ users }) {
       if (selectedId === userId) {
         setSelectedId(null)
         setIsCreating(false)
+        syncUserUrl(null)
       }
     } catch (error) {
       console.error('Error deleting user:', error)
@@ -238,6 +323,7 @@ export default function UsersAdminClient({ users }) {
           setUsersList((prev) => [updatedUser, ...prev])
           setSelectedId(updatedUser.id)
           setIsCreating(false)
+          syncUserUrl(updatedUser.id)
         }
       } else {
         const error = await response.json()
@@ -256,34 +342,51 @@ export default function UsersAdminClient({ users }) {
     }
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-4xl font-semibold text-primary">{t('users.title')}</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">{t('users.subtitle')}</p>
-        </div>
+  return editorVisible ? (
+    <AdminPageFrame>
+      <div className="mb-4">
+        <Button type="button" variant="ghost" size="sm" onClick={handleBackToList} className="gap-1.5">
+          <ArrowLeft className="size-4" aria-hidden />
+          {t('common.backToUsers')}
+        </Button>
       </div>
+      <UserEditor
+        key={isCreating ? '__new__' : selectedUser?.id}
+        user={selectedUser}
+        isCreating={isCreating}
+        isLoading={isLoading}
+        onSubmit={handleFormSubmit}
+        onCancel={handleCancel}
+        onDelete={handleDeleteUser}
+        onUserUpdated={handleUserUpdated}
+      />
+    </AdminPageFrame>
+  ) : (
+    <AdminPageFrame>
+      <AdminPageHeader
+        className="mb-6"
+        eyebrow={t('users.eyebrow')}
+        title={t('users.title')}
+        description={t('users.subtitle')}
+        actions={
+          <Button type="button" onClick={handleNewUser} className="gap-1.5">
+            <Plus className="size-4" aria-hidden />
+            {t('common.new')}
+          </Button>
+        }
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card
-          className={cn(
-            'border-border/80 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden',
-            editorVisible ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'
-          )}
-        >
-          <CardHeader className="space-y-3 border-b border-border/60 pb-4">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base text-primary">
-                {t('users.listTitle', { count: usersList.length })}
-              </CardTitle>
-              <Button type="button" size="sm" onClick={handleNewUser} className="gap-1.5">
-                <Plus className="size-4" aria-hidden />
-                {t('common.new')}
-              </Button>
-            </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader className="space-y-3 border-b border-border/60 pb-4">
+          <CardTitle className="text-base text-primary">
+            {t('users.listTitle', { count: filteredUsers.length })}
+          </CardTitle>
+          <div className="flex flex-row flex-wrap items-center gap-2 sm:flex-nowrap">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -291,129 +394,92 @@ export default function UsersAdminClient({ users }) {
                 className="pl-8"
               />
             </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t('filter.accountStatus')}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {ACCOUNT_STATUS_FILTERS.map((chip) => (
-                    <button
-                      key={`account-${chip.id}`}
-                      type="button"
-                      onClick={() => setAccountStatusFilter(chip.id)}
-                      className={filterChipClass(accountStatusFilter === chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t('filter.accreditation')}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {ACCREDITATION_FILTERS.map((chip) => (
-                    <button
-                      key={`accreditation-${chip.id}`}
-                      type="button"
-                      onClick={() => setAccreditationFilter(chip.id)}
-                      className={filterChipClass(accreditationFilter === chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-0">
-            {filteredUsers.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                {query ? t('common.noUsersSearch') : t('common.noUsersYet')}
-              </p>
-            ) : (
-              <ul>
-                {filteredUsers.map((user) => {
-                  const isActive = !isCreating && user.id === selectedId
-                  const isAdmin = user.type === 'ADMIN'
-                  const badge = isAdmin
-                    ? null
-                    : getInvestorListBadge(user, t)
-                  return (
-                    <li key={user.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectUser(user.id)}
-                        className={cn(
-                          'flex w-full cursor-pointer items-start justify-between gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/50',
-                          isActive && 'border-l-main-gold bg-main-gold/10'
-                        )}
-                      >
-                        <div className="min-w-0 space-y-1">
-                          <span className="block truncate text-sm font-medium text-primary">
-                            {user.email}
-                          </span>
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            #{user.id}
-                          </span>
-                        </div>
-                        {isAdmin ? (
-                          <span className="shrink-0 self-center rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            {adminUserTypeLabel(t, 'ADMIN')}
-                          </span>
-                        ) : (
-                          <span
-                            className={cn(
-                              'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                              badge.className
-                            )}
-                          >
-                            {badge.label}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className={cn(editorVisible ? 'block' : 'hidden lg:block')}>
-          <div className="mb-3 flex items-center lg:hidden">
-            <Button type="button" variant="ghost" size="sm" onClick={handleBackToList} className="gap-1.5">
-              <ArrowLeft className="size-4" aria-hidden />
-              {t('common.backToUsers')}
-            </Button>
-          </div>
-
-          {editorVisible ? (
-            <UserEditor
-              key={isCreating ? '__new__' : selectedUser?.id}
-              user={selectedUser}
-              isCreating={isCreating}
-              isLoading={isLoading}
-              onSubmit={handleFormSubmit}
-              onCancel={handleCancel}
-              onDelete={handleDeleteUser}
-              onUserUpdated={handleUserUpdated}
-            />
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-6 py-10 text-center text-sm text-muted-foreground">
-                <p>{t('common.selectUserHint')}</p>
-                <Button type="button" size="sm" onClick={handleNewUser} className="gap-1.5">
-                  <Plus className="size-4" aria-hidden />
-                  {t('common.createNewUser')}
+            <div className="flex shrink-0 flex-row flex-wrap items-center gap-2">
+              <AdminFilterCheckboxMenu
+                label={t('filter.accountStatus')}
+                allLabel={t('common.all')}
+                options={accountStatusOptions}
+                selectedIds={accountStatusFilters}
+                onChange={setAccountStatusFilters}
+              />
+              <AdminFilterCheckboxMenu
+                label={t('filter.accreditation')}
+                allLabel={t('common.all')}
+                options={accreditationOptions}
+                selectedIds={accreditationFilters}
+                onChange={setAccreditationFilters}
+              />
+              {(query.trim() ||
+                accountStatusFilters.length > 0 ||
+                accreditationFilters.length > 0) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2.5 text-muted-foreground"
+                  onClick={clearFilters}
+                >
+                  {t('common.clearFilters')}
                 </Button>
-              </CardContent>
-            </Card>
+              ) : null}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {filteredUsers.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              {query ? t('common.noUsersSearch') : t('common.noUsersYet')}
+            </p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {pagination.items.map((user) => {
+                const isAdmin = user.type === 'ADMIN'
+                const badge = isAdmin ? null : getInvestorListBadge(user, t)
+                return (
+                  <li key={user.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectUser(user.id)}
+                      className="flex w-full cursor-pointer items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <span className="block truncate text-sm font-medium text-primary">
+                          {user.email}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          #{user.id}
+                        </span>
+                      </div>
+                      {isAdmin ? (
+                        <span className="shrink-0 self-center rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {adminUserTypeLabel(t, 'ADMIN')}
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            'shrink-0 self-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            badge.className
+                          )}
+                        >
+                          {badge.label}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           )}
-        </div>
-      </div>
-    </div>
+          <AdminListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            from={pagination.from}
+            to={pagination.to}
+            onPageChange={setPage}
+          />
+        </CardContent>
+      </Card>
+    </AdminPageFrame>
   )
 }

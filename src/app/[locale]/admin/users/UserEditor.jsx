@@ -5,10 +5,12 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
 import AdminFormField from '@/components/admin/AdminFormField'
 import AdminFormSection from '@/components/admin/AdminFormSection'
 import {
+  formatExperienceForDisplay,
   formatProjectTypesForDisplay,
   INVESTMENT_RANGE_LABELS,
 } from '@/lib/auth/investorProfileOptions'
@@ -72,11 +74,7 @@ const formatProfileValue = (key, profile, tRegister, projectTypeLabelByCode) => 
     }
   }
   if (key === 'experience') {
-    try {
-      return tRegister(`experience_${value}`)
-    } catch {
-      return String(value).replace(/_/g, ' ')
-    }
+    return formatExperienceForDisplay(value, tRegister) || String(value)
   }
   return String(value)
 }
@@ -254,7 +252,7 @@ export default function UserEditor({
 
   return (
     <Card className="border-border/80 shadow-md">
-      <CardHeader className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="border-b border-border/60 pb-4">
         <div>
           <CardTitle className="font-heading text-2xl text-primary">{headingPrefix}</CardTitle>
           {user && !isCreating ? (
@@ -263,262 +261,331 @@ export default function UserEditor({
             </p>
           ) : null}
         </div>
-        {!isCreating && user ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onDelete?.(user.id)}
-            disabled={isLoading || actionLoading}
-          >
-            {t('common.deleteUser')}
-          </Button>
-        ) : null}
       </CardHeader>
 
       <CardContent className="space-y-6 pt-6">
-        {user && !isCreating && user.type === 'INVESTOR' ? (
-          <AdminFormSection title={t('users.reviewSectionTitle')}>
-            <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold tracking-wide text-muted-foreground">
-                {t('users.accountStatusLabel')}
-              </span>
-              {statusPill(
-                adminPhase || user.accountStatus,
-                getInvestorAdminPhaseTone(adminPhase || user.accountStatus),
-                adminPhase
-                  ? t(`accountPhase.${adminPhase}`)
-                  : adminAccountStatusLabel(t, user.accountStatus)
-              )}
-              <span className="text-xs font-semibold tracking-wide text-muted-foreground">
-                {t('users.accreditedStatusLabel')}
-              </span>
-              {statusPill(
-                user.accreditedStatus,
-                user.accreditedStatus === 'APPROVED'
-                  ? 'ok'
-                  : user.accreditedStatus === 'REJECTED'
-                    ? 'bad'
-                    : user.accreditedStatus === 'PENDING_REVIEW'
-                      ? 'info'
-                      : 'neutral',
-                adminAccreditedStatusLabel(t, user.accreditedStatus)
-              )}
-            </div>
-            {user.accreditedReviewNote ? (
-              <p className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-main-gold">{t('users.reviewNoteCurrent')}:</span>{' '}
-                {user.accreditedReviewNote}
-              </p>
+        <Tabs
+          defaultValue={isCreating ? 'account' : user?.type === 'INVESTOR' ? 'review' : 'account'}
+          className="gap-4"
+        >
+          <TabsList
+            variant="line"
+            className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border/70 bg-transparent p-0"
+          >
+            {user && !isCreating && user.type === 'INVESTOR' ? (
+              <TabsTrigger value="review" className="px-3 py-2">
+                {t('users.tabReview')}
+              </TabsTrigger>
             ) : null}
-            {canApproveAccount || canRejectAccount ? (
-              <div className="space-y-2">
-                {user.accountStatus === 'REJECTED' || user.accountStatus === 'ACTIVE' ? (
-                  <p className="text-xs text-muted-foreground">{t('users.accountActionsHelp')}</p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {canApproveAccount ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={actionLoading}
-                      onClick={() => runStatusAction('account-status', 'approve')}
-                    >
-                      {t('users.approveAccount')}
-                    </Button>
-                  ) : null}
-                  {canRejectAccount ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive"
-                      disabled={actionLoading}
-                      onClick={() => runStatusAction('account-status', 'reject')}
-                    >
-                      {t('users.rejectAccount')}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
+            {profile && !isCreating ? (
+              <TabsTrigger value="profile" className="px-3 py-2">
+                {t('users.tabProfile')}
+              </TabsTrigger>
             ) : null}
-            {documents.length > 0 ? (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">{t('users.uploadedDocuments')}</h4>
-                <InvestorDocumentReviewGrid
-                  documents={documents}
-                  t={tInvest}
-                  viewLabel={t('common.view')}
-                  missingLabel={t('users.documentNotUploaded')}
-                  closeLabel={t('common.close')}
-                  openInNewTabLabel={t('common.openInNewTab')}
-                  previewUnavailableLabel={t('common.previewUnavailable')}
-                  selectable={user.accreditedStatus === 'PENDING_REVIEW'}
-                  selectedKinds={selectedResubmitKinds}
-                  onToggleKind={toggleResubmitKind}
-                  selectLabel={t('users.resubmitSelectDocument')}
-                />
-                {user.accreditedStatus === 'PENDING_REVIEW' ? (
+            <TabsTrigger value="account" className="px-3 py-2">
+              {t('users.tabAccount')}
+            </TabsTrigger>
+            {user && !isCreating ? (
+              <TabsTrigger value="activity" className="px-3 py-2">
+                {t('users.tabActivity')}
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
+
+          {user && !isCreating && user.type === 'INVESTOR' ? (
+            <TabsContent value="review" keepMounted className="outline-none">
+              <AdminFormSection title={t('users.reviewSectionTitle')}>
+                <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="w-full text-xs text-muted-foreground">{t('users.resubmitSelectHelp')}</p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={actionLoading || selectedResubmitKinds.length === 0}
-                      onClick={() =>
-                        runStatusAction('accredited-status', 'request_resubmit', {
-                          resubmitKinds: selectedResubmitKinds,
-                        })
-                      }
-                    >
-                      {t('users.requestDocumentResubmit')}
-                    </Button>
+                    <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+                      {t('users.accountStatusLabel')}
+                    </span>
+                    {statusPill(
+                      adminPhase || user.accountStatus,
+                      getInvestorAdminPhaseTone(adminPhase || user.accountStatus),
+                      adminPhase
+                        ? t(`accountPhase.${adminPhase}`)
+                        : adminAccountStatusLabel(t, user.accountStatus)
+                    )}
+                    <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+                      {t('users.accreditedStatusLabel')}
+                    </span>
+                    {statusPill(
+                      user.accreditedStatus,
+                      user.accreditedStatus === 'APPROVED'
+                        ? 'ok'
+                        : user.accreditedStatus === 'REJECTED'
+                          ? 'bad'
+                          : user.accreditedStatus === 'PENDING_REVIEW'
+                            ? 'info'
+                            : 'neutral',
+                      adminAccreditedStatusLabel(t, user.accreditedStatus)
+                    )}
                   </div>
-                ) : null}
-                {pendingResubmitKinds.length > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t('users.awaitingResubmitKinds', {
-                      kinds: pendingResubmitKinds
-                        .map((kind) => tInvest(getFieldLabelKeyForKind(kind) || kind))
-                        .join(', '),
-                    })}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            {canApproveAccredited || canRejectAccredited ? (
-              <div className="space-y-2">
-                {canApproveAccredited &&
-                (user.accreditedStatus === 'REJECTED' || user.accreditedStatus === 'NOT_STARTED') ? (
-                  <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
-                ) : null}
-                {canRejectAccredited && user.accreditedStatus === 'APPROVED' ? (
-                  <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {canApproveAccredited ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={actionLoading}
-                      onClick={() => runStatusAction('accredited-status', 'approve')}
-                    >
-                      {t('users.approveAccredited')}
-                    </Button>
+                  {user.accreditedReviewNote ? (
+                    <p className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
+                      <span className="font-semibold text-main-gold">{t('users.reviewNoteCurrent')}:</span>{' '}
+                      {user.accreditedReviewNote}
+                    </p>
                   ) : null}
-                  {canRejectAccredited ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive"
-                      disabled={actionLoading}
-                      onClick={() => runStatusAction('accredited-status', 'reject')}
+                  {canApproveAccount || canRejectAccount ? (
+                    <div className="space-y-2">
+                      {user.accountStatus === 'REJECTED' || user.accountStatus === 'ACTIVE' ? (
+                        <p className="text-xs text-muted-foreground">{t('users.accountActionsHelp')}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {canApproveAccount ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={actionLoading}
+                            onClick={() => runStatusAction('account-status', 'approve')}
+                          >
+                            {t('users.approveAccount')}
+                          </Button>
+                        ) : null}
+                        {canRejectAccount ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive"
+                            disabled={actionLoading}
+                            onClick={() => runStatusAction('account-status', 'reject')}
+                          >
+                            {t('users.rejectAccount')}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {documents.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">{t('users.uploadedDocuments')}</h4>
+                      <InvestorDocumentReviewGrid
+                        documents={documents}
+                        t={tInvest}
+                        viewLabel={t('common.view')}
+                        missingLabel={t('users.documentNotUploaded')}
+                        closeLabel={t('common.close')}
+                        openInNewTabLabel={t('common.openInNewTab')}
+                        previewUnavailableLabel={t('common.previewUnavailable')}
+                        selectable={user.accreditedStatus === 'PENDING_REVIEW'}
+                        selectedKinds={selectedResubmitKinds}
+                        onToggleKind={toggleResubmitKind}
+                        selectLabel={t('users.resubmitSelectDocument')}
+                      />
+                      {user.accreditedStatus === 'PENDING_REVIEW' ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="w-full text-xs text-muted-foreground">{t('users.resubmitSelectHelp')}</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={actionLoading || selectedResubmitKinds.length === 0}
+                            onClick={() =>
+                              runStatusAction('accredited-status', 'request_resubmit', {
+                                resubmitKinds: selectedResubmitKinds,
+                              })
+                            }
+                          >
+                            {t('users.requestDocumentResubmit')}
+                          </Button>
+                        </div>
+                      ) : null}
+                      {pendingResubmitKinds.length > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('users.awaitingResubmitKinds', {
+                            kinds: pendingResubmitKinds
+                              .map((kind) => tInvest(getFieldLabelKeyForKind(kind) || kind))
+                              .join(', '),
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {canApproveAccredited || canRejectAccredited ? (
+                    <div className="space-y-2">
+                      {canApproveAccredited &&
+                      (user.accreditedStatus === 'REJECTED' || user.accreditedStatus === 'NOT_STARTED') ? (
+                        <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
+                      ) : null}
+                      {canRejectAccredited && user.accreditedStatus === 'APPROVED' ? (
+                        <p className="text-xs text-muted-foreground">{t('users.accreditedActionsHelp')}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {canApproveAccredited ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={actionLoading}
+                            onClick={() => runStatusAction('accredited-status', 'approve')}
+                          >
+                            {t('users.approveAccredited')}
+                          </Button>
+                        ) : null}
+                        {canRejectAccredited ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive"
+                            disabled={actionLoading}
+                            onClick={() => runStatusAction('accredited-status', 'reject')}
+                          >
+                            {t('users.rejectAccredited')}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  <AdminFormField label={t('users.reviewNote')} htmlFor="review-note">
+                    <Input
+                      id="review-note"
+                      value={reviewNote}
+                      onChange={(e) => setReviewNote(e.target.value)}
+                      placeholder={t('users.reviewNotePlaceholder')}
+                    />
+                  </AdminFormField>
+                </div>
+              </AdminFormSection>
+            </TabsContent>
+          ) : null}
+
+          {profile && !isCreating ? (
+            <TabsContent value="profile" keepMounted className="outline-none">
+              <AdminFormSection title={t('users.questionnaire')}>
+                <dl className="grid gap-3 text-sm md:grid-cols-2">
+                  {PROFILE_FIELD_KEYS.map((key) => {
+                    const display = formatProfileValue(key, profile, tRegister, projectTypeLabelByCode)
+                    if (!display) return null
+                    return (
+                      <div
+                        key={key}
+                        className={cn(
+                          'rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm',
+                          (key === 'investmentGoals' || key === 'background') && 'md:col-span-2'
+                        )}
+                      >
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t(`users.profile.${key}`)}
+                        </dt>
+                        <dd className="mt-1.5 text-sm text-foreground whitespace-pre-wrap">{display}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </AdminFormSection>
+            </TabsContent>
+          ) : null}
+
+          <TabsContent value="account" keepMounted className="outline-none">
+            <form onSubmit={handleSubmit}>
+              <AdminFormSection title={t('users.accountDetailsSectionTitle')}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <AdminFormField label={t('users.emailAddress')} htmlFor="user-email">
+                    <Input
+                      id="user-email"
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                    />
+                  </AdminFormField>
+
+                  <AdminFormField
+                    label={`${t('users.password')}${user && !isCreating ? ` ${t('users.passwordKeepHint')}` : ''}`}
+                    htmlFor="user-password"
+                  >
+                    <Input
+                      id="user-password"
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required={isCreating}
+                      placeholder={
+                        isCreating
+                          ? t('users.passwordPlaceholderNew')
+                          : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
+                      }
+                    />
+                  </AdminFormField>
+
+                  <AdminFormField label={t('users.userType')} htmlFor="user-type">
+                    <select
+                      id="user-type"
+                      name="type"
+                      value={formData.type}
+                      onChange={handleChange}
+                      className={adminSelectClassName()}
+                      required
                     >
-                      {t('users.rejectAccredited')}
-                    </Button>
+                      <option value="INVESTOR">{adminUserTypeLabel(t, 'INVESTOR')}</option>
+                      <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
+                    </select>
+                  </AdminFormField>
+
+                  <AdminFormField label={t('users.authProvider')} hint={t('users.authProviderHint')}>
+                    <Input
+                      value={formData.provider || t('common.credentials')}
+                      disabled
+                      readOnly
+                      className="bg-muted"
+                    />
+                  </AdminFormField>
+                </div>
+              </AdminFormSection>
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <p className="text-xs text-muted-foreground">
+                    {isDirty ? (
+                      <span className="text-main-gold">{t('common.unsavedChanges')}</span>
+                    ) : isCreating ? (
+                      t('common.fillFormThenCreate')
+                    ) : (
+                      t('common.noUnsavedChanges')
+                    )}
+                  </p>
+                  {!isCreating && user ? (
+                    <button
+                      type="button"
+                      onClick={() => onDelete?.(user.id)}
+                      disabled={isLoading || actionLoading}
+                      className="w-fit text-left text-xs text-muted-foreground/80 underline-offset-2 transition-colors hover:text-destructive hover:underline disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      {t('common.deleteUser')}
+                    </button>
                   ) : null}
                 </div>
-              </div>
-            ) : null}
-            <AdminFormField label={t('users.reviewNote')} htmlFor="review-note">
-              <Input
-                id="review-note"
-                value={reviewNote}
-                onChange={(e) => setReviewNote(e.target.value)}
-                placeholder={t('users.reviewNotePlaceholder')}
-              />
-            </AdminFormField>
-            </div>
-          </AdminFormSection>
-        ) : null}
-
-        {profile && !isCreating ? (
-          <AdminFormSection title={t('users.questionnaire')}>
-            <dl className="grid gap-3 text-sm md:grid-cols-2">
-              {PROFILE_FIELD_KEYS.map((key) => {
-                const display = formatProfileValue(key, profile, tRegister, projectTypeLabelByCode)
-                if (!display) return null
-                return (
-                  <div
-                    key={key}
-                    className={cn(
-                      'rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm',
-                      (key === 'investmentGoals' || key === 'background') && 'md:col-span-2'
-                    )}
+                <div className="flex flex-wrap justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelClick}
+                    disabled={isLoading || actionLoading || (!isCreating && !isDirty)}
                   >
-                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t(`users.profile.${key}`)}
-                    </dt>
-                    <dd className="mt-1.5 text-sm text-foreground whitespace-pre-wrap">{display}</dd>
-                  </div>
-                )
-              })}
-            </dl>
-          </AdminFormSection>
-        ) : null}
-
-        <form onSubmit={handleSubmit}>
-          <AdminFormSection title={t('users.accountDetailsSectionTitle')}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <AdminFormField label={t('users.emailAddress')} htmlFor="user-email">
-              <Input
-                id="user-email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </AdminFormField>
-
-            <AdminFormField
-              label={`${t('users.password')}${user && !isCreating ? ` ${t('users.passwordKeepHint')}` : ''}`}
-              htmlFor="user-password"
-            >
-              <Input
-                id="user-password"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required={isCreating}
-                placeholder={
-                  isCreating ? t('users.passwordPlaceholderNew') : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
-                }
-              />
-            </AdminFormField>
-
-            <AdminFormField label={t('users.userType')} htmlFor="user-type">
-              <select
-                id="user-type"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className={adminSelectClassName()}
-                required
-              >
-                <option value="INVESTOR">{adminUserTypeLabel(t, 'INVESTOR')}</option>
-                <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
-              </select>
-            </AdminFormField>
-
-            <AdminFormField label={t('users.authProvider')} hint={t('users.authProviderHint')}>
-              <Input
-                value={formData.provider || t('common.credentials')}
-                disabled
-                readOnly
-                className="bg-muted"
-              />
-            </AdminFormField>
-          </div>
-          </AdminFormSection>
+                    {isCreating ? t('common.cancel') : t('common.discardChanges')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading || actionLoading || (!isCreating && !isDirty)}
+                  >
+                    {isLoading
+                      ? t('common.saving')
+                      : isCreating
+                        ? t('users.createUser')
+                        : t('common.saveChanges')}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </TabsContent>
 
           {user && !isCreating ? (
-            <div className="mt-6">
+            <TabsContent value="activity" keepMounted className="outline-none">
               <AdminFormSection
                 title={t('users.activityLogTitle')}
                 description={t('users.activityLogDesc')}
@@ -544,38 +611,9 @@ export default function UserEditor({
                   </ol>
                 )}
               </AdminFormSection>
-            </div>
+            </TabsContent>
           ) : null}
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-            <p className="text-xs text-muted-foreground">
-              {isDirty ? (
-                <span className="text-main-gold">{t('common.unsavedChanges')}</span>
-              ) : isCreating ? (
-                t('common.fillFormThenCreate')
-              ) : (
-                t('common.noUnsavedChanges')
-              )}
-            </p>
-            <div className="flex flex-wrap justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelClick}
-                disabled={isLoading || actionLoading || (!isCreating && !isDirty)}
-              >
-                {isCreating ? t('common.cancel') : t('common.discardChanges')}
-              </Button>
-              <Button type="submit" disabled={isLoading || actionLoading || (!isCreating && !isDirty)}>
-                {isLoading
-                  ? t('common.saving')
-                  : isCreating
-                    ? t('users.createUser')
-                    : t('common.saveChanges')}
-              </Button>
-            </div>
-          </div>
-        </form>
+        </Tabs>
       </CardContent>
     </Card>
   )

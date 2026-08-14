@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import FaqStructuredEditor, { faqInputId } from './FaqStructuredEditor'
 import {
   parseFaqStructure,
@@ -668,11 +669,13 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
   }, [previewLocale])
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-heading text-4xl font-semibold text-primary">{t('title')}</h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <AdminPageFrame className="max-w-none">
+      <AdminPageHeader
+        className="mb-8"
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        description={t('subtitle')}
+      />
 
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2 border-b border-border pb-4">
@@ -821,6 +824,6 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
           </Card>
         </div>
       </div>
-    </div>
+    </AdminPageFrame>
   )
 }

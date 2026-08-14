@@ -2,10 +2,18 @@
 
 import { signOut } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
-import { Briefcase, ChevronDown, ClipboardList, LayoutDashboard, LogOut, UserRound } from 'lucide-react'
+import {
+  Briefcase,
+  ChevronDown,
+  Activity,
+  LayoutDashboard,
+  LogOut,
+  Shield,
+  UserRound,
+} from 'lucide-react'
 import { Link, useRouter } from '@/i18n/navigation'
 import {
-  resolveProtectedInvestmentsHref,
+  resolveProtectedActivityHref,
   resolveProtectedPortfolioHref,
 } from '@/lib/auth/userStatus'
 import { cn } from '@/lib/utils'
@@ -37,7 +45,7 @@ export default function AccountNavMenu({ user, className }) {
   const router = useRouter()
   const dashboardHref = '/dashboard'
   const portfolioHref = resolveProtectedPortfolioHref(user)
-  const investmentsHref = resolveProtectedInvestmentsHref(user)
+  const activityHref = resolveProtectedActivityHref(user)
   const myAccountHref = '/dashboard/account'
   const email = typeof user?.email === 'string' ? user.email : ''
   const primary = accountPrimaryLabel(user) || t('account')
@@ -48,12 +56,15 @@ export default function AccountNavMenu({ user, className }) {
     router.refresh()
   }
 
-  // Investments hosts requests now; Returns can expand on that page later.
+  // Activity hosts investment requests + returns wallet.
   const links = [
     { href: dashboardHref, label: t('dashboard'), icon: LayoutDashboard },
     { href: portfolioHref, label: t('portfolio'), icon: Briefcase },
-    { href: investmentsHref, label: t('investments'), icon: ClipboardList },
+    { href: activityHref, label: t('activity'), icon: Activity },
     { href: myAccountHref, label: t('myAccount'), icon: UserRound },
+    ...(user?.type === 'ADMIN'
+      ? [{ href: '/admin', label: t('admin'), icon: Shield }]
+      : []),
   ]
 
   return (

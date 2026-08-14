@@ -117,8 +117,13 @@ export function resolveProtectedPortfolioHref(user) {
   return resolveAccreditedAreaHref(user, '/dashboard/portfolio')
 }
 
+export function resolveProtectedActivityHref(user) {
+  return resolveAccreditedAreaHref(user, '/dashboard/activity')
+}
+
+/** @deprecated Prefer resolveProtectedActivityHref */
 export function resolveProtectedInvestmentsHref(user) {
-  return resolveAccreditedAreaHref(user, '/dashboard/investments')
+  return resolveProtectedActivityHref(user)
 }
 
 function resolveAccreditedAreaHref(user, target) {
@@ -136,8 +141,13 @@ export function resolveProtectedInvestorHref(user, target = '/dashboard') {
   if (target === '/dashboard/portfolio' || target.startsWith('/dashboard/portfolio/')) {
     return resolveProtectedPortfolioHref(user)
   }
-  if (target === '/dashboard/investments' || target.startsWith('/dashboard/investments/')) {
-    return resolveProtectedInvestmentsHref(user)
+  if (
+    target === '/dashboard/activity' ||
+    target.startsWith('/dashboard/activity/') ||
+    target === '/dashboard/investments' ||
+    target.startsWith('/dashboard/investments/')
+  ) {
+    return resolveProtectedActivityHref(user)
   }
   if (target === '/dashboard' || target === '/dashboard/account' || target.startsWith('/dashboard/account')) {
     return target
@@ -145,6 +155,69 @@ export function resolveProtectedInvestorHref(user, target = '/dashboard') {
   const onboardingPath = resolveInvestorOnboardingPath(user)
   if (onboardingPath) return onboardingPath
   return target
+}
+
+/**
+ * Next step toward investing in a property (eligibility + invest flow).
+ * Returns { href, ctaKey } for PropertyDetails.investNextStep.* labels.
+ */
+export function resolveInvestNextStep(user, { investmentId, propertyOpen = true } = {}) {
+  const investPath =
+    investmentId != null && investmentId !== ''
+      ? `/properties/${investmentId}/invest`
+      : '/projects'
+
+  if (!user) {
+    const callbackUrl = encodeURIComponent(investPath)
+    return {
+      href: `/login?callbackUrl=${callbackUrl}`,
+      ctaKey: 'loginOrRegister',
+    }
+  }
+
+  if (user.type === 'ADMIN') {
+    return propertyOpen
+      ? { href: investPath, ctaKey: 'investNow' }
+      : { href: '/projects', ctaKey: 'browseProjects' }
+  }
+
+  if (user.accountStatus === ACCOUNT_STATUS.REJECTED) {
+    return { href: '/account/rejected', ctaKey: 'viewAccount' }
+  }
+
+  if (needsEmailVerification(user)) {
+    return { href: '/register/check-email', ctaKey: 'verifyEmail' }
+  }
+
+  if (!user.profileComplete) {
+    return { href: '/account/complete-profile', ctaKey: 'completeProfile' }
+  }
+
+  if (user.accountStatus === ACCOUNT_STATUS.PENDING_ADMIN) {
+    return { href: '/account/pending', ctaKey: 'viewAccountStatus' }
+  }
+
+  if (user.accountStatus !== ACCOUNT_STATUS.ACTIVE) {
+    return { href: '/account/pending', ctaKey: 'viewAccountStatus' }
+  }
+
+  if (user.accreditedStatus === ACCREDITED_STATUS.PENDING_REVIEW) {
+    return { href: '/dashboard/account', ctaKey: 'viewAccreditationStatus' }
+  }
+
+  if (user.accreditedStatus === ACCREDITED_STATUS.REJECTED) {
+    return { href: '/dashboard/account/accreditation', ctaKey: 'resubmitAccreditation' }
+  }
+
+  if (user.accreditedStatus !== ACCREDITED_STATUS.APPROVED) {
+    return { href: '/dashboard/account/accreditation', ctaKey: 'startAccreditation' }
+  }
+
+  if (propertyOpen) {
+    return { href: investPath, ctaKey: 'investNow' }
+  }
+
+  return { href: '/projects', ctaKey: 'browseProjects' }
 }
 
 export function resolveDashboardAccessRedirect(user) {

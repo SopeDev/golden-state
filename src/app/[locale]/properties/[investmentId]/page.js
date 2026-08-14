@@ -1,7 +1,10 @@
+import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import PropertyDetailsClient from './PropertyDetailsClient'
-import { withFundingFields, getPropertyFundedAmount } from '@/lib/propertyFunding'
+import { enrichPropertyWithFunding } from '@/lib/propertyFunding'
 import { propertyTypeInclude, toClientProperty } from '@/lib/propertyTypes'
+import { userHasActiveHolding } from '@/lib/fundingContributions'
 
 const prisma = new PrismaClient()
 
@@ -21,10 +24,19 @@ export default async function PropertyDetailsPage({ params }) {
       return <PropertyDetailsClient property={null} />
     }
 
-    const fundedAmount = await getPropertyFundedAmount(prisma, property.id)
+    const [enrichedProperty, session] = await Promise.all([
+      enrichPropertyWithFunding(prisma, toClientProperty(property)),
+      getServerSession(authOptions),
+    ])
+    const userId = session?.user?.id ? Number(session.user.id) : null
+    const canViewProgressDocuments = userId
+      ? await userHasActiveHolding(prisma, { userId, propertyId: property.id })
+      : false
+
     return (
       <PropertyDetailsClient
-        property={withFundingFields(toClientProperty(property), fundedAmount)}
+        property={enrichedProperty}
+        canViewProgressDocuments={canViewProgressDocuments}
       />
     )
   } catch (error) {

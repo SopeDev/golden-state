@@ -209,12 +209,12 @@ export async function notifyAdminsMeetingRequested({
 
   const subject =
     locale === 'es'
-      ? `Solicitud de reunión de inversión — ${name}`
-      : `Investment meeting request — ${name}`
+      ? `Solicitud de inversión — ${name}`
+      : `Investment request — ${name}`
 
   const html =
     locale === 'es'
-      ? `<p>Un inversionista acreditado solicitó una reunión de inversión por WhatsApp. Confirme en WhatsApp que la reunión quedó agendada antes de aprobar para invertir:</p>
+      ? `<p>Un inversionista acreditado envió una solicitud de inversión por WhatsApp. Confirme en WhatsApp que la reunión quedó agendada antes de aprobar para invertir:</p>
 <ul>
 <li><strong>Nombre:</strong> ${name}</li>
 <li><strong>Correo:</strong> ${email}</li>
@@ -222,8 +222,8 @@ export async function notifyAdminsMeetingRequested({
 <li><strong>Modalidad:</strong> ${escapeHtml(channelLabel)}</li>
 <li><strong>Monto estimado:</strong> ${escapeHtml(amountLabel)}</li>
 </ul>
-<p><a href="${adminUrl}">Abrir solicitudes de reunión</a></p>`
-      : `<p>An accredited investor requested an investment meeting via WhatsApp. Confirm in WhatsApp that a meeting is actually scheduled before approving for investment:</p>
+<p><a href="${adminUrl}">Abrir solicitudes de inversión</a></p>`
+      : `<p>An accredited investor submitted an investment request via WhatsApp. Confirm in WhatsApp that a meeting is actually scheduled before approving for investment:</p>
 <ul>
 <li><strong>Name:</strong> ${name}</li>
 <li><strong>Email:</strong> ${email}</li>
@@ -231,7 +231,7 @@ export async function notifyAdminsMeetingRequested({
 <li><strong>Modality:</strong> ${escapeHtml(channelLabel)}</li>
 <li><strong>Intended amount:</strong> ${escapeHtml(amountLabel)}</li>
 </ul>
-<p><a href="${adminUrl}">Open meeting requests</a></p>`
+<p><a href="${adminUrl}">Open investment requests</a></p>`
 
   const text = `${subject}\n${adminUrl}`
 
@@ -248,7 +248,7 @@ export async function notifyAdminsDepositSubmitted({
   locale = 'en',
 }) {
   const recipients = getAdminNotifyEmails()
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/investments`
+  const adminUrl = `${getBaseUrl()}/${locale}/admin/deposits`
   const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
   const name = escapeHtml(profile.fullName || investor.email)
   const email = escapeHtml(investor.email)

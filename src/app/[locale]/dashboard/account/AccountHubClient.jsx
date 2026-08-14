@@ -71,7 +71,7 @@ export default function AccountHubClient() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.location.hash === '#investment-requests') {
-      router.replace('/dashboard/investments')
+      router.replace('/dashboard/activity')
     }
   }, [router])
 

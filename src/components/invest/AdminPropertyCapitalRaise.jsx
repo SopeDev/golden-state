@@ -11,6 +11,7 @@ import { adminSelectClassName } from '@/lib/adminFormClasses'
 import { cn } from '@/lib/utils'
 import { formatUsd } from '@/lib/formatMoney'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
+import { AdminInvestorLink } from '@/components/admin/AdminEntityLinks'
 import { useMessaging } from '@/hooks/useMessaging'
 
 const emptyForm = {
@@ -126,7 +127,7 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href={`/admin/investments?tab=contributions&propertyId=${encodeURIComponent(propertyId)}`}
+            href={`/admin/contributions?propertyId=${encodeURIComponent(propertyId)}`}
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >
             {t('openInvestmentsHub')}
@@ -222,7 +223,7 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
               <th className="px-3 py-2 font-medium">{t('actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/60">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
@@ -231,7 +232,7 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-b border-border/50">
+                <tr key={row.id}>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {new Date(row.createdAt).toLocaleDateString(
                       locale === 'es' ? 'es-ES' : 'en-US'
@@ -241,7 +242,11 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
                     <span className="mr-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {row.source === 'MANUAL' ? t('sourceManual') : t('sourceInvestor')}
                     </span>
-                    {row.source === 'MANUAL' ? row.label : row.user?.email || '—'}
+                    {row.source === 'MANUAL' ? (
+                      row.label
+                    ) : (
+                      <AdminInvestorLink user={row.user} />
+                    )}
                   </td>
                   <td className="px-3 py-2 font-medium">{formatUsd(row.amount)}</td>
                   <td className="px-3 py-2">

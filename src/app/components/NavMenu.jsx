@@ -3,10 +3,8 @@ import { useState } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
-import { resolveProtectedInvestmentsHref, resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
+import { resolveProtectedActivityHref, resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
 import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
 import AccountNavMenu from './AccountNavMenu'
@@ -21,7 +19,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
   const user = clientSession?.user ?? serverSession?.user
   const dashboardHref = '/dashboard'
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
-  const investmentsHref = user ? resolveProtectedInvestmentsHref(user) : '/login'
+  const activityHref = user ? resolveProtectedActivityHref(user) : '/login'
   const myAccountHref = '/dashboard/account'
 
   const projectTypeLinks = propertyTypes.map((type) => ({
@@ -91,17 +89,6 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
         </nav>
 
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          {user?.type === 'ADMIN' && (
-            <Link
-              href="/admin/properties"
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'default' }),
-                'border-main-gold text-main-gold hover:bg-main-gold/10'
-              )}
-            >
-              Admin
-            </Link>
-          )}
           {user ? <AccountNavMenu user={user} /> : <AuthButton t={t} />}
         </div>
 
@@ -173,15 +160,15 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               <Link href={portfolioHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('portfolio')}</div>
               </Link>
-              <Link href={investmentsHref} onClick={closeMenu}>
-                <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('investments')}</div>
+              <Link href={activityHref} onClick={closeMenu}>
+                <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('activity')}</div>
               </Link>
               <Link href={myAccountHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('myAccount')}</div>
               </Link>
               {user.type === 'ADMIN' && (
-                <Link href="/admin/properties" onClick={closeMenu}>
-                  <div className="py-1 text-sm text-main-gold hover:text-secondary-gold">Admin</div>
+                <Link href="/admin" onClick={closeMenu}>
+                  <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('admin')}</div>
                 </Link>
               )}
               <button

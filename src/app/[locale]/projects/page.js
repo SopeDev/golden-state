@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from './ProjectsClient'
 import {
-  ACTIVE_PROPERTY_STATUSES,
+  activeProjectWhere,
   notDeletedProperty,
   propertyTypeInclude,
   toClientProperties,
@@ -26,7 +26,7 @@ async function getProperties() {
     const properties = await prisma.property.findMany({
       where: {
         ...notDeletedProperty,
-        status: { in: ACTIVE_PROPERTY_STATUSES },
+        ...activeProjectWhere,
       },
       include: propertyTypeInclude,
       orderBy: {

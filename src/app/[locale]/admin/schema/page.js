@@ -2,8 +2,8 @@ import { getTranslations } from 'next-intl/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
-import AdminNav from '../components/AdminNav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 
 export default async function SchemaPage() {
   const t = await getTranslations('Admin.schema')
@@ -34,7 +34,7 @@ export default async function SchemaPage() {
           { name: 'id', type: 'String', description: 'Primary key, CUID' },
           { name: 'investmentId', type: 'Int', description: 'User-facing incremental ID' },
           { name: 'name', type: 'String', description: 'Property name/title' },
-          { name: 'slug', type: 'String', description: 'URL-friendly identifier' },
+          { name: 'slug', type: 'String', description: 'URL-friendly identifier auto-generated from name' },
           { name: 'typeId', type: 'String', description: 'Foreign key to PropertyType' },
           { name: 'deletedAt', type: 'DateTime?', description: 'Soft-delete timestamp; null = live' },
           { name: 'city', type: 'String', description: 'Property city' },
@@ -45,12 +45,17 @@ export default async function SchemaPage() {
           { name: 'minInvestment', type: 'Int', description: 'Legacy field; always stored as platform minimum ($5,000)' },
           { name: 'estimatedROI', type: 'Float', description: 'Expected return percentage' },
           { name: 'estimatedMonths', type: 'String', description: 'Project timeline display value (e.g. 24-36)' },
-          { name: 'summary', type: 'String', description: 'Executive summary' },
-          { name: 'propertyFacts', type: 'Json', description: 'Technical property details' },
-          { name: 'investmentDetails', type: 'Json', description: 'Funding breakdown' },
+          { name: 'summary', type: 'String', description: 'Legacy executive summary (synced from English)' },
+          { name: 'summaryEn', type: 'String', description: 'Executive summary (English)' },
+          { name: 'summaryEs', type: 'String', description: 'Executive summary (Spanish)' },
+          { name: 'propertyFacts', type: 'Json', description: 'Technical property details (label/value rows)' },
+          { name: 'propertyFactsSummary', type: 'Json', description: 'Optional intro text shown above property facts ({ en, es })' },
+          { name: 'investmentDetails', type: 'Json', description: 'Funding breakdown (label/value rows)' },
+          { name: 'investmentDetailsSummary', type: 'Json', description: 'Optional intro text shown above investment details ({ en, es })' },
           { name: 'images', type: 'String[]', description: 'Array of image URLs' },
-          { name: 'status', type: 'PropertyStatus', description: 'Lifecycle: FUNDING → FUNDED → PLANNING → IN_PROGRESS → COMPLETED' },
-          { name: 'progressPercent', type: 'Int', description: '0–100 project completion percentage' },
+          { name: 'status', type: 'PropertyStatus', description: 'Capital raise: FUNDING or FUNDED' },
+          { name: 'executionStatus', type: 'PropertyExecutionStatus', description: 'Construction: NONE / PLANNING / IN_PROGRESS / COMPLETED (independent of raise)' },
+          { name: 'progressPercent', type: 'Int', description: '0–100 construction completion percentage' },
           { name: 'startDate', type: 'DateTime?', description: 'Optional project start date' },
           { name: 'targetCompletionDate', type: 'DateTime?', description: 'Optional target completion date' },
           { name: 'completedAt', type: 'DateTime?', description: 'Optional actual completion date' },
@@ -115,6 +120,10 @@ export default async function SchemaPage() {
         values: ['FUNDING', 'FUNDED', 'PLANNING', 'IN_PROGRESS', 'COMPLETED'],
       },
       {
+        name: 'PropertyExecutionStatus',
+        values: ['NONE', 'PLANNING', 'IN_PROGRESS', 'COMPLETED'],
+      },
+      {
         name: 'FundingContributionSource',
         values: ['INVESTOR', 'MANUAL'],
       },
@@ -142,12 +151,13 @@ export default async function SchemaPage() {
 
   return (
     <div className="flex-1 bg-background">
-      <AdminNav />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">{t('title')}</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl">{t('subtitle')}</p>
-        </div>
+      <AdminPageFrame>
+        <AdminPageHeader
+          className="mb-8"
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('subtitle')}
+        />
 
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-foreground mb-4">{t('modelsHeading')}</h2>
@@ -218,7 +228,7 @@ export default async function SchemaPage() {
             ))}
           </div>
         </div>
-      </div>
+      </AdminPageFrame>
     </div>
   )
 }

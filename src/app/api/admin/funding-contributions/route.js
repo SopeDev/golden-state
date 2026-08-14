@@ -28,17 +28,20 @@ export async function GET(request) {
     const propertyId = searchParams.get('propertyId')
     const userId = searchParams.get('userId')
     const source = searchParams.get('source')
-    const status = searchParams.get('status') || 'ACTIVE'
+    const statusParam = searchParams.get('status')
     const includeCancelled = searchParams.get('includeCancelled') === '1'
 
     const where = {}
     if (propertyId) where.propertyId = propertyId
-    if (userId) where.userId = Number.parseInt(userId, 10)
+    if (userId) {
+      const parsedUserId = Number.parseInt(userId, 10)
+      if (Number.isFinite(parsedUserId)) where.userId = parsedUserId
+    }
     if (source && ['INVESTOR', 'MANUAL'].includes(source)) where.source = source
     if (!includeCancelled) {
-      where.status = status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE'
-    } else if (status && ['ACTIVE', 'CANCELLED'].includes(status)) {
-      where.status = status
+      where.status = statusParam === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE'
+    } else if (statusParam && ['ACTIVE', 'CANCELLED'].includes(statusParam)) {
+      where.status = statusParam
     }
 
     const contributions = await prisma.fundingContribution.findMany({

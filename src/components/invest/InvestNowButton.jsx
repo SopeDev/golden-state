@@ -5,15 +5,21 @@ import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { resolveInvestNextStep } from '@/lib/auth/userStatus'
 import { isPropertyOpenForInvestment } from '@/lib/propertyFunding'
 
-function closedLabel(t, propertyStatus) {
+function closedLabel(t, propertyStatus, executionStatus) {
+  if (executionStatus === 'COMPLETED') return t('investCompleted')
   if (propertyStatus === 'FUNDED') return t('investFullyFunded')
-  if (propertyStatus === 'COMPLETED') return t('investCompleted')
   return t('investClosed')
 }
 
-export default function InvestNowButton({ propertyId, propertyStatus, className }) {
+export default function InvestNowButton({
+  propertyId,
+  propertyStatus,
+  executionStatus,
+  className,
+}) {
   const { data: session, status } = useSession()
   const t = useTranslations('PropertyDetails')
   const open = isPropertyOpenForInvestment(propertyStatus)
@@ -28,62 +34,36 @@ export default function InvestNowButton({ propertyId, propertyStatus, className 
         )}
         aria-disabled
       >
-        {closedLabel(t, propertyStatus)}
+        {closedLabel(t, propertyStatus, executionStatus)}
       </span>
     )
   }
 
-  const label = t('investNow')
-
   if (status === 'loading') {
     return (
-      <span className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full opacity-60', className)}>
+      <span
+        className={cn(
+          buttonVariants({ variant: 'gold', size: 'cta' }),
+          'w-full opacity-60',
+          className
+        )}
+      >
         …
       </span>
     )
   }
 
-  if (!session?.user) {
-    return (
-      <Link
-        href={`/login?callbackUrl=/properties/${propertyId}/invest`}
-        className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
-      >
-        {label}
-      </Link>
-    )
-  }
-
-  const user = session.user
-
-  if (user.type !== 'ADMIN' && user.accountStatus !== 'ACTIVE') {
-    return (
-      <Link
-        href="/dashboard"
-        className={cn(buttonVariants({ variant: 'outline', size: 'cta' }), 'w-full', className)}
-      >
-        {label}
-      </Link>
-    )
-  }
-
-  if (user.type !== 'ADMIN' && user.accreditedStatus !== 'APPROVED') {
-    return (
-      <Link
-        href={`/properties/${propertyId}/invest`}
-        className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
-      >
-        {label}
-      </Link>
-    )
-  }
+  const step = resolveInvestNextStep(status === 'authenticated' ? session?.user : null, {
+    investmentId: propertyId,
+    propertyOpen: true,
+  })
 
   return (
     <Link
-      href={`/properties/${propertyId}/invest`}
+      href={step.href}
       className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
     >
-      {label}
+      {t('investNow')}
     </Link>
   )
 }

@@ -1,7 +1,6 @@
-import { requirePortfolioAccess } from '@/lib/auth/requireSession'
-import InvestmentsClient from './InvestmentsClient'
+import { permanentRedirect } from '@/i18n/navigation'
 
-export default async function InvestmentsPage() {
-  await requirePortfolioAccess()
-  return <InvestmentsClient />
+/** Legacy path — activity & wallet now live at /dashboard/activity. */
+export default async function InvestmentsRedirectPage() {
+  await permanentRedirect('/dashboard/activity')
 }

@@ -3,7 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import HomePage from '@/components/Home/HomePage'
 import { getHomeContent } from '@/lib/pageContent'
 import {
-  ACTIVE_PROPERTY_STATUSES,
+  activeProjectWhere,
+  completedProjectWhere,
   listActivePropertyTypes,
   notDeletedProperty,
   propertyTypeInclude,
@@ -31,13 +32,13 @@ async function loadHomeData() {
   try {
     const [liveRaw, completedRaw, typesRaw] = await Promise.all([
       prisma.property.findMany({
-        where: { ...notDeletedProperty, status: { in: ACTIVE_PROPERTY_STATUSES } },
+        where: { ...notDeletedProperty, ...activeProjectWhere },
         include: propertyTypeInclude,
         orderBy: { createdAt: 'desc' },
         take: LIVE_LIMIT,
       }),
       prisma.property.findMany({
-        where: { ...notDeletedProperty, status: 'COMPLETED' },
+        where: { ...notDeletedProperty, ...completedProjectWhere },
         include: propertyTypeInclude,
         orderBy: { updatedAt: 'desc' },
         take: COMPLETED_LIMIT,

@@ -33,6 +33,39 @@ export const INVESTMENT_RANGE_LABELS = {
 
 export const EXPERIENCE_OPTIONS = ['none', 'some', 'experienced', 'professional']
 
+/** Legacy seed / free-text aliases → current option ids. */
+const EXPERIENCE_ALIASES = {
+  intermediate: 'some',
+  beginner: 'none',
+  advanced: 'experienced',
+}
+
+export function normalizeExperience(raw) {
+  const value = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (!value) return ''
+  if (EXPERIENCE_OPTIONS.includes(value)) return value
+  return EXPERIENCE_ALIASES[value] || ''
+}
+
+/**
+ * @param raw saved experience value
+ * @param tRegister next-intl translator for the Register namespace
+ */
+export function formatExperienceForDisplay(raw, tRegister) {
+  const normalized = normalizeExperience(raw)
+  if (normalized) {
+    const key = `experience_${normalized}`
+    if (typeof tRegister?.has === 'function' && tRegister.has(key)) return tRegister(key)
+    try {
+      return tRegister(key)
+    } catch {
+      return normalized
+    }
+  }
+  if (raw == null || raw === '') return null
+  return String(raw).replace(/_/g, ' ')
+}
+
 /** Investor location options for the profile questionnaire. */
 export const LOCATION_OPTIONS = ['US', 'MX']
 

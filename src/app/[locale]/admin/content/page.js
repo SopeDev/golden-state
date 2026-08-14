@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
-import AdminNav from '../components/AdminNav'
 import ContentAdminClient from './ContentAdminClient'
 import {
   getAboutFallbackByLocale,
@@ -42,7 +41,6 @@ export default async function ContentAdminPage() {
 
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <ContentAdminClient records={records} fallbackByPage={fallbackByPage} />
       </div>
     )
@@ -50,7 +48,6 @@ export default async function ContentAdminPage() {
     console.error('Error fetching page content:', error)
     return (
       <div className="flex-1 bg-background">
-        <AdminNav />
         <div className="flex min-h-[60vh] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader>

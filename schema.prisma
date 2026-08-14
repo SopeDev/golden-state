@@ -45,6 +45,12 @@ model User {
   createdDepositRequests DepositRequest[] @relation("DepositCreatedBy")
   investorDocuments InvestorDocument[]
   investmentIntents InvestmentIntent[]
+  returnDistributions ReturnDistribution[] @relation("InvestorReturnDistributions")
+  createdReturnDistributions ReturnDistribution[] @relation("ReturnDistributionCreatedBy")
+  cashOutRequests CashOutRequest[] @relation("InvestorCashOuts")
+  reviewedCashOutRequests CashOutRequest[] @relation("CashOutReviewedBy")
+  reinvestRequests ReinvestRequest[] @relation("InvestorReinvests")
+  reviewedReinvestRequests ReinvestRequest[] @relation("ReinvestReviewedBy")
 }
 
 enum UserType {
@@ -156,14 +162,21 @@ model Property {
   minInvestment    Int
   estimatedROI     Float
   estimatedMonths  String
+  /// Legacy column; public/admin surfaces compute investor ROI from ledger returns.
+  actualRoi        Float?
 
-  summary           String
-  propertyFacts     Json
-  investmentDetails Json
-  images            String[]
+  summary                    String   @default("")
+  summaryEn                  String   @default("")
+  summaryEs                  String   @default("")
+  propertyFacts              Json
+  propertyFactsSummary       Json     @default("{}")
+  investmentDetails          Json
+  investmentDetailsSummary   Json     @default("{}")
+  images                     String[]
 
-  status               PropertyStatus @default(FUNDING)
-  progressPercent      Int            @default(0)
+  status               PropertyStatus          @default(FUNDING)
+  executionStatus      PropertyExecutionStatus @default(NONE)
+  progressPercent      Int                     @default(0)
   startDate            DateTime?
   targetCompletionDate DateTime?
   completedAt          DateTime?
@@ -177,6 +190,8 @@ model Property {
   depositRequests        DepositRequest[]
   investmentIntents      InvestmentIntent[]
   documents              PropertyDocument[]
+  returnDistributions    ReturnDistribution[]
+  reinvestRequests       ReinvestRequest[]     @relation("ReinvestDestination")
 
   @@index([deletedAt])
   @@index([typeId])
@@ -185,6 +200,13 @@ model Property {
 enum PropertyStatus {
   FUNDING
   FUNDED
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PropertyExecutionStatus {
+  NONE
   PLANNING
   IN_PROGRESS
   COMPLETED
@@ -232,28 +254,107 @@ enum DepositRequestStatus {
 
 /// Capital raise ledger. Investor holdings are ACTIVE + INVESTOR rows with userId.
 model FundingContribution {
-  id               String                     @id @default(cuid())
-  propertyId       String
-  userId           Int?
-  amount           Float
-  source           FundingContributionSource
-  status           FundingContributionStatus  @default(ACTIVE)
-  label            String?
-  note             String?
-  createdByAdminId Int?
-  depositRequestId String?                    @unique
-  createdAt        DateTime                   @default(now())
-  updatedAt        DateTime                   @updatedAt
-  cancelledAt      DateTime?
+  id                   String                     @id @default(cuid())
+  propertyId           String
+  userId               Int?
+  amount               Float
+  source               FundingContributionSource
+  status               FundingContributionStatus  @default(ACTIVE)
+  label                String?
+  note                 String?
+  createdByAdminId     Int?
+  depositRequestId     String?                    @unique
+  reinvestmentRequestId String?                   @unique
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  cancelledAt          DateTime?
 
-  property       Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  user           User?          @relation("InvestorContributions", fields: [userId], references: [id], onDelete: Restrict)
-  createdByAdmin User?          @relation("ContributionCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
-  depositRequest DepositRequest? @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+  property            Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  user                User?            @relation("InvestorContributions", fields: [userId], references: [id], onDelete: Restrict)
+  createdByAdmin      User?            @relation("ContributionCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  depositRequest      DepositRequest?  @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+  reinvestmentRequest ReinvestRequest? @relation(fields: [reinvestmentRequestId], references: [id], onDelete: SetNull)
 
   @@index([propertyId, status])
   @@index([userId, status])
   @@map("funding_contributions")
+}
+
+enum ReturnDistributionStatus {
+  ACTIVE
+  VOIDED
+}
+
+enum WalletRequestStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+/// Property-attributed return credit into the investor wallet.
+model ReturnDistribution {
+  id               String                    @id @default(cuid())
+  userId           Int
+  propertyId       String
+  amount           Float
+  concept          String?
+  note             String?
+  distributedAt    DateTime                  @default(now())
+  status           ReturnDistributionStatus  @default(ACTIVE)
+  createdByAdminId Int?
+  voidedAt         DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  user           User     @relation("InvestorReturnDistributions", fields: [userId], references: [id], onDelete: Restrict)
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  createdByAdmin User?    @relation("ReturnDistributionCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([propertyId, createdAt])
+  @@map("return_distributions")
+}
+
+model CashOutRequest {
+  id           String              @id @default(cuid())
+  userId       Int
+  amount       Float
+  status       WalletRequestStatus @default(PENDING)
+  adminNote    String?
+  reviewedAt   DateTime?
+  reviewedById Int?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user       User  @relation("InvestorCashOuts", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy User? @relation("CashOutReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId, status])
+  @@map("cash_out_requests")
+}
+
+model ReinvestRequest {
+  id                    String              @id @default(cuid())
+  userId                Int
+  amount                Float
+  destinationPropertyId String
+  status                WalletRequestStatus @default(PENDING)
+  adminNote             String?
+  reviewedAt            DateTime?
+  reviewedById          Int?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                User                 @relation("InvestorReinvests", fields: [userId], references: [id], onDelete: Restrict)
+  destinationProperty Property             @relation("ReinvestDestination", fields: [destinationPropertyId], references: [id], onDelete: Restrict)
+  reviewedBy          User?                @relation("ReinvestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  contribution        FundingContribution?
+
+  @@index([status, createdAt])
+  @@index([userId, status])
+  @@index([destinationPropertyId, status])
+  @@map("reinvest_requests")
 }
 
 model DepositRequest {
