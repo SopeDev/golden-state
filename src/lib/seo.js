@@ -9,8 +9,6 @@ export const DEFAULT_DESCRIPTION =
 export const PUBLIC_SITE_URL = 'https://goldenstatecapitalmgt.com'
 
 const OG_LOCALE = {
-
-const OG_LOCALE = {
   en: 'en_US',
   es: 'es_MX',
 }
