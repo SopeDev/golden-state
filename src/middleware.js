@@ -48,6 +48,8 @@ export default async function middleware(request) {
     pathWithoutLocale.startsWith('/dashboard/portfolio/') ||
     pathWithoutLocale === '/dashboard/activity' ||
     pathWithoutLocale.startsWith('/dashboard/activity/') ||
+    pathWithoutLocale === '/dashboard/updates' ||
+    pathWithoutLocale.startsWith('/dashboard/updates/') ||
     pathWithoutLocale === '/dashboard/investments' ||
     pathWithoutLocale.startsWith('/dashboard/investments/')
 
@@ -66,5 +68,5 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: '/((?!api|trpc|_next|_vercel|.*\\..*).*)',
+  matcher: '/((?!api|trpc|_next|_vercel|opengraph-image|twitter-image|.*\\..*).*)',
 }

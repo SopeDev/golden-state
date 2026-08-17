@@ -13,38 +13,51 @@ import {
   toClientProperties,
 } from '@/lib/projectTypes'
 import { attachFundingToProperties } from '@/lib/propertyFunding'
+import { buildPageMetadata } from '@/lib/seo'
 
 const prisma = new PrismaClient()
 
 export async function generateMetadata({ params }) {
   const { slug, locale } = await params
+  const path = `/projects/${slug}`
 
   if (isCompletedProjectsSlug(slug)) {
     const t = await getTranslations({ locale, namespace: 'Projects' })
-    return {
+    return buildPageMetadata({
+      locale,
+      path,
       title: t('headers.completed.metaTitle'),
       description: t('headers.completed.metaDescription'),
-    }
+    })
   }
 
   const propertyType = await getPropertyTypeBySlug(prisma, slug)
   if (!propertyType) {
-    return { title: 'Projects' }
+    return buildPageMetadata({
+      locale,
+      path,
+      title: 'Projects',
+      noIndex: true,
+    })
   }
 
   const headerKey = slugToHeaderKey[slug]
   if (headerKey) {
     const t = await getTranslations({ locale, namespace: 'Projects' })
-    return {
+    return buildPageMetadata({
+      locale,
+      path,
       title: t(`headers.${headerKey}.metaTitle`),
       description: t(`headers.${headerKey}.metaDescription`),
-    }
+    })
   }
 
-  return {
-    title: `${propertyType.labelEn} | Projects`,
+  return buildPageMetadata({
+    locale,
+    path,
+    title: `${locale === 'es' ? propertyType.labelEs : propertyType.labelEn} | Projects`,
     description: locale === 'es' ? propertyType.descriptionEs : propertyType.descriptionEn,
-  }
+  })
 }
 
 export default async function ProjectsByTypePage({ params }) {

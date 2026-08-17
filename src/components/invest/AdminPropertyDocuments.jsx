@@ -10,6 +10,7 @@ import {
   translatePropertyDocumentKind,
 } from '@/lib/propertyDocuments'
 import { useMessaging } from '@/hooks/useMessaging'
+import NotifyDocumentsDialog from '@/components/invest/NotifyDocumentsDialog'
 
 const fileInputClassName =
   'block w-full min-w-0 cursor-pointer text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50'
@@ -21,12 +22,16 @@ export default function AdminPropertyDocuments({ propertyId }) {
   const tc = useTranslations('Admin.common')
   const { confirm } = useMessaging()
   const [documents, setDocuments] = useState([])
+  const [unannouncedCount, setUnannouncedCount] = useState(0)
   const [kind, setKind] = useState('CONSTRUCTION_PHOTOS')
   const [fileInputKey, setFileInputKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [updatingId, setUpdatingId] = useState(null)
   const [error, setError] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
+  const [notifyPrompt, setNotifyPrompt] = useState(null)
+  const [notifying, setNotifying] = useState(false)
 
   const loadDocuments = useCallback(async () => {
     if (!propertyId) return
@@ -40,6 +45,7 @@ export default function AdminPropertyDocuments({ propertyId }) {
         return
       }
       setDocuments(Array.isArray(data.documents) ? data.documents : [])
+      setUnannouncedCount(Number(data.unannouncedCount) || 0)
     } catch {
       setError(t('loadError'))
     } finally {
@@ -73,16 +79,22 @@ export default function AdminPropertyDocuments({ propertyId }) {
 
     setUploading(true)
     setError('')
+    setStatusMessage('')
+    let uploaded = 0
     try {
       for (const file of files) {
         await uploadOneFile(file, kind)
+        uploaded += 1
       }
-      await loadDocuments()
     } catch (uploadError) {
       setError(uploadError.message || t('uploadError'))
     } finally {
       setUploading(false)
       setFileInputKey((key) => key + 1)
+      if (uploaded > 0) {
+        await loadDocuments()
+        setNotifyPrompt({ uploadedCount: uploaded })
+      }
     }
   }
 
@@ -137,8 +149,41 @@ export default function AdminPropertyDocuments({ propertyId }) {
         return
       }
       setDocuments((prev) => prev.filter((doc) => doc.id !== docId))
+      await loadDocuments()
     } catch {
       setError(t('deleteError'))
+    }
+  }
+
+  const handleSkipNotify = () => {
+    if (notifying) return
+    setNotifyPrompt(null)
+  }
+
+  const handleNotifyHolders = async () => {
+    if (!propertyId || notifying) return
+    setNotifying(true)
+    setError('')
+    setStatusMessage('')
+    try {
+      const res = await fetch(`/api/admin/properties/${propertyId}/notify-documents`, {
+        method: 'POST',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.message || t('notifyError'))
+        return
+      }
+      setNotifyPrompt(null)
+      await loadDocuments()
+      const holders = Number(data.holderCount) || 0
+      setStatusMessage(
+        holders > 0 ? t('notifySuccess', { count: holders }) : t('notifyNone')
+      )
+    } catch {
+      setError(t('notifyError'))
+    } finally {
+      setNotifying(false)
     }
   }
 
@@ -191,6 +236,28 @@ export default function AdminPropertyDocuments({ propertyId }) {
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
+      ) : null}
+
+      {statusMessage ? (
+        <p className="rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-sm text-foreground">
+          {statusMessage}
+        </p>
+      ) : null}
+
+      {!notifyPrompt && unannouncedCount > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-main-gold/40 bg-main-gold/10 px-3 py-2">
+          <p className="text-sm text-foreground">
+            {t('unannouncedHint', { count: unannouncedCount })}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleNotifyHolders}
+            disabled={notifying || uploading}
+          >
+            {notifying ? t('notifying') : t('notifyNow')}
+          </Button>
+        </div>
       ) : null}
 
       {loading ? (
@@ -257,6 +324,14 @@ export default function AdminPropertyDocuments({ propertyId }) {
       ) : (
         <p className="text-sm text-muted-foreground">{t('emptyAdmin')}</p>
       )}
+
+      <NotifyDocumentsDialog
+        open={Boolean(notifyPrompt)}
+        uploadedCount={notifyPrompt?.uploadedCount || 0}
+        notifying={notifying}
+        onSkip={handleSkipNotify}
+        onNotify={handleNotifyHolders}
+      />
     </div>
   )
 }

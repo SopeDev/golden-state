@@ -129,6 +129,61 @@ export const getContactContent = async (locale) => {
   }
 }
 
+const WORK_WITH_US_FALLBACK = {
+  en: enMessages.WorkWithUs || {},
+  es: esMessages.WorkWithUs || {},
+}
+
+const CAREERS_STRUCTURED_KEY_REGEX =
+  /^(?:roleOrder|role[A-Z][A-Za-z0-9]*(?:Title|Location|Type|Summary|Body))$/
+
+export const getWorkWithUsFallbackByLocale = () => WORK_WITH_US_FALLBACK
+
+export const getWorkWithUsContent = async (locale) => {
+  const normalizedLocale = normalizeLocale(locale)
+  const fallback = WORK_WITH_US_FALLBACK[normalizedLocale] || WORK_WITH_US_FALLBACK.en
+
+  try {
+    const record = await prisma.pageContent.findUnique({
+      where: {
+        pageKey_locale: {
+          pageKey: 'WORK_WITH_US',
+          locale: normalizedLocale,
+        },
+      },
+    })
+
+    if (!record?.content || typeof record.content !== 'object' || Array.isArray(record.content)) {
+      return fallback
+    }
+
+    const savedHasOrder = typeof record.content.roleOrder === 'string'
+
+    if (savedHasOrder) {
+      const fallbackStatic = {}
+      Object.entries(fallback).forEach(([key, value]) => {
+        if (!CAREERS_STRUCTURED_KEY_REGEX.test(key)) {
+          fallbackStatic[key] = value
+        }
+      })
+      return {
+        ...fallbackStatic,
+        ...record.content,
+      }
+    }
+
+    return {
+      ...fallback,
+      ...record.content,
+    }
+  } catch (error) {
+    console.error('Error loading Work with us content:', error)
+    return fallback
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
 export const getFaqContent = async (locale) => {
   const normalizedLocale = normalizeLocale(locale)
   const fallback = FAQ_FALLBACK[normalizedLocale] || FAQ_FALLBACK.en

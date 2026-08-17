@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { userSecretOmit } from '@/lib/auth/prismaUserSelect'
 
 const prisma = new PrismaClient()
 
@@ -18,6 +19,7 @@ export async function GET() {
 
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
+      omit: userSecretOmit,
       include: {
         _count: {
           select: {
@@ -100,6 +102,7 @@ export async function POST(request) {
         type,
         provider: 'credentials' // Always credentials for admin-created users
       },
+      omit: userSecretOmit,
       include: {
         _count: {
           select: {
@@ -109,10 +112,7 @@ export async function POST(request) {
       }
     })
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user
-
-    return NextResponse.json(userWithoutPassword, { status: 201 })
+    return NextResponse.json(user, { status: 201 })
   } catch (error) {
     console.error('Error creating user:', error)
     return NextResponse.json(

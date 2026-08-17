@@ -34,6 +34,15 @@ export const cashOutRequestInclude = {
   reviewedBy: { select: { id: true, email: true } },
 }
 
+export function toClientCashOutRequest(row) {
+  if (!row) return row
+  const { receiptStorageKey, ...rest } = row
+  return {
+    ...rest,
+    hasReceipt: Boolean(receiptStorageKey),
+  }
+}
+
 export const reinvestRequestInclude = {
   user: { select: { id: true, email: true, type: true } },
   destinationProperty: { select: propertyWalletSelect },
@@ -223,6 +232,7 @@ export async function buildWalletSummary(prisma, userId, { activityLimit = 50 } 
       status: row.status,
       adminNote: row.adminNote,
       sourceId: row.id,
+      hasReceipt: Boolean(row.receiptStorageKey),
     })),
     ...reinvests.map((row) => ({
       id: `reinvest-${row.id}`,
@@ -242,7 +252,7 @@ export async function buildWalletSummary(prisma, userId, { activityLimit = 50 } 
     ...balance,
     perProperty,
     distributions,
-    cashOuts,
+    cashOuts: cashOuts.map(toClientCashOutRequest),
     reinvests,
     activity,
   }

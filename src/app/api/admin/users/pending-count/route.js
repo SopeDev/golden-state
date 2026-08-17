@@ -22,7 +22,10 @@ export async function GET() {
       prisma.user.count({
         where: {
           type: 'INVESTOR',
-          accountStatus: 'PENDING_ADMIN',
+          OR: [
+            { accountStatus: 'PENDING_ADMIN' },
+            { accreditedStatus: 'PENDING_REVIEW' },
+          ],
         },
       }),
       prisma.investmentIntent.count({

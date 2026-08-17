@@ -8,6 +8,11 @@ import { matchesAdminQuery } from '@/lib/adminSearch'
 import { meetingChannelLabelKey } from '@/lib/investMeetingLinks'
 import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
 import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
+import {
+  adminRecordRowClass,
+  pageForRecord,
+  useScrollToAdminRecord,
+} from '@/hooks/useAdminRecordHighlight'
 
 export default function AdminInvestmentIntentsPanel({
   propertyFilter,
@@ -15,6 +20,7 @@ export default function AdminInvestmentIntentsPanel({
   statusFilter = 'MEETING_REQUESTED',
   searchQuery = '',
   locale,
+  highlightId = '',
 }) {
   const t = useTranslations('Admin.investments')
   const [intents, setIntents] = useState([])
@@ -59,6 +65,12 @@ export default function AdminInvestmentIntentsPanel({
   )
 
   const pagination = useMemo(() => paginateItems(filteredIntents, page), [filteredIntents, page])
+  useScrollToAdminRecord(highlightId)
+
+  useEffect(() => {
+    if (!highlightId) return
+    setPage(pageForRecord(filteredIntents, highlightId))
+  }, [highlightId, filteredIntents])
 
   const setIntentStatus = async (id, nextStatus) => {
     setIsLoading(true)
@@ -108,7 +120,11 @@ export default function AdminInvestmentIntentsPanel({
               </tr>
             ) : (
               pagination.items.map((row) => (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  id={`admin-record-${row.id}`}
+                  className={adminRecordRowClass(highlightId, row.id)}
+                >
                   <td className="px-2 py-3 whitespace-nowrap">
                     {new Date(row.meetingRequestedAt || row.updatedAt).toLocaleDateString(
                       locale === 'es' ? 'es-ES' : 'en-US'

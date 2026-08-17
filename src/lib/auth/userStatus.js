@@ -67,6 +67,12 @@ export const canAccessPortfolio = (user) =>
   (user?.accountStatus === ACCOUNT_STATUS.ACTIVE &&
     user?.accreditedStatus === ACCREDITED_STATUS.APPROVED)
 
+/** Investor-only: project news bell and Updates page audience. */
+export const canAccessInvestorUpdates = (user) =>
+  user?.type === 'INVESTOR' &&
+  user?.accountStatus === ACCOUNT_STATUS.ACTIVE &&
+  user?.accreditedStatus === ACCREDITED_STATUS.APPROVED
+
 export const canAccessDashboard = (user) =>
   Boolean(user && (user.type === 'ADMIN' || user.type === 'INVESTOR'))
 
@@ -97,6 +103,22 @@ export function resolveInvestorOnboardingPath(user) {
   return null
 }
 
+/** Default destination after sign-in, or when an already-signed-in user hits /login. */
+export function resolvePostLoginPath(user) {
+  if (!user) return '/dashboard'
+  if (user.type === 'ADMIN') return '/admin'
+  const onboardingPath = resolveInvestorOnboardingPath(user)
+  if (onboardingPath) return onboardingPath
+  return '/dashboard'
+}
+
+export function resolveLoginDestination(user, callbackUrl = '') {
+  if (callbackUrl && user?.accountStatus === ACCOUNT_STATUS.ACTIVE) {
+    return callbackUrl
+  }
+  return resolvePostLoginPath(user)
+}
+
 /** Where an investor should go instead of portfolio. */
 export function resolvePortfolioAccessRedirect(user) {
   if (!user) return '/login'
@@ -119,6 +141,10 @@ export function resolveProtectedPortfolioHref(user) {
 
 export function resolveProtectedActivityHref(user) {
   return resolveAccreditedAreaHref(user, '/dashboard/activity')
+}
+
+export function resolveProtectedUpdatesHref(user) {
+  return resolveAccreditedAreaHref(user, '/dashboard/updates')
 }
 
 /** @deprecated Prefer resolveProtectedActivityHref */
@@ -148,6 +174,9 @@ export function resolveProtectedInvestorHref(user, target = '/dashboard') {
     target.startsWith('/dashboard/investments/')
   ) {
     return resolveProtectedActivityHref(user)
+  }
+  if (target === '/dashboard/updates' || target.startsWith('/dashboard/updates/')) {
+    return resolveProtectedUpdatesHref(user)
   }
   if (target === '/dashboard' || target === '/dashboard/account' || target.startsWith('/dashboard/account')) {
     return target

@@ -5,7 +5,6 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 const isLocalStorageDriver = () => {
   if (process.env.STORAGE_DRIVER === 'local') return true
   if (process.env.STORAGE_DRIVER === 'r2') return false
-  // Dev convenience: skip R2 unless explicitly requested
   return process.env.NODE_ENV !== 'production'
 }
 
@@ -34,7 +33,29 @@ const getS3Client = () => {
   return s3Client
 }
 
-const localRoot = () => path.join(process.cwd(), 'public', 'uploads')
+const localPrivateRoot = () => path.join(process.cwd(), 'storage', 'private')
+const localPublicRoot = () => path.join(process.cwd(), 'public', 'uploads')
+const legacyPublicRoot = () => path.join(process.cwd(), 'public', 'uploads')
+
+const normalizeObjectKey = (key) => {
+  const raw = String(key || '')
+    .replace(/^\/uploads\//, '')
+    .replace(/^\/+/, '')
+  if (!raw || raw.includes('..') || path.isAbsolute(raw)) {
+    throw new Error('Invalid storage key')
+  }
+  return raw
+}
+
+const resolveInsideRoot = (rootDir, key) => {
+  const root = path.resolve(rootDir)
+  const resolved = path.resolve(root, key)
+  const prefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`
+  if (resolved !== root && !resolved.startsWith(prefix)) {
+    throw new Error('Invalid storage key')
+  }
+  return resolved
+}
 
 const streamToBuffer = async (body) => {
   if (!body) return Buffer.alloc(0)
@@ -50,36 +71,51 @@ const streamToBuffer = async (body) => {
   return Buffer.concat(chunks)
 }
 
+const readLocalPrivateFile = async (key) => {
+  const privatePath = resolveInsideRoot(localPrivateRoot(), key)
+  try {
+    return await readFile(privatePath)
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+  }
+
+  const legacyPath = resolveInsideRoot(legacyPublicRoot(), key)
+  return readFile(legacyPath)
+}
+
 /**
  * Upload a private investor document. Returns the object key stored in DB.
  */
 export const putPrivateObject = async ({ key, body, contentType }) => {
+  const objectKey = normalizeObjectKey(key)
+
   if (isLocalStorageDriver()) {
-    const filePath = path.join(localRoot(), key)
+    const filePath = resolveInsideRoot(localPrivateRoot(), objectKey)
     await mkdir(path.dirname(filePath), { recursive: true })
     await writeFile(filePath, body)
-    return key
+    return objectKey
   }
 
   const client = getS3Client()
   await client.send(
     new PutObjectCommand({
       Bucket: requireEnv('R2_BUCKET_PRIVATE'),
-      Key: key,
+      Key: objectKey,
       Body: body,
       ContentType: contentType,
     })
   )
-  return key
+  return objectKey
 }
 
 /**
  * Read a private object by key. Returns { body: Buffer, contentType }.
  */
 export const getPrivateObject = async (key) => {
+  const objectKey = normalizeObjectKey(key)
+
   if (isLocalStorageDriver()) {
-    const filePath = path.join(localRoot(), key)
-    const body = await readFile(filePath)
+    const body = await readLocalPrivateFile(objectKey)
     return { body, contentType: null }
   }
 
@@ -87,7 +123,7 @@ export const getPrivateObject = async (key) => {
   const result = await client.send(
     new GetObjectCommand({
       Bucket: requireEnv('R2_BUCKET_PRIVATE'),
-      Key: key,
+      Key: objectKey,
     })
   )
 
@@ -101,11 +137,16 @@ export const getPrivateObject = async (key) => {
  * Upload a public marketing asset. Returns a URL suitable for <img src>.
  */
 export const putPublicObject = async ({ key, body, contentType }) => {
+  const objectKey = normalizeObjectKey(key)
+  if (objectKey.startsWith('investors/')) {
+    throw new Error('Investor files cannot use public storage')
+  }
+
   if (isLocalStorageDriver()) {
-    const filePath = path.join(localRoot(), key)
+    const filePath = resolveInsideRoot(localPublicRoot(), objectKey)
     await mkdir(path.dirname(filePath), { recursive: true })
     await writeFile(filePath, body)
-    return `/uploads/${key}`
+    return `/uploads/${objectKey}`
   }
 
   const client = getS3Client()
@@ -113,14 +154,14 @@ export const putPublicObject = async ({ key, body, contentType }) => {
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
-      Key: key,
+      Key: objectKey,
       Body: body,
       ContentType: contentType,
     })
   )
 
   const baseUrl = requireEnv('R2_PUBLIC_BASE_URL').replace(/\/$/, '')
-  return `${baseUrl}/${key}`
+  return `${baseUrl}/${objectKey}`
 }
 
 /** Client-facing URL for authenticated document preview/download. */

@@ -8,10 +8,8 @@ import {
 } from '@/lib/depositRequests'
 import { contributionInclude } from '@/lib/fundingContributions'
 import { markIntentCompleted } from '@/lib/investmentIntents'
-import {
-  assertContributionFitsGoal,
-  syncPropertyFundingStatus,
-} from '@/lib/propertyFunding'
+import { assertContributionFitsGoal } from '@/lib/propertyFunding'
+import { syncPropertyFundingStatusWithHolderNotify } from '@/lib/investorUpdates'
 
 const prisma = new PrismaClient()
 
@@ -135,7 +133,7 @@ export async function POST(request) {
         return { deposit, contribution }
       })
 
-      await syncPropertyFundingStatus(prisma, propertyId)
+      await syncPropertyFundingStatusWithHolderNotify(prisma, propertyId)
       await markIntentCompleted(prisma, { userId, propertyId })
 
       const fullDeposit = await prisma.depositRequest.findUnique({

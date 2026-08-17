@@ -9,15 +9,16 @@ import { formatMoneyAmount } from '@/lib/formatMoney'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import PortfolioGrowthSection from '@/components/invest/PortfolioGrowthSection'
 import PortfolioHoldingCard from '@/components/invest/PortfolioHoldingCard'
-import { getLedgerRoiPercent } from '@/lib/portfolioGrowth'
+import { getLedgerRoiPercent, isLedgerRoiReady } from '@/lib/portfolioGrowth'
 
-function SummaryTile({ label, value, icon: Icon, valueClassName }) {
+function SummaryTile({ label, value, hint, icon: Icon, valueClassName }) {
   return (
     <Card className="border-border/80 py-0 shadow-sm">
       <CardContent className="flex items-center justify-between px-5 py-5">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className={cn('text-3xl font-semibold text-primary', valueClassName)}>{value}</p>
+          {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
         </div>
         {Icon ? <Icon className="h-8 w-8 shrink-0 text-main-gold" /> : null}
       </CardContent>
@@ -34,7 +35,8 @@ export default function PortfolioClient({ investments = [], growthEvents }) {
     0
   )
   const totalProperties = investments.length
-  const roiPct = getLedgerRoiPercent(totalInvested, totalReturns) || 0
+  const roiReady = isLedgerRoiReady(totalReturns)
+  const roiPct = roiReady ? getLedgerRoiPercent(totalInvested, totalReturns) : null
 
   return (
     <div className="flex-1 bg-background">
@@ -76,9 +78,10 @@ export default function PortfolioClient({ investments = [], growthEvents }) {
               />
               <SummaryTile
                 label={t('returnOnInvestment')}
-                value={`${roiPct.toFixed(1)}%`}
+                value={roiPct == null ? '—' : `${roiPct.toFixed(1)}%`}
+                hint={roiPct == null ? t('roiPendingHint') : null}
                 icon={Percent}
-                valueClassName="text-main-gold"
+                valueClassName={roiPct == null ? 'text-muted-foreground' : 'text-main-gold'}
               />
             </div>
 

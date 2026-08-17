@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { cashOutRequestInclude } from '@/lib/investorWallet'
+import { cashOutRequestInclude, toClientCashOutRequest } from '@/lib/investorWallet'
 
 const prisma = new PrismaClient()
 
@@ -36,7 +36,7 @@ export async function GET(request) {
       take: 300,
     })
 
-    return NextResponse.json(rows)
+    return NextResponse.json(rows.map(toClientCashOutRequest))
   } catch (error) {
     console.error('Error listing cash-out requests:', error)
     return NextResponse.json({ error: 'Failed to list cash-out requests' }, { status: 500 })

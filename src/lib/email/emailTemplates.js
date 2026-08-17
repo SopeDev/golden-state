@@ -213,7 +213,7 @@ export function verificationEmailContent({ locale, link }) {
   }
 }
 
-export function pendingAdminEmailContent({ locale }) {
+export function pendingAdminEmailContent({ locale, pendingLink }) {
   if (locale === 'es') {
     return {
       subject: 'Correo confirmado — solicitud en revisión | Golden State Capital',
@@ -226,9 +226,15 @@ export function pendingAdminEmailContent({ locale }) {
           'Su dirección de correo ha sido verificada correctamente.',
           'Nuestro equipo revisará su perfil de inversionista y le notificaremos cuando su cuenta esté activa.',
         ],
+        cta: pendingLink ? { href: pendingLink, label: 'Ver estado de la cuenta' } : null,
         footnotes: ['Gracias por su paciencia.'],
       }),
-      text: 'Su correo fue confirmado. Revisaremos su perfil y le avisaremos cuando su cuenta esté activa.',
+      text: [
+        'Su correo fue confirmado. Revisaremos su perfil y le avisaremos cuando su cuenta esté activa.',
+        pendingLink || '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
     }
   }
 
@@ -243,9 +249,15 @@ export function pendingAdminEmailContent({ locale }) {
         'Your email address has been successfully verified.',
         'Our team will review your investor profile and notify you when your account is active.',
       ],
+      cta: pendingLink ? { href: pendingLink, label: 'View account status' } : null,
       footnotes: ['Thank you for your patience.'],
     }),
-    text: 'Your email is confirmed. We will review your profile and notify you when your account is active.',
+    text: [
+      'Your email is confirmed. We will review your profile and notify you when your account is active.',
+      pendingLink || '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
   }
 }
 

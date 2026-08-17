@@ -4,7 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
-const SUPPORTED_PAGE_KEYS = ['HOME', 'ABOUT', 'FAQ', 'CONTACT']
+const SUPPORTED_PAGE_KEYS = ['HOME', 'ABOUT', 'FAQ', 'CONTACT', 'WORK_WITH_US']
 
 const isValidContentPayload = (value) => {
   return value && typeof value === 'object' && !Array.isArray(value)

@@ -9,6 +9,7 @@ import {
   PLATFORM_MIN_INVESTMENT,
   syncPropertyFundingStatus,
 } from '@/lib/propertyFunding'
+import { notifyIfPropertyLifecycleChanged } from '@/lib/investorUpdates'
 import {
   ensureUniquePropertySlug,
   getPropertyTypeByCode,
@@ -241,6 +242,8 @@ export async function PUT(request, { params }) {
         })
       }
     }
+
+    await notifyIfPropertyLifecycleChanged(prisma, existingProperty, property)
 
     return NextResponse.json(
       await enrichPropertyWithFunding(prisma, toClientProperty(property))

@@ -6,6 +6,7 @@ import {
   Briefcase,
   ChevronDown,
   Activity,
+  Bell,
   LayoutDashboard,
   LogOut,
   Shield,
@@ -15,6 +16,7 @@ import { Link, useRouter } from '@/i18n/navigation'
 import {
   resolveProtectedActivityHref,
   resolveProtectedPortfolioHref,
+  resolveProtectedUpdatesHref,
 } from '@/lib/auth/userStatus'
 import { cn } from '@/lib/utils'
 import {
@@ -46,6 +48,7 @@ export default function AccountNavMenu({ user, className }) {
   const dashboardHref = '/dashboard'
   const portfolioHref = resolveProtectedPortfolioHref(user)
   const activityHref = resolveProtectedActivityHref(user)
+  const updatesHref = resolveProtectedUpdatesHref(user)
   const myAccountHref = '/dashboard/account'
   const email = typeof user?.email === 'string' ? user.email : ''
   const primary = accountPrimaryLabel(user) || t('account')
@@ -61,6 +64,7 @@ export default function AccountNavMenu({ user, className }) {
     { href: dashboardHref, label: t('dashboard'), icon: LayoutDashboard },
     { href: portfolioHref, label: t('portfolio'), icon: Briefcase },
     { href: activityHref, label: t('activity'), icon: Activity },
+    { href: updatesHref, label: t('updates'), icon: Bell },
     { href: myAccountHref, label: t('myAccount'), icon: UserRound },
     ...(user?.type === 'ADMIN'
       ? [{ href: '/admin', label: t('admin'), icon: Shield }]

@@ -39,11 +39,6 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    // Legacy local public paths from before R2 migration
-    if (doc.fileUrl.startsWith('/uploads/')) {
-      return NextResponse.redirect(new URL(doc.fileUrl, _request.url))
-    }
-
     const { body, contentType } = await getPrivateObject(doc.fileUrl)
     const headers = new Headers()
     headers.set('Content-Type', contentType || doc.mimeType || 'application/octet-stream')

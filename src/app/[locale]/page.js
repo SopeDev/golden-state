@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import HomePage from '@/components/Home/HomePage'
 import { getHomeContent } from '@/lib/pageContent'
+import { buildPageMetadata } from '@/lib/seo'
 import {
   activeProjectWhere,
   completedProjectWhere,
@@ -22,10 +23,12 @@ export async function generateMetadata({ params }) {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'Home' })
 
-  return {
+  return buildPageMetadata({
+    locale,
+    path: '/',
     title: t('metaTitle'),
     description: t('metaDescription'),
-  }
+  })
 }
 
 async function loadHomeData() {

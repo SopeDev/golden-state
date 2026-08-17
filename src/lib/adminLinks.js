@@ -10,6 +10,26 @@ export function adminUserPath(userId) {
   return `/admin/users?id=${encodeURIComponent(String(userId))}`
 }
 
+export function adminIntentPath(intentId) {
+  if (!intentId) return '/admin/investments'
+  return `/admin/investments?id=${encodeURIComponent(String(intentId))}`
+}
+
+export function adminDepositPath(depositId) {
+  if (!depositId) return '/admin/deposits'
+  return `/admin/deposits?id=${encodeURIComponent(String(depositId))}`
+}
+
+export function adminCashOutPath(cashOutId) {
+  if (!cashOutId) return '/admin/cash-outs'
+  return `/admin/cash-outs?id=${encodeURIComponent(String(cashOutId))}`
+}
+
+export function adminReinvestPath(reinvestId) {
+  if (!reinvestId) return '/admin/reinvests'
+  return `/admin/reinvests?id=${encodeURIComponent(String(reinvestId))}`
+}
+
 export function formatAdminPropertyLabel(property) {
   if (!property) return '—'
   const id = property.investmentId

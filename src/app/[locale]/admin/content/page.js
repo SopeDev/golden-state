@@ -9,6 +9,7 @@ import {
   getContactFallbackByLocale,
   getFaqFallbackByLocale,
   getHomeFallbackByLocale,
+  getWorkWithUsFallbackByLocale,
 } from '@/lib/pageContent'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -26,17 +27,27 @@ export default async function ContentAdminPage() {
     const records = await prisma.pageContent.findMany({
       where: {
         pageKey: {
-          in: ['HOME', 'ABOUT', 'FAQ', 'CONTACT'],
+          in: ['HOME', 'ABOUT', 'FAQ', 'CONTACT', 'WORK_WITH_US'],
         },
       },
       orderBy: [{ pageKey: 'asc' }, { locale: 'asc' }],
-    })
+    }).catch(() =>
+      prisma.pageContent.findMany({
+        where: {
+          pageKey: {
+            in: ['HOME', 'ABOUT', 'FAQ', 'CONTACT'],
+          },
+        },
+        orderBy: [{ pageKey: 'asc' }, { locale: 'asc' }],
+      })
+    )
 
     const fallbackByPage = {
       HOME: getHomeFallbackByLocale(),
       ABOUT: getAboutFallbackByLocale(),
       FAQ: getFaqFallbackByLocale(),
       CONTACT: getContactFallbackByLocale(),
+      WORK_WITH_US: getWorkWithUsFallbackByLocale(),
     }
 
     return (

@@ -8,8 +8,15 @@ import {
 } from '@/lib/depositRequests'
 import { canInvestorSubmitDeposit } from '@/lib/investmentIntents'
 import { notifyAdminsDepositSubmitted } from '@/lib/email/adminNotify'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendSafely } from '@/lib/email/sendSafely'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
 import { putPrivateObject } from '@/lib/storage/r2'
+import { formatMoneyAmount } from '@/lib/formatMoney'
+import {
+  getEffectiveMinInvestment,
+  getPropertyFundedAmount,
+} from '@/lib/propertyFunding'
 
 const prisma = new PrismaClient()
 
@@ -100,6 +107,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 })
     }
 
+    const fundedAmount = await getPropertyFundedAmount(prisma, property.id)
+    const minTicket = getEffectiveMinInvestment({
+      goal: property.price,
+      fundedAmount,
+    })
+    if (amount < minTicket) {
+      return NextResponse.json(
+        { error: `Amount must be at least $${formatMoneyAmount(minTicket)}` },
+        { status: 400 }
+      )
+    }
+
     const pending = await prisma.depositRequest.findFirst({
       where: { userId, propertyId, status: 'PENDING' },
       select: { id: true },
@@ -167,21 +186,20 @@ export async function POST(request) {
 
     const investor = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, profile: true },
+      select: investorEmailSelect,
     })
     if (investor?.email) {
       const locale = resolveUserLocale(investor)
-      try {
-        await notifyAdminsDepositSubmitted({
+      await sendSafely('Deposit submitted admin notify', () =>
+        notifyAdminsDepositSubmitted({
           investor,
           property,
           amount,
           reference,
+          depositId: deposit.id,
           locale,
         })
-      } catch (emailError) {
-        console.error('Deposit submitted admin notify failed:', emailError)
-      }
+      )
     }
 
     return NextResponse.json(toClientDepositRequest(deposit), { status: 201 })

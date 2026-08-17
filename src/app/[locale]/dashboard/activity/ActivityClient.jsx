@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import { ArrowRight, BadgeCheck, Clock3, TrendingUp, Wallet } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -37,6 +38,7 @@ function SummaryTile({ label, value, icon: Icon, valueClassName }) {
 
 export default function ActivityClient() {
   const t = useTranslations('ActivityPage')
+  const searchParams = useSearchParams()
   const intentsState = useInvestmentIntents()
   const walletState = useInvestorWallet()
   const [tab, setTab] = useState(null)
@@ -47,8 +49,13 @@ export default function ActivityClient() {
 
   useEffect(() => {
     if (!ready) return
-    setTab((current) => current ?? resolveDefaultActivityTab({ intents, wallet }))
-  }, [ready, intents, wallet])
+    const requested = searchParams.get('tab')
+    const fromUrl =
+      requested === ACTIVITY_TABS.wallet || requested === ACTIVITY_TABS.requests
+        ? requested
+        : null
+    setTab((current) => current ?? fromUrl ?? resolveDefaultActivityTab({ intents, wallet }))
+  }, [ready, intents, wallet, searchParams])
 
   const openRequests = countOpenRequests(intents)
   const nextAction = useMemo(

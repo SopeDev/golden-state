@@ -9,6 +9,7 @@ import {
   sanitizeDocumentFileBase,
   toClientPropertyDocuments,
 } from '@/lib/propertyDocuments'
+import { countUnannouncedDocuments } from '@/lib/investorUpdates'
 
 const prisma = new PrismaClient()
 
@@ -29,7 +30,7 @@ export async function GET(_request, { params }) {
   try {
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
-      select: { id: true },
+      select: { id: true, documentsNotifiedAt: true },
     })
     if (!property) {
       return NextResponse.json({ message: 'Property not found' }, { status: 404 })
@@ -40,7 +41,13 @@ export async function GET(_request, { params }) {
       orderBy: { uploadedAt: 'desc' },
     })
 
-    return NextResponse.json({ documents: toClientPropertyDocuments(docs) })
+    const unannouncedCount = await countUnannouncedDocuments(prisma, property)
+
+    return NextResponse.json({
+      documents: toClientPropertyDocuments(docs),
+      unannouncedCount,
+      documentsNotifiedAt: property.documentsNotifiedAt,
+    })
   } catch (error) {
     console.error('List property documents error:', error)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })

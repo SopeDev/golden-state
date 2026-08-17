@@ -41,7 +41,12 @@ export async function GET() {
 
     const withFunding = await attachFundingToProperties(prisma, openProperties)
     const reinvestTargets = withFunding
-      .filter((p) => isPropertyOpenForInvestment(p.status) && p.remainingCapacity > 0)
+      .filter((p) => {
+        if (!isPropertyOpenForInvestment(p.status)) return false
+        const remaining = Number(p.remainingCapacity) || 0
+        const minTicket = Number(p.effectiveMinInvestment) || 0
+        return remaining > 0 && remaining + 1e-6 >= minTicket
+      })
       .map((p) => ({
         id: p.id,
         name: p.name,
@@ -52,6 +57,7 @@ export async function GET() {
         status: p.status,
         remainingCapacity: p.remainingCapacity,
         investmentGoal: p.investmentGoal,
+        effectiveMinInvestment: p.effectiveMinInvestment,
       }))
 
     return NextResponse.json({

@@ -4,10 +4,11 @@ import { signOut, useSession } from 'next-auth/react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
-import { resolveProtectedActivityHref, resolveProtectedPortfolioHref } from '@/lib/auth/userStatus'
+import { resolveProtectedActivityHref, resolveProtectedPortfolioHref, resolveProtectedUpdatesHref } from '@/lib/auth/userStatus'
 import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
 import AccountNavMenu from './AccountNavMenu'
+import UpdatesNavBell from '@/components/invest/UpdatesNavBell'
 
 export default function NavMenu({ session: serverSession, propertyTypes = [] }) {
   const t = useTranslations('Navbar')
@@ -20,6 +21,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
   const dashboardHref = '/dashboard'
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
   const activityHref = user ? resolveProtectedActivityHref(user) : '/login'
+  const updatesHref = user ? resolveProtectedUpdatesHref(user) : '/login'
   const myAccountHref = '/dashboard/account'
 
   const projectTypeLinks = propertyTypes.map((type) => ({
@@ -89,10 +91,18 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
         </nav>
 
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          {user ? <AccountNavMenu user={user} /> : <AuthButton t={t} />}
+          {user ? (
+            <>
+              <UpdatesNavBell user={user} />
+              <AccountNavMenu user={user} />
+            </>
+          ) : (
+            <AuthButton t={t} />
+          )}
         </div>
 
-        <div className="flex shrink-0 items-center lg:hidden">
+        <div className="flex shrink-0 items-center gap-2 lg:hidden">
+          {user ? <UpdatesNavBell user={user} /> : null}
           <button
             type="button"
             className="cursor-pointer"
@@ -162,6 +172,9 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               </Link>
               <Link href={activityHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('activity')}</div>
+              </Link>
+              <Link href={updatesHref} onClick={closeMenu}>
+                <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('updates')}</div>
               </Link>
               <Link href={myAccountHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('myAccount')}</div>

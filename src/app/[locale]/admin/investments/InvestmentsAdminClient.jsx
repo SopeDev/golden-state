@@ -18,6 +18,11 @@ import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHea
 import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 import AdminInvestmentIntentsPanel from './AdminInvestmentIntentsPanel'
 import { useMessaging } from '@/hooks/useMessaging'
+import {
+  adminRecordRowClass,
+  pageForRecord,
+  useScrollToAdminRecord,
+} from '@/hooks/useAdminRecordHighlight'
 
 const emptyContributionForm = {
   source: 'INVESTOR',
@@ -45,6 +50,7 @@ export default function InvestmentsAdminClient({
   locale,
   section = 'intents',
   initialPropertyId = '',
+  initialRecordId = '',
 }) {
   const t = useTranslations('Admin.investments')
   const tc = useTranslations('Admin.common')
@@ -55,9 +61,13 @@ export default function InvestmentsAdminClient({
   const [query, setQuery] = useState('')
   const [propertyFilter, setPropertyFilter] = useState(initialPropertyId)
   const [investorFilter, setInvestorFilter] = useState('')
-  const [intentStatusFilter, setIntentStatusFilter] = useState('MEETING_REQUESTED')
+  const [intentStatusFilter, setIntentStatusFilter] = useState(
+    initialRecordId ? '' : 'MEETING_REQUESTED'
+  )
   const [contributionStatusFilter, setContributionStatusFilter] = useState('')
-  const [depositStatusFilter, setDepositStatusFilter] = useState('PENDING')
+  const [depositStatusFilter, setDepositStatusFilter] = useState(
+    initialRecordId ? '' : 'PENDING'
+  )
   const [showContributionForm, setShowContributionForm] = useState(false)
   const [showDepositForm, setShowDepositForm] = useState(false)
   const [contributionForm, setContributionForm] = useState(() => ({
@@ -71,6 +81,7 @@ export default function InvestmentsAdminClient({
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [listPage, setListPage] = useState(1)
+  useScrollToAdminRecord(initialRecordId)
 
   const pageTitle =
     section === 'intents'
@@ -183,6 +194,14 @@ export default function InvestmentsAdminClient({
     () => paginateItems(filteredDeposits, listPage),
     [filteredDeposits, listPage]
   )
+
+  useEffect(() => {
+    if (!initialRecordId) return
+    if (section === 'deposits') setListPage(pageForRecord(filteredDeposits, initialRecordId))
+    if (section === 'contributions') {
+      setListPage(pageForRecord(filteredContributions, initialRecordId))
+    }
+  }, [initialRecordId, section, filteredDeposits, filteredContributions])
 
   const submitContribution = async (event) => {
     event.preventDefault()
@@ -444,6 +463,7 @@ export default function InvestmentsAdminClient({
               statusFilter={intentStatusFilter}
               searchQuery={query}
               locale={locale}
+              highlightId={initialRecordId}
             />
           ) : null}
 
@@ -766,7 +786,11 @@ export default function InvestmentsAdminClient({
                     </tr>
                   ) : (
                     depositPagination.items.map((row) => (
-                      <tr key={row.id}>
+                      <tr
+                        key={row.id}
+                        id={`admin-record-${row.id}`}
+                        className={adminRecordRowClass(initialRecordId, row.id)}
+                      >
                         <td className="px-2 py-3 whitespace-nowrap">
                           {new Date(row.createdAt).toLocaleDateString(
                             locale === 'es' ? 'es-ES' : 'en-US'

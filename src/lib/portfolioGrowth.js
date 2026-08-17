@@ -12,6 +12,11 @@ export function getLedgerRoiPercent(invested, returned) {
   return ((credited - capital) / capital) * 100
 }
 
+/** Cash ROI is only meaningful after at least one credited return. */
+export function isLedgerRoiReady(returned) {
+  return Number(returned) > 0
+}
+
 export function toMonthKey(value) {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)

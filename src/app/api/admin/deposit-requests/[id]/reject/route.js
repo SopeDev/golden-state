@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { depositRequestInclude } from '@/lib/depositRequests'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendDepositRejectedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
 
 const prisma = new PrismaClient()
 
@@ -35,6 +39,23 @@ export async function POST(request, { params }) {
       },
       include: depositRequestInclude,
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: updated.userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Deposit rejected email', () =>
+        sendDepositRejectedEmail({
+          to: investor.email,
+          locale,
+          propertyName: updated.property?.name || 'property',
+          investmentId: updated.property?.investmentId,
+          adminNote,
+        })
+      )
+    }
 
     return NextResponse.json(updated)
   } catch (error) {

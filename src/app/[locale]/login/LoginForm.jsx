@@ -18,17 +18,9 @@ import {
 import { Input } from '@/components/ui/input'
 import RequiredLabel from '@/components/ui/RequiredLabel'
 import GoogleIcon from '@/components/GoogleIcon/GoogleIcon'
+import { legalAgreementTags } from '@/components/Legal/legalAgreementTags'
 
-import { resolveInvestorOnboardingPath } from '@/lib/auth/userStatus'
-
-const resolvePostLoginPath = (user) => {
-  if (!user) return '/dashboard'
-  if (user.type === 'ADMIN') return '/admin'
-  if (user.accountStatus === 'REJECTED') return '/account/rejected'
-  const onboardingPath = resolveInvestorOnboardingPath(user)
-  if (onboardingPath) return onboardingPath
-  return '/dashboard'
-}
+import { resolveLoginDestination } from '@/lib/auth/userStatus'
 
 export default function LoginForm() {
   const t = useTranslations('Login')
@@ -66,8 +58,7 @@ export default function LoginForm() {
     const sessionRes = await fetch('/api/auth/session')
     const session = await sessionRes.json()
     const user = session?.user
-    const destination =
-      callbackUrl && user?.accountStatus === 'ACTIVE' ? callbackUrl : resolvePostLoginPath(user)
+    const destination = resolveLoginDestination(user, callbackUrl)
     router.push(destination)
     router.refresh()
   }
@@ -138,6 +129,9 @@ export default function LoginForm() {
               <GoogleIcon className="size-5 shrink-0" />
               {t('google')}
             </Button>
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              {t.rich('googleLegalNote', legalAgreementTags)}
+            </p>
             <p className="text-center text-sm text-muted-foreground">
               {t('registerHint')}{' '}
               <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">

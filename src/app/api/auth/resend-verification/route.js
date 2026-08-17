@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
+import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { generateSecureToken, verificationExpiry } from '@/lib/auth/tokens'
+import { generateSecureToken, hashAuthToken, verificationExpiry } from '@/lib/auth/tokens'
 import { sendVerificationEmail, verificationEmailLink } from '@/lib/email/mailer'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/security/rateLimit'
 
 const prisma = new PrismaClient()
 
 export async function POST(request) {
+  const limited = enforceRateLimit(request, 'resend-verification', RATE_LIMITS.resendVerification)
+  if (limited) return limited
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
@@ -27,7 +31,7 @@ export async function POST(request) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          emailVerificationToken: token,
+          emailVerificationToken: hashAuthToken(token),
           emailVerificationExpires: verificationExpiry(),
         },
       })

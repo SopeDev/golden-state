@@ -5,6 +5,7 @@ import {
   cashOutRequestInclude,
   reinvestRequestInclude,
   returnDistributionInclude,
+  toClientCashOutRequest,
 } from '@/lib/investorWallet'
 import ReturnsAdminClient from './ReturnsAdminClient'
 
@@ -12,10 +13,13 @@ const prisma = new PrismaClient()
 
 const SECTIONS = ['distributions', 'cashouts', 'reinvests']
 
-export default async function ReturnsSectionPage({ section }) {
+export default async function ReturnsSectionPage({ section, searchParams }) {
   const resolvedSection = SECTIONS.includes(section) ? section : 'distributions'
   const t = await getTranslations('Admin.returns')
   const locale = await getLocale()
+  const params = searchParams || {}
+  const initialRecordId =
+    typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
   try {
     const [distributions, cashOuts, reinvests, investors, properties] = await Promise.all([
@@ -58,11 +62,12 @@ export default async function ReturnsSectionPage({ section }) {
         <ReturnsAdminClient
           section={resolvedSection}
           initialDistributions={distributions}
-          initialCashOuts={cashOuts}
+          initialCashOuts={cashOuts.map(toClientCashOutRequest)}
           initialReinvests={reinvests}
           investors={investors}
           properties={properties}
           locale={locale}
+          initialRecordId={initialRecordId}
         />
       </div>
     )

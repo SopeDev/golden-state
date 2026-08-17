@@ -7,6 +7,11 @@ import {
   getWalletBalance,
   returnDistributionInclude,
 } from '@/lib/investorWallet'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendReturnVoidedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { formatUsd } from '@/lib/formatMoney'
 
 const prisma = new PrismaClient()
 
@@ -47,6 +52,22 @@ export async function POST(_request, { params }) {
       },
       include: returnDistributionInclude,
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: updated.userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Return voided email', () =>
+        sendReturnVoidedEmail({
+          to: investor.email,
+          locale,
+          propertyName: updated.property?.name || 'property',
+          amountLabel: formatUsd(updated.amount),
+        })
+      )
+    }
 
     return NextResponse.json(updated)
   } catch (error) {

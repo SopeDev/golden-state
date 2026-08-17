@@ -5,8 +5,71 @@ import PropertyDetailsClient from './PropertyDetailsClient'
 import { enrichPropertyWithFunding } from '@/lib/propertyFunding'
 import { propertyTypeInclude, toClientProperty } from '@/lib/propertyTypes'
 import { userHasActiveHolding } from '@/lib/fundingContributions'
+import { getLocalizedPropertySummary } from '@/lib/propertySummary'
+import { SITE_NAME, buildPageMetadata } from '@/lib/seo'
 
 const prisma = new PrismaClient()
+
+export async function generateMetadata({ params }) {
+  const { locale, investmentId } = await params
+  const path = `/properties/${investmentId}`
+  const parsedId = parseInt(investmentId, 10)
+
+  if (!Number.isFinite(parsedId)) {
+    return buildPageMetadata({
+      locale,
+      path,
+      title: `Property | ${SITE_NAME}`,
+      noIndex: true,
+    })
+  }
+
+  try {
+    const property = await prisma.property.findFirst({
+      where: { investmentId: parsedId, deletedAt: null },
+      select: {
+        name: true,
+        summary: true,
+        summaryEn: true,
+        summaryEs: true,
+        images: true,
+        city: true,
+        state: true,
+      },
+    })
+
+    if (!property) {
+      return buildPageMetadata({
+        locale,
+        path,
+        title: `Property | ${SITE_NAME}`,
+        noIndex: true,
+      })
+    }
+
+    const summary = getLocalizedPropertySummary(property, locale)
+    const location = [property.city, property.state].filter(Boolean).join(', ')
+    const description =
+      summary || `${property.name}${location ? ` · ${location}` : ''}`
+
+    return buildPageMetadata({
+      locale,
+      path,
+      title: `${property.name} | ${SITE_NAME}`,
+      description,
+      image: property.images?.[0],
+      imageAlt: property.name,
+    })
+  } catch (error) {
+    console.error('Error building property metadata:', error)
+    return buildPageMetadata({
+      locale,
+      path,
+      title: `Property | ${SITE_NAME}`,
+      noIndex: true,
+    })
+  }
+}
 
 export default async function PropertyDetailsPage({ params }) {
   const { investmentId } = await params

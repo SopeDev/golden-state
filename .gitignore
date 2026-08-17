@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# local private uploads (never serve from public/)
+/storage/private/*
+!/storage/private/.gitkeep
+/public/uploads/investors/

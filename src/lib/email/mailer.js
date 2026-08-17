@@ -9,14 +9,25 @@ import {
   accountApprovedEmailContent,
   accreditationApprovedEmailContent,
   accreditationResubmitEmailContent,
-  meetingRequestedEmailContent,
   awaitingWireEmailContent,
   EMAIL_LOGO_CID,
 } from '@/lib/email/emailTemplates'
-import { meetingChannelPlainLabel } from '@/lib/investMeetingLinks'
-
-const getBaseUrl = () =>
-  process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000'
+import {
+  accountRejectedEmailContent,
+  accreditationRejectedEmailContent,
+  cashOutReviewedEmailContent,
+  contributionAssignedEmailContent,
+  depositConfirmedEmailContent,
+  depositRejectedEmailContent,
+  investmentRequestCancelledEmailContent,
+  passwordChangedEmailContent,
+  propertyDocumentsUpdateEmailContent,
+  propertyStatusUpdateEmailContent,
+  reinvestReviewedEmailContent,
+  returnCreditedEmailContent,
+  returnVoidedEmailContent,
+} from '@/lib/email/investorOpsEmails'
+import { getAppBaseUrl, investorAppLinks } from '@/lib/email/appLinks'
 
 const NO_REPLY_ADDRESS = 'no-reply@goldenstatecapitalmgt.com'
 const DEFAULT_FROM = `Golden State Capital <${NO_REPLY_ADDRESS}>`
@@ -199,11 +210,11 @@ export async function sendAdminEmail(args) {
 }
 
 export function verificationEmailLink(token, locale = 'en') {
-  return `${getBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}&locale=${locale}`
+  return `${getAppBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}&locale=${locale}`
 }
 
 export function passwordResetLink(token, locale = 'en') {
-  return `${getBaseUrl()}/${locale}/reset-password?token=${encodeURIComponent(token)}`
+  return `${getAppBaseUrl()}/${locale}/reset-password?token=${encodeURIComponent(token)}`
 }
 
 export async function sendVerificationEmail({ to, token, locale }) {
@@ -223,7 +234,8 @@ export async function sendVerificationEmail({ to, token, locale }) {
 }
 
 export async function sendPendingAdminEmail({ to, locale }) {
-  const content = pendingAdminEmailContent({ locale })
+  const links = investorAppLinks(locale)
+  const content = pendingAdminEmailContent({ locale, pendingLink: links.accountPending })
   return sendEmail({
     to,
     subject: content.subject,
@@ -244,19 +256,19 @@ export async function sendPasswordResetEmail({ to, token, locale }) {
 }
 
 export function dashboardLink(locale = 'en') {
-  return `${getBaseUrl()}/${locale}/dashboard`
+  return investorAppLinks(locale).dashboard
 }
 
 export function accountInvestmentRequestsLink(locale = 'en') {
-  return `${getBaseUrl()}/${locale}/dashboard/activity`
+  return investorAppLinks(locale).activityRequests
 }
 
 export function propertyInvestLink(locale = 'en', investmentId) {
-  return `${getBaseUrl()}/${locale}/properties/${investmentId}/invest`
+  return investorAppLinks(locale).invest(investmentId)
 }
 
 export function accreditationLink(locale = 'en') {
-  return `${getBaseUrl()}/${locale}/dashboard/account/accreditation`
+  return investorAppLinks(locale).accreditation
 }
 
 export async function sendAccountApprovedEmail({ to, locale }) {
@@ -302,38 +314,6 @@ export async function sendAccreditationResubmitEmail({
   })
 }
 
-export async function sendMeetingRequestedEmail({
-  to,
-  locale,
-  propertyName,
-  investmentId,
-  channel,
-  intendedAmount,
-}) {
-  const accountLink = accountInvestmentRequestsLink(locale)
-  const investLink = investmentId ? propertyInvestLink(locale, investmentId) : accountLink
-  const channelLabel = meetingChannelPlainLabel(channel, locale)
-  const amountLabel =
-    intendedAmount != null && Number.isFinite(Number(intendedAmount))
-      ? `$${Number(intendedAmount).toLocaleString('en-US')}`
-      : null
-
-  const content = meetingRequestedEmailContent({
-    locale,
-    propertyName,
-    accountLink,
-    investLink,
-    channelLabel,
-    amountLabel,
-  })
-  return sendEmail({
-    to,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
-  })
-}
-
 export async function sendAwaitingWireEmail({ to, locale, propertyName, investmentId }) {
   const investLink = investmentId
     ? propertyInvestLink(locale, investmentId)
@@ -351,4 +331,178 @@ export async function sendAwaitingWireEmail({ to, locale, propertyName, investme
     html: content.html,
     text: content.text,
   })
+}
+
+export async function sendAccountRejectedEmail({ to, locale }) {
+  const content = accountRejectedEmailContent({
+    locale,
+    contactLink: investorAppLinks(locale).contact,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendAccreditationRejectedEmail({ to, locale, reviewNote }) {
+  const content = accreditationRejectedEmailContent({
+    locale,
+    accreditationLink: accreditationLink(locale),
+    reviewNote,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendDepositConfirmedEmail({ to, locale, propertyName, amountLabel }) {
+  const content = depositConfirmedEmailContent({
+    locale,
+    propertyName,
+    amountLabel,
+    portfolioLink: investorAppLinks(locale).portfolio,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendDepositRejectedEmail({
+  to,
+  locale,
+  propertyName,
+  investmentId,
+  adminNote,
+}) {
+  const content = depositRejectedEmailContent({
+    locale,
+    propertyName,
+    investLink: propertyInvestLink(locale, investmentId),
+    adminNote,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendContributionAssignedEmail({ to, locale, propertyName, amountLabel }) {
+  const content = contributionAssignedEmailContent({
+    locale,
+    propertyName,
+    amountLabel,
+    portfolioLink: investorAppLinks(locale).portfolio,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendReturnCreditedEmail({
+  to,
+  locale,
+  propertyName,
+  amountLabel,
+  concept,
+}) {
+  const content = returnCreditedEmailContent({
+    locale,
+    propertyName,
+    amountLabel,
+    concept,
+    walletLink: investorAppLinks(locale).activityWallet,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendReturnVoidedEmail({ to, locale, propertyName, amountLabel }) {
+  const content = returnVoidedEmailContent({
+    locale,
+    propertyName,
+    amountLabel,
+    walletLink: investorAppLinks(locale).activityWallet,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendCashOutReviewedEmail({
+  to,
+  locale,
+  confirmed,
+  amountLabel,
+  adminNote,
+}) {
+  const content = cashOutReviewedEmailContent({
+    locale,
+    confirmed,
+    amountLabel,
+    walletLink: investorAppLinks(locale).activityWallet,
+    adminNote,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendReinvestReviewedEmail({
+  to,
+  locale,
+  confirmed,
+  propertyName,
+  amountLabel,
+  adminNote,
+}) {
+  const links = investorAppLinks(locale)
+  const content = reinvestReviewedEmailContent({
+    locale,
+    confirmed,
+    propertyName,
+    amountLabel,
+    activityLink: confirmed ? links.portfolio : links.activityWallet,
+    adminNote,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendInvestmentRequestCancelledEmail({ to, locale, propertyName }) {
+  const content = investmentRequestCancelledEmailContent({
+    locale,
+    propertyName,
+    activityLink: accountInvestmentRequestsLink(locale),
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendPropertyStatusUpdateEmail({
+  to,
+  locale,
+  propertyName,
+  fromLabel,
+  toLabel,
+  progressPercent,
+  documentsLink,
+}) {
+  const content = propertyStatusUpdateEmailContent({
+    locale,
+    propertyName,
+    fromLabel,
+    toLabel,
+    progressPercent,
+    documentsLink,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendPropertyDocumentsUpdateEmail({
+  to,
+  locale,
+  propertyName,
+  documentCount,
+  kindLabels,
+  progressPercent,
+  documentsLink,
+}) {
+  const content = propertyDocumentsUpdateEmailContent({
+    locale,
+    propertyName,
+    documentCount,
+    kindLabels,
+    progressPercent,
+    documentsLink,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
+}
+
+export async function sendPasswordChangedEmail({ to, locale }) {
+  const content = passwordChangedEmailContent({
+    locale,
+    contactLink: investorAppLinks(locale).contact,
+  })
+  return sendEmail({ to, subject: content.subject, html: content.html, text: content.text })
 }

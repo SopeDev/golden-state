@@ -4,6 +4,11 @@ import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { returnDistributionInclude } from '@/lib/investorWallet'
 import { investorHoldingWhere } from '@/lib/fundingContributions'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendReturnCreditedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { formatUsd } from '@/lib/formatMoney'
 
 const prisma = new PrismaClient()
 
@@ -111,6 +116,23 @@ export async function POST(request) {
       },
       include: returnDistributionInclude,
     })
+
+    const investorForEmail = await prisma.user.findUnique({
+      where: { id: userId },
+      select: investorEmailSelect,
+    })
+    if (investorForEmail?.email) {
+      const locale = resolveUserLocale(investorForEmail)
+      await sendSafely('Return credited email', () =>
+        sendReturnCreditedEmail({
+          to: investorForEmail.email,
+          locale,
+          propertyName: row.property?.name || property.name || 'property',
+          amountLabel: formatUsd(row.amount),
+          concept,
+        })
+      )
+    }
 
     return NextResponse.json(row, { status: 201 })
   } catch (error) {

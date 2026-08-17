@@ -35,6 +35,8 @@ model User {
   passwordResetToken String? @unique
   passwordResetExpires DateTime?
 
+  sessionEpoch Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -51,6 +53,7 @@ model User {
   reviewedCashOutRequests CashOutRequest[] @relation("CashOutReviewedBy")
   reinvestRequests ReinvestRequest[] @relation("InvestorReinvests")
   reviewedReinvestRequests ReinvestRequest[] @relation("ReinvestReviewedBy")
+  investorUpdates InvestorUpdate[]
 }
 
 enum UserType {
@@ -180,6 +183,8 @@ model Property {
   startDate            DateTime?
   targetCompletionDate DateTime?
   completedAt          DateTime?
+  /// Last time holders were emailed/in-app notified about new private documents.
+  documentsNotifiedAt  DateTime?
   deletedAt            DateTime?
 
   createdAt DateTime @default(now())
@@ -192,6 +197,7 @@ model Property {
   documents              PropertyDocument[]
   returnDistributions    ReturnDistribution[]
   reinvestRequests       ReinvestRequest[]     @relation("ReinvestDestination")
+  investorUpdates        InvestorUpdate[]
 
   @@index([deletedAt])
   @@index([typeId])
@@ -234,6 +240,28 @@ model PropertyDocument {
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId, kind, uploadedAt])
+}
+
+enum InvestorUpdateType {
+  PROPERTY_STATUS
+  PROPERTY_DOCUMENTS
+}
+
+/// Project news for holders (status change or document batch). Separate from Activity (wallet / requests).
+model InvestorUpdate {
+  id         String             @id @default(cuid())
+  userId     Int
+  propertyId String
+  type       InvestorUpdateType
+  payload    Json
+  readAt     DateTime?
+  createdAt  DateTime           @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("investor_updates")
 }
 
 enum FundingContributionSource {
@@ -316,15 +344,18 @@ model ReturnDistribution {
 }
 
 model CashOutRequest {
-  id           String              @id @default(cuid())
-  userId       Int
-  amount       Float
-  status       WalletRequestStatus @default(PENDING)
-  adminNote    String?
-  reviewedAt   DateTime?
-  reviewedById Int?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  userId             Int
+  amount             Float
+  status             WalletRequestStatus @default(PENDING)
+  adminNote          String?
+  receiptStorageKey  String?
+  receiptFileName    String?
+  receiptMimeType    String?
+  reviewedAt         DateTime?
+  reviewedById       Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   user       User  @relation("InvestorCashOuts", fields: [userId], references: [id], onDelete: Restrict)
   reviewedBy User? @relation("CashOutReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
@@ -405,4 +436,5 @@ enum PageKey {
   ABOUT
   FAQ
   CONTACT
+  WORK_WITH_US
 }

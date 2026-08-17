@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { assertCanReserveWallet, cashOutRequestInclude } from '@/lib/investorWallet'
+import { assertCanReserveWallet, cashOutRequestInclude, toClientCashOutRequest } from '@/lib/investorWallet'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { notifyAdminsCashOutRequested } from '@/lib/email/adminNotify'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendSafely } from '@/lib/email/sendSafely'
 
 const prisma = new PrismaClient()
 
@@ -21,7 +25,7 @@ export async function GET() {
       take: 100,
     })
 
-    return NextResponse.json(rows)
+    return NextResponse.json(rows.map(toClientCashOutRequest))
   } catch (error) {
     console.error('Error listing investor cash-outs:', error)
     return NextResponse.json({ error: 'Failed to list cash-out requests' }, { status: 500 })
@@ -64,7 +68,23 @@ export async function POST(request) {
       })
     })
 
-    return NextResponse.json(row, { status: 201 })
+    const investor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Cash-out requested admin notify', () =>
+        notifyAdminsCashOutRequested({
+          investor,
+          amount,
+          cashOutId: row.id,
+          locale,
+        })
+      )
+    }
+
+    return NextResponse.json(toClientCashOutRequest(row), { status: 201 })
   } catch (error) {
     console.error('Error creating cash-out request:', error)
     if (error.code === 'INVALID_AMOUNT' || error.code === 'INSUFFICIENT_FUNDS') {

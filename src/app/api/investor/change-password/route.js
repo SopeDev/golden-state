@@ -4,6 +4,9 @@ import { compare, hash } from 'bcryptjs'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { validateChangePassword } from '@/lib/auth/profileUpdateValidation'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { sendPasswordChangedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
 
 const prisma = new PrismaClient()
 
@@ -44,8 +47,18 @@ export async function POST(request) {
     const hashedPassword = await hash(result.data.newPassword, 10)
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        sessionEpoch: { increment: 1 },
+      },
     })
+
+    if (user.email) {
+      const locale = resolveUserLocale(user)
+      await sendSafely('Password changed email', () =>
+        sendPasswordChangedEmail({ to: user.email, locale })
+      )
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

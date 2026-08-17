@@ -4,6 +4,11 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
 import { sessionUserSelect } from '@/lib/auth/prismaUserSelect'
+import {
+  consumeRateLimit,
+  enforceRateLimit,
+  RATE_LIMITS,
+} from '@/lib/security/rateLimit'
 
 const prisma = new PrismaClient()
 
@@ -16,6 +21,7 @@ const mapDbUserToToken = (dbUser) => ({
   accreditedStatus: dbUser.accreditedStatus,
   profileComplete: Boolean(dbUser.profile?.completedAt),
   emailVerified: Boolean(dbUser.emailVerifiedAt) || dbUser.provider === 'google',
+  sessionEpoch: dbUser.sessionEpoch ?? 0,
 })
 
 export const authOptions = {
@@ -38,6 +44,15 @@ export const authOptions = {
         }
 
         const email = credentials.email.trim().toLowerCase()
+        const emailLimit = consumeRateLimit(
+          `login-email:${email}`,
+          RATE_LIMITS.loginEmail.limit,
+          RATE_LIMITS.loginEmail.windowMs
+        )
+        if (!emailLimit.ok) {
+          return null
+        }
+
         const user = await prisma.user.findUnique({ where: { email } })
 
         if (!user || !user.password) {
@@ -87,36 +102,48 @@ export const authOptions = {
       return true
     },
     async jwt({ token, user }) {
-      if (user) {
-        token.type = user.type
-        token.userId = user.id
-        token.provider = user.provider
-        token.accountStatus = user.accountStatus
-        token.accreditedStatus = user.accreditedStatus
-        token.profileComplete = user.profileComplete
-        token.emailVerified = user.emailVerified
+      if (user?.email && !token.email) {
+        token.email = user.email
       }
 
-      if (token.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email },
-          select: sessionUserSelect,
-        })
-        if (dbUser) {
-          const mapped = mapDbUserToToken(dbUser)
-          token.type = mapped.type
-          token.userId = mapped.id
-          token.provider = mapped.provider
-          token.accountStatus = mapped.accountStatus
-          token.accreditedStatus = mapped.accreditedStatus
-          token.profileComplete = mapped.profileComplete
-          token.emailVerified = mapped.emailVerified
-        }
+      if (!token.email) {
+        return { invalid: true }
       }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: token.email },
+        select: sessionUserSelect,
+      })
+
+      if (!dbUser) {
+        return { invalid: true }
+      }
+
+      const currentEpoch = dbUser.sessionEpoch ?? 0
+
+      if (user) {
+        token.sessionEpoch = currentEpoch
+      } else if ((token.sessionEpoch ?? 0) !== currentEpoch) {
+        return { invalid: true }
+      }
+
+      const mapped = mapDbUserToToken(dbUser)
+      token.type = mapped.type
+      token.userId = mapped.id
+      token.provider = mapped.provider
+      token.accountStatus = mapped.accountStatus
+      token.accreditedStatus = mapped.accreditedStatus
+      token.profileComplete = mapped.profileComplete
+      token.emailVerified = mapped.emailVerified
+      token.invalid = false
 
       return token
     },
     async session({ session, token }) {
+      if (token.invalid || !token.userId) {
+        return { ...session, user: undefined }
+      }
+
       if (session.user) {
         session.user.type = token.type
         session.user.id = token.userId
@@ -141,4 +168,17 @@ export const authOptions = {
 
 const handler = NextAuth(authOptions)
 
-export { handler as GET, handler as POST }
+export { handler as GET }
+
+export async function POST(request, context) {
+  const pathname = new URL(request.url).pathname
+  const isCredentials =
+    pathname.includes('callback/credentials') || pathname.includes('/signin')
+  const limited = enforceRateLimit(
+    request,
+    isCredentials ? 'auth-credentials' : 'auth-post',
+    isCredentials ? RATE_LIMITS.loginIp : RATE_LIMITS.authPost
+  )
+  if (limited) return limited
+  return handler(request, context)
+}

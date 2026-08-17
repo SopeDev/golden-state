@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -119,6 +119,8 @@ export default function AccountHubClient() {
 
     setPasswordSuccess(true)
     setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    await signOut({ redirect: false })
+    router.push('/login')
   }
 
   if (loading) {

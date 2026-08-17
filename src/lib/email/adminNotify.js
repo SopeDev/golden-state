@@ -1,17 +1,26 @@
 import { sendAdminEmail } from '@/lib/email/mailer'
+import { buildAdminEmail } from '@/lib/email/adminEmail'
+import { adminAppLinks } from '@/lib/email/appLinks'
 import { meetingChannelPlainLabel } from '@/lib/investMeetingLinks'
+import { formatUsd } from '@/lib/formatMoney'
 
 const CORPORATE_ADMIN_EMAIL = 'admin@goldenstatecapitalmgt.com'
 
-const escapeHtml = (value) =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+const investorName = (investor) => {
+  const profile = investor?.profile && typeof investor.profile === 'object' ? investor.profile : {}
+  return profile.fullName || investor?.email || '—'
+}
 
-const getBaseUrl = () =>
-  process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000'
+const propertyLabel = (property) => {
+  if (!property) return '—'
+  if (property.investmentId != null && property.name) {
+    return `#${property.investmentId} · ${property.name}`
+  }
+  return property.name || (property.investmentId != null ? `#${property.investmentId}` : '—')
+}
+
+const amountLabel = (amount) =>
+  amount != null && Number.isFinite(Number(amount)) ? formatUsd(amount) : '—'
 
 export function getAdminNotifyEmails() {
   const override =
@@ -26,66 +35,62 @@ export function getAdminNotifyEmails() {
   return [CORPORATE_ADMIN_EMAIL]
 }
 
-export async function notifyAdminsInvestorPendingApproval({ investor, locale = 'en' }) {
+async function deliverAdminEmail(locale, content) {
   const recipients = getAdminNotifyEmails()
-
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/users`
-  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
-  const name = escapeHtml(profile.fullName || investor.email)
-  const email = escapeHtml(investor.email)
-  const investmentRange = escapeHtml(profile.investmentRange || '—')
-  const investmentGoals = escapeHtml(profile.investmentGoals || '—')
-  const locationLabel =
-    profile.location === 'MX' ? (locale === 'es' ? 'México' : 'Mexico') : profile.location === 'US' ? (locale === 'es' ? 'Estados Unidos' : 'United States') : '—'
-  const visaInterest =
-    profile.location === 'MX'
-      ? profile.interestedInInvestorVisa
-        ? locale === 'es'
-          ? 'Sí'
-          : 'Yes'
-        : locale === 'es'
-          ? 'No'
-          : 'No'
-      : null
-  const projectTypes = escapeHtml(
-    Array.isArray(profile.projectTypes) ? profile.projectTypes.join(', ') : '—'
+  await Promise.all(
+    recipients.map((to) =>
+      sendAdminEmail({
+        to,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
+      })
+    )
   )
-
-  const subject =
-    locale === 'es'
-      ? `Nuevo inversionista pendiente de aprobación — ${name}`
-      : `New investor pending approval — ${name}`
-
-  const html =
-    locale === 'es'
-      ? `<p>Un inversionista completó su perfil y está listo para revisión:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-<li><strong>Ubicación:</strong> ${escapeHtml(locationLabel)}</li>
-${visaInterest ? `<li><strong>Visa de inversionista:</strong> ${visaInterest}</li>` : ''}
-<li><strong>Monto planeado:</strong> ${investmentRange}</li>
-<li><strong>Objetivos:</strong> ${investmentGoals}</li>
-<li><strong>Tipos de proyecto:</strong> ${projectTypes}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir gestión de usuarios</a></p>`
-      : `<p>An investor completed their profile and is ready for your review:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-<li><strong>Location:</strong> ${escapeHtml(locationLabel)}</li>
-${visaInterest ? `<li><strong>Investor Visa interest:</strong> ${visaInterest}</li>` : ''}
-<li><strong>Planned investment:</strong> ${investmentRange}</li>
-<li><strong>Goals:</strong> ${investmentGoals}</li>
-<li><strong>Project interests:</strong> ${projectTypes}</li>
-</ul>
-<p><a href="${adminUrl}">Open user management</a></p>`
-
-  const text = `${subject}\n${adminUrl}`
-
-  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
-
   return { ok: true, count: recipients.length }
+}
+
+export async function notifyAdminsInvestorPendingApproval({ investor, locale = 'en' }) {
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id })
+  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
+  const locationLabel =
+    profile.location === 'MX'
+      ? locale === 'es'
+        ? 'México'
+        : 'Mexico'
+      : profile.location === 'US'
+        ? locale === 'es'
+          ? 'Estados Unidos'
+          : 'United States'
+        : profile.location || '—'
+
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? `Nuevo inversionista pendiente de aprobación — ${name}`
+        : `New investor pending approval — ${name}`,
+    heading:
+      locale === 'es' ? 'Inversionista pendiente de aprobación' : 'Investor pending approval',
+    intro:
+      locale === 'es'
+        ? 'Un inversionista completó su perfil y está listo para revisión de cuenta.'
+        : 'An investor completed their profile and is ready for account review.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Ubicación' : 'Location', value: locationLabel },
+      { label: locale === 'es' ? 'Monto planeado' : 'Planned investment', value: profile.investmentRange },
+      { label: locale === 'es' ? 'Objetivos' : 'Goals', value: profile.investmentGoals },
+    ],
+    primaryCta: {
+      href: links.user,
+      label: locale === 'es' ? 'Abrir ficha del inversionista' : 'Open investor record',
+    },
+  })
+
+  return deliverAdminEmail(locale, content)
 }
 
 export async function notifyAdminsAccreditationSubmitted({
@@ -93,95 +98,77 @@ export async function notifyAdminsAccreditationSubmitted({
   documentCount,
   locale = 'en',
 }) {
-  const recipients = getAdminNotifyEmails()
-
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/users`
-  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
-  const name = escapeHtml(profile.fullName || investor.email)
-  const email = escapeHtml(investor.email)
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id })
   const count = Number(documentCount) || 0
 
-  const subject =
-    locale === 'es'
-      ? `Documentos de inversionista acreditado enviados — ${name}`
-      : `Accredited investor documents submitted — ${name}`
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? `Documentos de inversionista acreditado enviados — ${name}`
+        : `Accredited investor documents submitted — ${name}`,
+    heading:
+      locale === 'es' ? 'Documentos de acreditación enviados' : 'Accreditation documents submitted',
+    intro:
+      locale === 'es'
+        ? 'Revise los documentos en la ficha de este inversionista y apruebe, solicite reenvío o rechace.'
+        : 'Review the documents on this investor’s record and approve, request a resubmit, or reject.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Documentos' : 'Documents', value: String(count) },
+    ],
+    primaryCta: {
+      href: links.user,
+      label: locale === 'es' ? 'Revisar documentos del inversionista' : 'Review investor documents',
+    },
+  })
 
-  const html =
-    locale === 'es'
-      ? `<p>Un inversionista envió documentación para verificación de inversionista acreditado:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-<li><strong>Documentos cargados:</strong> ${count}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir gestión de usuarios</a></p>`
-      : `<p>An investor submitted documentation for accredited investor verification:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-<li><strong>Documents uploaded:</strong> ${count}</li>
-</ul>
-<p><a href="${adminUrl}">Open user management</a></p>`
-
-  const text = `${subject}\n${adminUrl}`
-
-  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
-
-  return { ok: true, count: recipients.length }
+  return deliverAdminEmail(locale, content)
 }
 
 export async function notifyAdminsReviewRequested({ investor, scope, locale = 'en' }) {
-  const recipients = getAdminNotifyEmails()
-
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/users`
-  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
-  const name = escapeHtml(profile.fullName || investor.email)
-  const email = escapeHtml(investor.email)
-
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id })
   const isAccount = scope === 'account'
-  const subject =
-    locale === 'es'
-      ? isAccount
-        ? `Solicitud de revisión de cuenta — ${name}`
-        : `Solicitud de revisión de acreditación — ${name}`
-      : isAccount
-        ? `Account review requested — ${name}`
-        : `Accreditation review requested — ${name}`
 
-  const html =
-    locale === 'es'
-      ? isAccount
-        ? `<p>Un inversionista rechazado solicitó una nueva revisión de su cuenta:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir gestión de usuarios</a></p>`
-        : `<p>Un inversionista solicitó una nueva revisión de su verificación de inversionista acreditado:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir gestión de usuarios</a></p>`
-      : isAccount
-        ? `<p>A rejected investor requested another review of their account:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-</ul>
-<p><a href="${adminUrl}">Open user management</a></p>`
-        : `<p>An investor requested another review of their accredited investor verification:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-</ul>
-<p><a href="${adminUrl}">Open user management</a></p>`
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? isAccount
+          ? `Solicitud de revisión de cuenta — ${name}`
+          : `Solicitud de revisión de acreditación — ${name}`
+        : isAccount
+          ? `Account review requested — ${name}`
+          : `Accreditation review requested — ${name}`,
+    heading:
+      locale === 'es'
+        ? isAccount
+          ? 'Revisión de cuenta solicitada'
+          : 'Revisión de acreditación solicitada'
+        : isAccount
+          ? 'Account review requested'
+          : 'Accreditation review requested',
+    intro: isAccount
+      ? locale === 'es'
+        ? 'Un inversionista rechazado pidió una nueva revisión de su cuenta.'
+        : 'A rejected investor asked for another review of their account.'
+      : locale === 'es'
+        ? 'Un inversionista pidió una nueva revisión de su verificación de inversionista acreditado.'
+        : 'An investor asked for another review of their accredited investor verification.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+    ],
+    primaryCta: {
+      href: links.user,
+      label: locale === 'es' ? 'Abrir ficha del inversionista' : 'Open investor record',
+    },
+  })
 
-  const text = `${subject}\n${adminUrl}`
-
-  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
-
-  return { ok: true, count: recipients.length }
+  return deliverAdminEmail(locale, content)
 }
 
 export async function notifyAdminsMeetingRequested({
@@ -189,55 +176,42 @@ export async function notifyAdminsMeetingRequested({
   property,
   channel,
   intendedAmount,
+  intentId,
   locale = 'en',
 }) {
-  const recipients = getAdminNotifyEmails()
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/investments`
-  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
-  const name = escapeHtml(profile.fullName || investor.email)
-  const email = escapeHtml(investor.email)
-  const propertyLabel = escapeHtml(
-    property?.investmentId
-      ? `#${property.investmentId} · ${property.name}`
-      : property?.name || '—'
-  )
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id, intentId })
   const channelLabel = meetingChannelPlainLabel(channel, locale)
-  const amountLabel =
-    intendedAmount != null && Number.isFinite(Number(intendedAmount))
-      ? `$${Number(intendedAmount).toLocaleString('en-US')}`
-      : '—'
 
-  const subject =
-    locale === 'es'
-      ? `Solicitud de inversión — ${name}`
-      : `Investment request — ${name}`
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es' ? `Solicitud de inversión — ${name}` : `Investment request — ${name}`,
+    heading: locale === 'es' ? 'Solicitud de inversión' : 'Investment request',
+    intro:
+      locale === 'es'
+        ? 'Un inversionista acreditado envió una solicitud por WhatsApp. Confirme en WhatsApp que la reunión quedó agendada antes de aprobar para invertir.'
+        : 'An accredited investor submitted an investment request via WhatsApp. Confirm in WhatsApp that a meeting is actually scheduled before approving them to invest.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Propiedad' : 'Property', value: propertyLabel(property) },
+      { label: locale === 'es' ? 'Modalidad' : 'Modality', value: channelLabel },
+      { label: locale === 'es' ? 'Monto estimado' : 'Intended amount', value: amountLabel(intendedAmount) },
+    ],
+    primaryCta: {
+      href: links.intent,
+      label: locale === 'es' ? 'Abrir esta solicitud' : 'Open this request',
+    },
+    secondaryCtas: [
+      {
+        href: links.user,
+        label: locale === 'es' ? 'Ficha del inversionista' : 'Investor record',
+      },
+    ],
+  })
 
-  const html =
-    locale === 'es'
-      ? `<p>Un inversionista acreditado envió una solicitud de inversión por WhatsApp. Confirme en WhatsApp que la reunión quedó agendada antes de aprobar para invertir:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-<li><strong>Propiedad:</strong> ${propertyLabel}</li>
-<li><strong>Modalidad:</strong> ${escapeHtml(channelLabel)}</li>
-<li><strong>Monto estimado:</strong> ${escapeHtml(amountLabel)}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir solicitudes de inversión</a></p>`
-      : `<p>An accredited investor submitted an investment request via WhatsApp. Confirm in WhatsApp that a meeting is actually scheduled before approving for investment:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-<li><strong>Property:</strong> ${propertyLabel}</li>
-<li><strong>Modality:</strong> ${escapeHtml(channelLabel)}</li>
-<li><strong>Intended amount:</strong> ${escapeHtml(amountLabel)}</li>
-</ul>
-<p><a href="${adminUrl}">Open investment requests</a></p>`
-
-  const text = `${subject}\n${adminUrl}`
-
-  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
-
-  return { ok: true, count: recipients.length }
+  return deliverAdminEmail(locale, content)
 }
 
 export async function notifyAdminsDepositSubmitted({
@@ -245,53 +219,184 @@ export async function notifyAdminsDepositSubmitted({
   property,
   amount,
   reference,
+  depositId,
   locale = 'en',
 }) {
-  const recipients = getAdminNotifyEmails()
-  const adminUrl = `${getBaseUrl()}/${locale}/admin/deposits`
-  const profile = investor.profile && typeof investor.profile === 'object' ? investor.profile : {}
-  const name = escapeHtml(profile.fullName || investor.email)
-  const email = escapeHtml(investor.email)
-  const propertyLabel = escapeHtml(
-    property?.investmentId
-      ? `#${property.investmentId} · ${property.name}`
-      : property?.name || '—'
-  )
-  const amountLabel =
-    amount != null && Number.isFinite(Number(amount))
-      ? `$${Number(amount).toLocaleString('en-US')}`
-      : '—'
-  const referenceLabel = escapeHtml(reference || '—')
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id, depositId })
 
-  const subject =
-    locale === 'es'
-      ? `Comprobante de depósito enviado — ${name}`
-      : `Deposit proof submitted — ${name}`
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? `Comprobante de depósito enviado — ${name}`
+        : `Deposit proof submitted — ${name}`,
+    heading: locale === 'es' ? 'Comprobante de depósito enviado' : 'Deposit proof submitted',
+    intro:
+      locale === 'es'
+        ? 'Revise el comprobante y confirme o rechace el depósito. Confirmar crea el aporte en el portafolio.'
+        : 'Review the receipt and confirm or reject the deposit. Confirming creates the portfolio contribution.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Propiedad' : 'Property', value: propertyLabel(property) },
+      { label: locale === 'es' ? 'Monto' : 'Amount', value: amountLabel(amount) },
+      { label: locale === 'es' ? 'Referencia' : 'Reference', value: reference || '—' },
+    ],
+    primaryCta: {
+      href: links.deposit,
+      label: locale === 'es' ? 'Revisar este depósito' : 'Review this deposit',
+    },
+    secondaryCtas: [
+      {
+        href: links.user,
+        label: locale === 'es' ? 'Ficha del inversionista' : 'Investor record',
+      },
+    ],
+  })
 
-  const html =
-    locale === 'es'
-      ? `<p>Un inversionista acreditado envió comprobante de depósito para revisión:</p>
-<ul>
-<li><strong>Nombre:</strong> ${name}</li>
-<li><strong>Correo:</strong> ${email}</li>
-<li><strong>Propiedad:</strong> ${propertyLabel}</li>
-<li><strong>Monto:</strong> ${escapeHtml(amountLabel)}</li>
-<li><strong>Referencia:</strong> ${referenceLabel}</li>
-</ul>
-<p><a href="${adminUrl}">Abrir solicitudes de inversión</a></p>`
-      : `<p>An accredited investor submitted deposit proof for review:</p>
-<ul>
-<li><strong>Name:</strong> ${name}</li>
-<li><strong>Email:</strong> ${email}</li>
-<li><strong>Property:</strong> ${propertyLabel}</li>
-<li><strong>Amount:</strong> ${escapeHtml(amountLabel)}</li>
-<li><strong>Reference:</strong> ${referenceLabel}</li>
-</ul>
-<p><a href="${adminUrl}">Open investment requests</a></p>`
+  return deliverAdminEmail(locale, content)
+}
 
-  const text = `${subject}\n${adminUrl}`
+export async function notifyAdminsCashOutRequested({ investor, amount, cashOutId, locale = 'en' }) {
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id, cashOutId })
 
-  await Promise.all(recipients.map((to) => sendAdminEmail({ to, subject, html, text })))
+  const content = buildAdminEmail({
+    locale,
+    subject: locale === 'es' ? `Solicitud de retiro — ${name}` : `Cash-out request — ${name}`,
+    heading: locale === 'es' ? 'Solicitud de retiro pendiente' : 'Pending cash-out request',
+    intro:
+      locale === 'es'
+        ? 'Un inversionista pidió un retiro de retornos. Confirme cuando el pago esté hecho, o rechace para liberar el saldo.'
+        : 'An investor requested a cash-out of returns. Confirm when the payment is made, or reject to release the balance.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Monto' : 'Amount', value: amountLabel(amount) },
+    ],
+    primaryCta: {
+      href: links.cashOut,
+      label: locale === 'es' ? 'Abrir esta solicitud de retiro' : 'Open this cash-out request',
+    },
+    secondaryCtas: [
+      {
+        href: links.user,
+        label: locale === 'es' ? 'Ficha del inversionista' : 'Investor record',
+      },
+    ],
+  })
 
-  return { ok: true, count: recipients.length }
+  return deliverAdminEmail(locale, content)
+}
+
+export async function notifyAdminsReinvestRequested({
+  investor,
+  property,
+  amount,
+  reinvestId,
+  locale = 'en',
+}) {
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id, reinvestId })
+
+  const content = buildAdminEmail({
+    locale,
+    subject: locale === 'es' ? `Solicitud de reinversión — ${name}` : `Reinvestment request — ${name}`,
+    heading: locale === 'es' ? 'Solicitud de reinversión pendiente' : 'Pending reinvestment request',
+    intro:
+      locale === 'es'
+        ? 'Un inversionista pidió asignar retornos a una propiedad. Confirmar crea el aporte; rechazar libera el saldo.'
+        : 'An investor asked to allocate returns to a property. Confirming creates the contribution; rejecting releases the balance.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Propiedad destino' : 'Destination property', value: propertyLabel(property) },
+      { label: locale === 'es' ? 'Monto' : 'Amount', value: amountLabel(amount) },
+    ],
+    primaryCta: {
+      href: links.reinvest,
+      label: locale === 'es' ? 'Abrir esta reinversión' : 'Open this reinvestment',
+    },
+    secondaryCtas: [
+      {
+        href: links.user,
+        label: locale === 'es' ? 'Ficha del inversionista' : 'Investor record',
+      },
+    ],
+  })
+
+  return deliverAdminEmail(locale, content)
+}
+
+export async function notifyAdminsMeetingCancelled({
+  investor,
+  property,
+  intentId,
+  locale = 'en',
+}) {
+  const name = investorName(investor)
+  const links = adminAppLinks(locale, { userId: investor.id, intentId })
+
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? `Solicitud de inversión cancelada — ${name}`
+        : `Investment request cancelled — ${name}`,
+    heading:
+      locale === 'es' ? 'El inversionista canceló la solicitud' : 'Investor cancelled the request',
+    intro:
+      locale === 'es'
+        ? 'Un inversionista canceló una solicitud de inversión pendiente. No se requiere acción salvo seguimiento si la reunión ya estaba agendada.'
+        : 'An investor cancelled a pending investment request. No action is required unless a meeting was already scheduled.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: investor.email },
+      { label: locale === 'es' ? 'Propiedad' : 'Property', value: propertyLabel(property) },
+    ],
+    primaryCta: {
+      href: links.intent,
+      label: locale === 'es' ? 'Ver la solicitud cancelada' : 'View the cancelled request',
+    },
+    secondaryCtas: [
+      {
+        href: links.user,
+        label: locale === 'es' ? 'Ficha del inversionista' : 'Investor record',
+      },
+    ],
+  })
+
+  return deliverAdminEmail(locale, content)
+}
+
+export async function notifyAdminsWorkWithUsInquiry({
+  name,
+  email,
+  phone,
+  message,
+  roleTitle,
+  locale = 'en',
+}) {
+  const content = buildAdminEmail({
+    locale,
+    subject:
+      locale === 'es'
+        ? `Consulta de Trabaja con nosotros — ${name}`
+        : `Work with us inquiry — ${name}`,
+    heading: locale === 'es' ? 'Consulta de Trabaja con nosotros' : 'Work with us inquiry',
+    intro:
+      locale === 'es'
+        ? 'Alguien envió el formulario de Trabaja con nosotros.'
+        : 'Someone submitted the Work with us form.',
+    fields: [
+      { label: locale === 'es' ? 'Nombre' : 'Name', value: name },
+      { label: locale === 'es' ? 'Correo' : 'Email', value: email },
+      { label: locale === 'es' ? 'Teléfono' : 'Phone', value: phone || '—' },
+      { label: locale === 'es' ? 'Interés' : 'Interest', value: roleTitle },
+    ],
+    note: message,
+  })
+
+  return deliverAdminEmail(locale, content)
 }

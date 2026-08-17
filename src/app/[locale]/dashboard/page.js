@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { getTranslations } from 'next-intl/server'
 import { PrismaClient } from '@prisma/client'
-import { ArrowRight, Activity, Briefcase, Building2, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowRight, Activity, Bell, Briefcase, Building2, ShieldCheck, UserRound } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { buttonVariants } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { getWalletBalance } from '@/lib/investorWallet'
 import {
   canAccessPortfolio,
   resolveProtectedPortfolioHref,
+  resolveProtectedUpdatesHref,
 } from '@/lib/auth/userStatus'
 import { getInvestorAdminPhase } from '@/lib/admin/userTimeline'
 
@@ -59,6 +60,7 @@ export default async function DashboardPage() {
   const user = session?.user
   const isAdmin = user?.type === 'ADMIN'
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
+  const updatesHref = user ? resolveProtectedUpdatesHref(user) : '/login'
 
   let totalInvested = 0
   let holdingCount = 0
@@ -226,6 +228,14 @@ export default async function DashboardPage() {
       desc: investmentsUnlocked ? t('investmentsDesc') : t('investmentsLockedDesc'),
       cta: investmentsUnlocked ? t('investmentsCta') : t('investmentsLockedCta'),
       badge: investmentsUnlocked && openRequests.length > 0 ? String(openRequests.length) : null,
+      disabled: !investmentsUnlocked,
+    },
+    {
+      href: updatesHref,
+      icon: Bell,
+      title: t('updatesTitle'),
+      desc: investmentsUnlocked ? t('updatesDesc') : t('updatesLockedDesc'),
+      cta: investmentsUnlocked ? t('updatesCta') : t('updatesLockedCta'),
       disabled: !investmentsUnlocked,
     },
     {

@@ -5,10 +5,13 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { depositRequestInclude, toClientDepositRequest } from '@/lib/depositRequests'
 import { contributionInclude } from '@/lib/fundingContributions'
 import { markIntentCompleted } from '@/lib/investmentIntents'
-import {
-  assertContributionFitsGoal,
-  syncPropertyFundingStatus,
-} from '@/lib/propertyFunding'
+import { assertContributionFitsGoal } from '@/lib/propertyFunding'
+import { syncPropertyFundingStatusWithHolderNotify } from '@/lib/investorUpdates'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendDepositConfirmedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { formatUsd } from '@/lib/formatMoney'
 
 const prisma = new PrismaClient()
 
@@ -66,7 +69,7 @@ export async function POST(_request, { params }) {
       return { deposit: updated, contribution }
     })
 
-    await syncPropertyFundingStatus(prisma, deposit.propertyId)
+    await syncPropertyFundingStatusWithHolderNotify(prisma, deposit.propertyId)
     await markIntentCompleted(prisma, {
       userId: deposit.userId,
       propertyId: deposit.propertyId,
@@ -76,6 +79,22 @@ export async function POST(_request, { params }) {
       where: { id },
       include: depositRequestInclude,
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: deposit.userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Deposit confirmed email', () =>
+        sendDepositConfirmedEmail({
+          to: investor.email,
+          locale,
+          propertyName: fullDeposit?.property?.name || 'property',
+          amountLabel: formatUsd(deposit.amount),
+        })
+      )
+    }
 
     return NextResponse.json({
       deposit: toClientDepositRequest(fullDeposit),

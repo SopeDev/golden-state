@@ -3,10 +3,8 @@ import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { contributionInclude } from '@/lib/fundingContributions'
-import {
-  assertContributionFitsGoal,
-  syncPropertyFundingStatus,
-} from '@/lib/propertyFunding'
+import { assertContributionFitsGoal } from '@/lib/propertyFunding'
+import { syncPropertyFundingStatusWithHolderNotify } from '@/lib/investorUpdates'
 
 const prisma = new PrismaClient()
 
@@ -71,7 +69,7 @@ export async function PATCH(request, { params }) {
       include: contributionInclude,
     })
 
-    await syncPropertyFundingStatus(prisma, existing.propertyId)
+    await syncPropertyFundingStatusWithHolderNotify(prisma, existing.propertyId)
 
     return NextResponse.json(contribution)
   } catch (error) {
@@ -107,7 +105,7 @@ export async function DELETE(_request, { params }) {
       include: contributionInclude,
     })
 
-    await syncPropertyFundingStatus(prisma, existing.propertyId)
+    await syncPropertyFundingStatusWithHolderNotify(prisma, existing.propertyId)
 
     return NextResponse.json(contribution)
   } catch (error) {

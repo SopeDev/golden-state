@@ -69,9 +69,9 @@ Migration: `migrations/YYYYMMDDHHMMSS_pago5_property_progress/`
 
 | Item | Payment |
 |------|---------|
-| Secure project document uploads / downloads | Pago 6 |
-| Investment assignment / deposits | Pago 7 |
-| Push notifications when progress changes | Pago 8 |
+| Secure project document uploads / downloads | Pago 6 (done) |
+| Investment assignment / deposits | Pago 7 (done) |
+| Push notifications when progress changes | Pago 8 closed without a dedicated inbox; see [PLAN_ENTREGA_10_PAGOS.md](PLAN_ENTREGA_10_PAGOS.md) |
 
 ---
 

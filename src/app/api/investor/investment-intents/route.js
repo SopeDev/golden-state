@@ -10,8 +10,9 @@ import {
 } from '@/lib/investmentIntents'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
-import { sendMeetingRequestedEmail } from '@/lib/email/mailer'
-import { notifyAdminsMeetingRequested } from '@/lib/email/adminNotify'
+import { notifyAdminsMeetingCancelled, notifyAdminsMeetingRequested } from '@/lib/email/adminNotify'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendSafely } from '@/lib/email/sendSafely'
 import {
   getEffectiveMinInvestment,
   getPropertyFundedAmount,
@@ -157,33 +158,20 @@ export async function POST(request) {
     if (shouldNotify) {
       const investor = await prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, profile: true },
+        select: investorEmailSelect,
       })
       if (investor?.email) {
         const locale = resolveUserLocale(investor)
-        try {
-          await sendMeetingRequestedEmail({
-            to: investor.email,
-            locale,
-            propertyName: property.name,
-            investmentId: property.investmentId,
-            channel,
-            intendedAmount,
-          })
-        } catch (emailError) {
-          console.error('Meeting requested investor email failed:', emailError)
-        }
-        try {
-          await notifyAdminsMeetingRequested({
+        await sendSafely('Meeting requested admin notify', () =>
+          notifyAdminsMeetingRequested({
             investor,
             property,
             channel,
             intendedAmount,
+            intentId: intent.id,
             locale,
           })
-        } catch (emailError) {
-          console.error('Meeting requested admin notify failed:', emailError)
-        }
+        )
       }
     }
 
@@ -235,6 +223,22 @@ export async function PATCH(request) {
       data: { status: 'CANCELLED' },
       include: investmentIntentInclude,
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Meeting cancelled admin notify', () =>
+        notifyAdminsMeetingCancelled({
+          investor,
+          property: intent.property,
+          intentId: intent.id,
+          locale,
+        })
+      )
+    }
 
     return NextResponse.json(intent)
   } catch (error) {

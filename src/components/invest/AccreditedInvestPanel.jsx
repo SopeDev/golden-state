@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useRouter } from '@/i18n/navigation'
 import { getInvestMeetingLinks } from '@/lib/investMeetingLinks'
 import {
   canInvestorCancelMeetingRequest,
@@ -32,6 +33,7 @@ export default function AccreditedInvestPanel({ property, onActiveRequestChange 
   const t = useTranslations('Invest')
   const tAccount = useTranslations('MyAccount')
   const locale = useLocale()
+  const router = useRouter()
   const { confirm } = useMessaging()
   const [intendedAmount, setIntendedAmount] = useState('')
   const [intent, setIntent] = useState(null)
@@ -178,10 +180,10 @@ export default function AccreditedInvestPanel({ property, onActiveRequestChange 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || t('meetingRequestFailed'))
       setIntent(data)
-      setStatus(t('meetingRequested'))
 
       const url = whatsappUrlForChannel(channel)
       if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      router.push('/dashboard/activity')
     } catch (error) {
       setStatus(error.message || t('meetingRequestFailed'))
     } finally {
@@ -369,7 +371,11 @@ export default function AccreditedInvestPanel({ property, onActiveRequestChange 
         ) : null}
 
         {canSubmitDeposit ? (
-          <DepositConfirmForm propertyId={property.id} onSubmitted={() => refresh()} />
+          <DepositConfirmForm
+            propertyId={property.id}
+            minAmount={effectiveMin}
+            onSubmitted={() => refresh()}
+          />
         ) : null}
 
         {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}

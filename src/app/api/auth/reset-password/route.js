@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { sendPasswordChangedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { findUserByHashedToken } from '@/lib/auth/tokens'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/security/rateLimit'
 
 const prisma = new PrismaClient()
 
 export async function POST(request) {
+  const limited = enforceRateLimit(request, 'reset-password', RATE_LIMITS.resetPassword)
+  if (limited) return limited
+
   try {
     const body = await request.json()
     const token = typeof body.token === 'string' ? body.token : ''
@@ -14,12 +22,12 @@ export async function POST(request) {
       return NextResponse.json({ message: 'Invalid request' }, { status: 400 })
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        passwordResetToken: token,
-        passwordResetExpires: { gt: new Date() },
-      },
-    })
+    const user = await findUserByHashedToken(
+      prisma,
+      'passwordResetToken',
+      token,
+      'passwordResetExpires'
+    )
 
     if (!user) {
       return NextResponse.json({ message: 'Invalid or expired token' }, { status: 400 })
@@ -32,8 +40,16 @@ export async function POST(request) {
         password: hashedPassword,
         passwordResetToken: null,
         passwordResetExpires: null,
+        sessionEpoch: { increment: 1 },
       },
     })
+
+    if (user.email) {
+      const locale = resolveUserLocale(user)
+      await sendSafely('Password changed email', () =>
+        sendPasswordChangedEmail({ to: user.email, locale })
+      )
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/security/rateLimit'
 
 export async function POST(request) {
+  const limited = enforceRateLimit(request, 'contact', RATE_LIMITS.contact)
+  if (limited) return limited
+
   try {
     const body = await request.json()
     const name = typeof body.name === 'string' ? body.name.trim() : ''

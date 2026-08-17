@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import FaqStructuredEditor, { faqInputId } from './FaqStructuredEditor'
+import RolesStructuredEditor from './RolesStructuredEditor'
 import {
   parseFaqStructure,
   composeFaqFlat,
@@ -22,12 +23,28 @@ import {
   moveQuestion as faqMoveQuestion,
   updateQuestionField as faqUpdateQuestionField,
 } from '@/lib/faqEditor'
+import {
+  parseCareersRoles,
+  composeCareersFlat,
+  isCareersStructuredKey,
+  addRole as careersAddRole,
+  removeRole as careersRemoveRole,
+  moveRole as careersMoveRole,
+  updateRoleField as careersUpdateRoleField,
+  roleInputId,
+} from '@/lib/careersEditor'
+import { stripCareersStructuredKeys } from '@/lib/careerRoles'
 
 const PREVIEW_CONFIG = {
   HOME: { src: '/en/admin/content/preview/home', updateType: 'HOME_PREVIEW_UPDATE', selectType: 'HOME_PREVIEW_SELECT' },
   ABOUT: { src: '/en/admin/content/preview/about', updateType: 'ABOUT_PREVIEW_UPDATE', selectType: 'ABOUT_PREVIEW_SELECT' },
   FAQ: { src: '/en/admin/content/preview/faq', updateType: 'FAQ_PREVIEW_UPDATE', selectType: 'FAQ_PREVIEW_SELECT' },
   CONTACT: { src: '/en/admin/content/preview/contact', updateType: 'CONTACT_PREVIEW_UPDATE', selectType: 'CONTACT_PREVIEW_SELECT' },
+  WORK_WITH_US: {
+    src: '/en/admin/content/preview/work-with-us',
+    updateType: 'WORK_WITH_US_PREVIEW_UPDATE',
+    selectType: 'WORK_WITH_US_PREVIEW_SELECT',
+  },
 }
 
 const stripFaqStructuredKeys = (obj) => {
@@ -45,6 +62,12 @@ const mergeForPage = (pageKey, fallback, saved) => {
     // entries don't resurrect from the bundled fallback.
     return {
       ...stripFaqStructuredKeys(fallback),
+      ...saved,
+    }
+  }
+  if (pageKey === 'WORK_WITH_US' && typeof saved?.roleOrder === 'string') {
+    return {
+      ...stripCareersStructuredKeys(fallback),
       ...saved,
     }
   }
@@ -282,6 +305,38 @@ const HOME_SECTIONS = [
   },
 ]
 
+const WORK_WITH_US_KEY_ORDER = [
+  'metaTitle',
+  'metaDescription',
+  'heroEyebrow',
+  'heroTitle',
+  'heroSubtitle',
+  'introTitle',
+  'introBody',
+  'rolesKicker',
+  'rolesTitle',
+  'rolesSubtitle',
+  'rolesEmpty',
+  'roleApply',
+  'roleApplySelected',
+  'formSectionTitle',
+  'formSectionDescription',
+  'formInterestLabel',
+  'formInterestGeneral',
+  'formApplyingFor',
+  'name',
+  'email',
+  'phone',
+  'message',
+  'submit',
+  'submitting',
+  'success',
+  'error',
+  'validationError',
+  'privacyNote',
+  'eeoNote',
+]
+
 const CONTACT_KEY_ORDER = [
   'metaTitle',
   'metaDescription',
@@ -355,11 +410,15 @@ const PAGE_CONFIG = {
     label: 'Contact Page',
     keyOrder: CONTACT_KEY_ORDER,
   },
+  WORK_WITH_US: {
+    label: 'Work with us',
+    keyOrder: WORK_WITH_US_KEY_ORDER,
+  },
 }
 
 const FAQ_STRUCTURED_KEY_REGEX = /^(?:categoryOrder|category.+Title|item\d+(?:Category|Question|Answer))$/
 
-const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ', 'CONTACT']
+const PAGE_TABS = ['HOME', 'ABOUT', 'FAQ', 'CONTACT', 'WORK_WITH_US']
 
 export default function ContentAdminClient({ records, fallbackByPage }) {
   const t = useTranslations('Admin.content')
@@ -404,6 +463,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
       if (pageOrder.includes(key)) return false
       // FAQ categories/items are edited via the structured editor below.
       if (activePage === 'FAQ' && FAQ_STRUCTURED_KEY_REGEX.test(key)) return false
+      if (activePage === 'WORK_WITH_US' && isCareersStructuredKey(key)) return false
       return true
     })
     return [...pageOrder, ...unknownKeys]
@@ -447,6 +507,32 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
       ),
   }
 
+  const careersStructure = useMemo(() => {
+    if (activePage !== 'WORK_WITH_US') return null
+    return parseCareersRoles(contentByPage.WORK_WITH_US)
+  }, [activePage, contentByPage])
+
+  const applyCareersUpdate = (producer) => {
+    setContentByPage((prev) => {
+      const base = prev.WORK_WITH_US || { en: {}, es: {} }
+      const currentStructure = parseCareersRoles(base)
+      const nextStructure = producer(currentStructure)
+      return {
+        ...prev,
+        WORK_WITH_US: composeCareersFlat(nextStructure, base),
+      }
+    })
+  }
+
+  const careersHandlers = {
+    onAddRole: () => applyCareersUpdate((s) => careersAddRole(s)),
+    onRemoveRole: (roleId) => applyCareersUpdate((s) => careersRemoveRole(s, roleId)),
+    onMoveRole: (roleId, direction) =>
+      applyCareersUpdate((s) => careersMoveRole(s, roleId, direction)),
+    onRoleFieldChange: (roleId, field, locale, value) =>
+      applyCareersUpdate((s) => careersUpdateRoleField(s, roleId, field, locale, value)),
+  }
+
   const isLongField = (key) => {
     const longKeyWords = [
       'Body',
@@ -462,6 +548,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
       'Footnote',
     ]
     if (key === 'hoursValue') return true
+    if (key === 'rolesEmpty') return true
     return longKeyWords.some((word) => key.includes(word))
   }
 
@@ -661,6 +748,23 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
           field: payload.field,
         })
         focusInputId(fieldId)
+        return
+      }
+
+      if (eventType === 'WORK_WITH_US_PREVIEW_SELECT') {
+        const payload = event.data?.payload || {}
+        const locale = payload.locale || previewLocale
+        if (payload.kind === 'role') {
+          focusInputId(
+            roleInputId({
+              roleId: payload.roleId,
+              field: payload.field,
+              locale,
+            })
+          )
+          return
+        }
+        if (payload.key) focusInputId(`${locale}-${payload.key}`)
       }
     }
 
@@ -741,7 +845,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 <div className="space-y-4">
                   {orderedKeys.length > 0 ? (
                     orderedKeys.map((key) => renderField(key))
-                  ) : activePage === 'FAQ' ? null : (
+                  ) : activePage === 'FAQ' || activePage === 'WORK_WITH_US' ? null : (
                     <Card className="border-dashed">
                       <CardContent className="pt-6 text-sm text-muted-foreground">
                         {t('noFieldsYet', { page: t(`tabs.${activePage}`) })}
@@ -761,6 +865,16 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                 </div>
               ) : null}
 
+              {activePage === 'WORK_WITH_US' && careersStructure ? (
+                <div className="border-t border-border pt-6">
+                  <RolesStructuredEditor
+                    structure={careersStructure}
+                    highlightedFieldId={highlightedFieldId}
+                    {...careersHandlers}
+                  />
+                </div>
+              ) : null}
+
               {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
 
               <div className="flex justify-end gap-3 border-t border-border pt-4">
@@ -771,7 +885,10 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                   type="button"
                   onClick={handleSave}
                   disabled={
-                    isLoading || (orderedKeys.length === 0 && activePage !== 'FAQ')
+                    isLoading ||
+                    (orderedKeys.length === 0 &&
+                      activePage !== 'FAQ' &&
+                      activePage !== 'WORK_WITH_US')
                   }
                 >
                   {isLoading ? t('savingContent') : t('saveContent')}

@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
-import { sendAccreditationApprovedEmail, sendAccreditationResubmitEmail } from '@/lib/email/mailer'
+import { sendAccreditationApprovedEmail, sendAccreditationRejectedEmail, sendAccreditationResubmitEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
 import { getDocumentEmailLabels, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 
 const prisma = new PrismaClient()
@@ -89,6 +90,12 @@ export async function POST(request, { params }) {
           accreditationResubmitKinds: null,
         },
       })
+
+      const locale = resolveUserLocale(user)
+      await sendSafely('Accreditation rejected email', () =>
+        sendAccreditationRejectedEmail({ to: user.email, locale, reviewNote: note })
+      )
+
       const { password: _, ...safe } = user
       return NextResponse.json(safe)
     }

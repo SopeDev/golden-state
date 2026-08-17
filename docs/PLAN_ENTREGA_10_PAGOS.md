@@ -1,6 +1,6 @@
 ---
 name: Plan de entrega en 10 pagos
-overview: "Plan vivo: pago 6 = captación (dinero in); pago 7 = dividendos/reinversión + rediseño admin; pago 8 = notificaciones; pago 9 = legales + Work with us; pago 10 = publicación/analítica."
+overview: "Plan vivo: pagos 6–8 cerrados (captación, dividendos/reinversión + admin, avisos vía docs/actividad/correos); pago 9 = legales + Work with us; pago 10 = publicación/analítica."
 todos:
   - id: payment-2
     content: "Página Quiénes somos (About) bilingüe; pulido de pantallas ya existentes; arquitectura front + shadcn/Magic alineados a reglas Cursor"
@@ -19,10 +19,10 @@ todos:
     status: completed
   - id: payment-7
     content: "Rediseño del panel admin; distribuciones/dividendos a inversionistas, historial y base de reinversión (dinero hacia el cliente)"
-    status: pending
+    status: completed
   - id: payment-8
-    content: Notificaciones de avances (en plataforma; correo opcional)
-    status: pending
+    content: "Avisos de avances (cerrado con documentos de progreso, actividad del inversionista y correos transaccionales; sin centro de notificaciones dedicado)"
+    status: completed
   - id: payment-9
     content: "Páginas estáticas: legales (términos, privacidad, avisos) y Trabaja con nosotros / Work with us"
     status: pending
@@ -86,7 +86,7 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 
 - **Usuarios / inversionistas** — alta, edición, **aprobación o rechazo de cuenta**, **revisión de documentos de acreditación** (**pago 4**).
 - **Propiedades / proyectos** — alta, edición y baja desde el panel admin + API (imágenes hoy como URLs en formulario; archivos reales en **pago 6**).
-- **Vista de datos** (`/admin/data`) — resumen legible de propiedades, usuarios e inversiones existentes en BD (el rediseño admin y las herramientas de **distribuciones** van en **pago 7**).
+- **Vista de datos** (`/admin/data`) — resumen legible de propiedades, usuarios e inversiones existentes en BD (el rediseño admin y las **distribuciones** quedaron en **pago 7**).
 - **Esquema / documentación interna** (`/admin/schema`) — referencia del modelo de datos para el equipo.
 
 **Detrás de escena**
@@ -96,10 +96,8 @@ El **primer pago** cubrió la **base del producto** en código: pantallas recorr
 
 **Qué todavía no hay como producto (y está en pagos posteriores del plan)**
 
-- **Distribuciones / dividendos**, historial de pagos al inversionista y **reinversión**, más **rediseño del panel admin** — **pago 7**.
 - **Quiénes somos**, **FAQ**, **contacto**, **navegación cerrada** en menú/pie, enlaces huérfanos — **pagos 2 y 3** (según calendario original; varias ya entregadas).
 - Páginas **legales** completas y **Trabaja con nosotros** — **pago 9**.
-- **Notificaciones** de avances de proyecto — **pago 8**.
 La página **Quiénes somos** se entrega en el **pago 2**. La **landing principal** (inicio del sitio público, cotizada en la Fase 1) **aún no forma parte de lo recibido**: va en el **pago 3**, junto con **FAQ**, **contacto** y el cierre de **navegación**; allí también va **idioma sugerido por ubicación**. **Analítica, métricas y el paquete SEO / redes para el lanzamiento** se entregan en el **pago 10**, con el cierre de **publicación** del sitio.
 
 En conjunto: ya existe la **base técnica** y el recorrido de proyectos y panel; falta el **sitio informativo completo** (incluida la home pública), el resto de la **Fase 1** en la página y, más adelante, lo de la cotización como **producto terminado** y **operación diaria**.
@@ -122,8 +120,6 @@ El **inventario superior** ya refleja lo construido; puede **cambiar de forma y 
 - **Archivos reales:** subida de **documentos** (no solo textos en formulario) y **descargas** seguras desde el portafolio o la ficha del proyecto.
 - **Operación de inversiones:** desde el admin, **asignar** un proyecto a un inversionista y **registrar o editar montos** sin depender solo de datos de prueba.
 - **Depósitos:** flujo de “**avisé mi depósito**” y **confirmación manual por el admin**.
-- **Notificaciones:** avisos de actualización a los inversionistas.
-- **Dividendos e historial** (y base para **reinvertir** en una primera versión).
 - **Roles extra** (contador, moderador) con permisos distintos, si se mantienen en el alcance; puede programarse al final o como extensión.
 
 ---
@@ -199,11 +195,11 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 
 | Tema | Pago |
 |------|------|
-| Almacenamiento seguro de documentos y descargas firmadas | 6 |
+| Almacenamiento seguro de documentos y descargas firmadas | 6 (cerrado) |
 | Avance % y estado de proyectos en fichas y portafolio | 5 |
-| Captación: reunión, depósito bancario entrante y confirmación (dinero in) | 6 |
-| Distribuciones/dividendos, reinversión y rediseño admin (dinero out) | 7 |
-| Centro de notificaciones y correos de avances de proyecto | 8 |
+| Captación: reunión, depósito bancario entrante y confirmación (dinero in) | 6 (cerrado) |
+| Distribuciones/dividendos, reinversión y rediseño admin (dinero out) | 7 (cerrado) |
+| Avisos de avances (docs, actividad, correos; sin inbox dedicado) | 8 (cerrado) |
 | Páginas legales y Trabaja con nosotros | 9 |
 
 **Qué verán ustedes**
@@ -242,12 +238,14 @@ Material de proyecto disponible de forma controlada, y el **núcleo de entrada d
 
 ### Pago 7 — Pagos al inversionista, reinversión y rediseño del admin
 
+**Estado:** completado.
+
 **Qué entregamos**
 
 - **Rediseño del panel administrativo** (navegación, layout y consistencia de las herramientas de ops).
 - Registro de **distribuciones, dividendos o pagos** asociados a cada inversión (monto, fecha, concepto) — dinero **hacia el cliente**.
 - Pantallas para que el inversionista vea **historial** y resúmenes (sustituye el placeholder de returns).
-- **Primera versión de reinversión**: por ejemplo solicitud registrada o anotación administrativa (automatización total puede quedar como evolución futura).
+- **Primera versión de reinversión**: solicitud del inversionista, reserva en billetera y cola admin para confirmar o rechazar. Incluye **retiro** (cash-out) con el mismo patrón.
 
 **Qué verán ustedes**
 
@@ -257,15 +255,15 @@ Ops con un admin más usable, y transparencia en **resultados / pagos recibidos*
 
 ### Pago 8 — Notificaciones de avances
 
-**Qué entregamos**
+**Estado:** completado (cierre pragmático). No hay un centro de notificaciones dedicado ni avisos push al subir un documento de avance; se cierra el pago con las superficies ya en producto.
 
-- Un sistema de **avisos** cuando haya novedades en un proyecto o para un grupo de inversionistas.
-- **Centro de notificaciones** (o similar) para el inversionista y herramienta para el admin para **publicar actualizaciones**.
-- Opcional en esta etapa: que el mismo aviso **también llegue por correo**, si lo incluimos en el mismo entregable o como complemento.
+**Qué cuenta como entregado**
 
-**Qué verán ustedes**
+- **Documentos de avance** por proyecto (admin sube; inversionistas con holding descargan desde el portafolio).
+- **Actividad** del inversionista (`/dashboard/activity`) para solicitudes de inversión y movimientos de billetera.
+- **Correos transaccionales** de onboarding, acreditación, reunión y aviso de depósito (ops).
 
-Cumplimiento de **“notificar a los usuarios sobre avances o cambios”**.
+Un inbox de “novedades de proyecto” con publicación masiva y correo al holder queda fuera de este pago (evolución futura, no pago 9 ni 10).
 
 ---
 
@@ -308,8 +306,8 @@ El sitio **medible** para el público y **presentado de forma profesional** en b
 
 - **Pagos 2 y 3:** **Fase 1** en sitio visible (**pago 2:** **Quiénes somos**, pulido de lo existente, base shadcn/Magic/reglas Cursor; **pago 3:** landing, **FAQ**, **contacto**, menú y pie **sin enlaces rotos**, terminados/en desarrollo, idioma por ubicación).
 - **Pagos 4 a 6:** núcleo de la **Fase 2** (acceso seguro, **Mi cuenta y acreditación**, avance de proyectos, archivos, **captación** de inversiones y depósitos entrantes).
-- **Pago 7:** **visibilidad financiera saliente** (dividendos / historial / reinversión) + **rediseño del admin**.
-- **Pago 8:** **comunicación** (notificaciones de avances).
+- **Pago 7 (cerrado):** **visibilidad financiera saliente** (dividendos / historial / reinversión) + **rediseño del admin**.
+- **Pago 8 (cerrado):** **comunicación** de avances vía documentos, actividad y correos transaccionales (sin inbox dedicado).
 - **Pago 9:** **páginas estáticas** legales y Trabaja con nosotros.
 - **Pago 10:** **cotización / extensión de Fase 1** en su parte de **analítica**: mediciones y metadatos de **lanzamiento**, junto con el cierre orientado a **publicación**.
 
@@ -323,22 +321,17 @@ Si desean, en la siguiente reunión podemos **marcar con fecha** cada pago 2–1
 
 ```mermaid
 flowchart LR
-  subgraph entregado [Pago1_completado]
+  subgraph entregado [Pagos1_y_6_a_8]
     A[Base_tecnica]
     B[Proyectos_y_fichas]
-    C[Acceso_y_portafolio_basico]
-    D[Admin_usuarios_y_proyectos]
+    C[Acceso_y_portafolio]
+    D[Captacion_dinero_in]
+    J[Dividendos_reinversion_admin]
+    K[Avisos_via_docs_actividad_correos]
   end
-  subgraph pendiente [Pagos2_al_10]
-    E[Quienes_somos_pulido_arch]
-    F[Landing_FAQ_contacto_nav_idioma]
-    G[Registro_activacion_mi_cuenta_acreditacion]
-    H[Estado_y_avance]
-    I[Archivos_y_captacion_dinero_in]
-    J[Dividendos_reinversion_admin_UI]
-    K[Notificaciones]
-    L[Legales_y_work_with_us]
-    M[Publicacion_analitica_SEO]
+  subgraph pendiente [Siguiente]
+    L[Pago9_legales_y_work_with_us]
+    M[Pago10_publicacion_analitica_SEO]
   end
   entregado --> pendiente
 ```

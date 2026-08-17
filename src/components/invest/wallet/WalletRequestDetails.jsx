@@ -68,6 +68,7 @@ export default function WalletRequestDetails({ form, inputId, isReinvest, onSubm
             id={inputId}
             name={inputId}
             required
+            min={isReinvest && form.minAmount > 0 && form.minAmount <= form.maxAmount ? form.minAmount : undefined}
             max={form.maxAmount}
             value={form.amount}
             onChange={form.handleAmountChange}
@@ -78,7 +79,12 @@ export default function WalletRequestDetails({ form, inputId, isReinvest, onSubm
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          {t('maxAvailable', { amount: formatUsd(form.maxAmount, { fallback: '$0' }) })}
+          {isReinvest && form.minAmount > 0
+            ? t('reinvestAmountHint', {
+                min: formatUsd(form.minAmount, { fallback: '$0' }),
+                max: formatUsd(form.maxAmount, { fallback: '$0' }),
+              })
+            : t('maxAvailable', { amount: formatUsd(form.maxAmount, { fallback: '$0' }) })}
         </p>
         {form.amountError ? <p className="text-xs text-destructive">{form.amountError}</p> : null}
       </div>

@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
 
-export default function DepositConfirmForm({ propertyId, onSubmitted }) {
+export default function DepositConfirmForm({ propertyId, minAmount, onSubmitted }) {
   const t = useTranslations('Invest')
   const [amount, setAmount] = useState('')
   const [reference, setReference] = useState('')
@@ -25,6 +26,11 @@ export default function DepositConfirmForm({ propertyId, onSubmitted }) {
     }
     if (!acknowledged) {
       setStatus(t('depositAckRequired'))
+      return
+    }
+    const parsedAmount = Number(amount)
+    if (minAmount && parsedAmount < Number(minAmount)) {
+      setStatus(t('intendedAmountMinError', { amount: formatMoneyAmount(minAmount) }))
       return
     }
     setIsLoading(true)
@@ -62,9 +68,15 @@ export default function DepositConfirmForm({ propertyId, onSubmitted }) {
             id="deposit-amount"
             name="amount"
             required
+            min={minAmount}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
+          {minAmount ? (
+            <p className="text-xs text-muted-foreground">
+              {t('depositMinHint', { amount: formatMoneyAmount(minAmount) })}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="deposit-date">{t('depositDate')}</Label>

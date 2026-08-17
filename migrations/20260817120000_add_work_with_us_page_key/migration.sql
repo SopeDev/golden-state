@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "PageKey" ADD VALUE IF NOT EXISTS 'WORK_WITH_US';

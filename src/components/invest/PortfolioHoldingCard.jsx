@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/propertyTypeUi'
 import { getActualDurationMonths, getPropertyDisplayFlags } from '@/lib/propertyStatusUi'
-import { getLedgerRoiPercent } from '@/lib/portfolioGrowth'
+import { getLedgerRoiPercent, isLedgerRoiReady } from '@/lib/portfolioGrowth'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 
-function Stat({ label, value, valueClassName, className }) {
+function Stat({ label, value, hint, valueClassName, className }) {
   return (
     <div className={cn('px-3 text-center', className)}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -19,6 +19,7 @@ function Stat({ label, value, valueClassName, className }) {
       <p className={cn('mt-1 text-lg font-semibold tabular-nums text-primary', valueClassName)}>
         {value}
       </p>
+      {hint ? <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   )
 }
@@ -42,7 +43,8 @@ export default function PortfolioHoldingCard({ investment }) {
   const property = investment.property
   const flags = getPropertyDisplayFlags(property)
   const durationMonths = getActualDurationMonths(property?.startDate, property?.completedAt)
-  const roiPct = getLedgerRoiPercent(investment.amount, investment.totalReturns)
+  const roiReady = isLedgerRoiReady(investment.totalReturns)
+  const roiPct = roiReady ? getLedgerRoiPercent(investment.amount, investment.totalReturns) : null
   const roiValue = roiPct == null ? '—' : `${roiPct.toFixed(1)}%`
   const timelineLabel = flags.showActualDuration ? t('duration') : t('timeline')
 
@@ -74,7 +76,11 @@ export default function PortfolioHoldingCard({ investment }) {
             value={`$${formatMoneyAmount(investment.totalReturns || 0)}`}
             valueClassName="text-main-gold"
           />
-          <Stat label={t('statRoi')} value={roiValue} />
+          <Stat
+            label={t('statRoi')}
+            value={roiValue}
+            hint={roiPct == null ? t('roiPendingHint') : null}
+          />
           <Stat
             label={timelineLabel}
             value={formatTimeline(property, flags, durationMonths, t)}

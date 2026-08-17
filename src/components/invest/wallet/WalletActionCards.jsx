@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { ArrowRight, Banknote, Repeat2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatUsd } from '@/lib/formatMoney'
+import { PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
 
 function ActionCard({ icon: Icon, title, description, meta, disabled, onClick }) {
   return (
@@ -46,8 +47,14 @@ function ActionCard({ icon: Icon, title, description, meta, disabled, onClick })
 export default function WalletActionCards({ form }) {
   const t = useTranslations('ActivityPage')
   const noFunds = form.availableCap <= 0
-  const targetCount = form.reinvestTargets.length
+  const eligibleTargets = form.reinvestTargets.filter((property) => {
+    const minTicket = Number(property.effectiveMinInvestment) || 0
+    const remaining = Number(property.remainingCapacity) || 0
+    return form.availableCap + 1e-6 >= minTicket && remaining + 1e-6 >= minTicket
+  })
+  const targetCount = eligibleTargets.length
   const upTo = t('cardUpTo', { amount: formatUsd(form.availableCap, { fallback: '$0' }) })
+  const belowMin = !noFunds && form.reinvestTargets.length > 0 && targetCount === 0
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -67,7 +74,11 @@ export default function WalletActionCards({ form }) {
           noFunds
             ? t('walletEmptyHint')
             : targetCount === 0
-              ? t('reinvestNoTargetsHint')
+              ? belowMin
+                ? t('reinvestBelowMinHint', {
+                    amount: formatUsd(PLATFORM_MIN_INVESTMENT, { fallback: '$0' }),
+                  })
+                : t('reinvestNoTargetsHint')
               : `${upTo} · ${t('reinvestOpenProperties', { count: targetCount })}`
         }
         disabled={noFunds || targetCount === 0}

@@ -58,6 +58,16 @@ export default function WalletActivityList({ activity = [] }) {
                     {item.property ? ` · #${item.property.investmentId} ${item.property.name}` : ''}
                     {item.concept ? ` · ${item.concept}` : ''}
                   </p>
+                  {item.kind === 'CASH_OUT' && item.hasReceipt ? (
+                    <a
+                      href={`/api/cash-out-receipts/${item.sourceId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-xs text-primary underline"
+                    >
+                      {t('viewBankNotice')}
+                    </a>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold tabular-nums">{formatUsd(item.amount)}</span>

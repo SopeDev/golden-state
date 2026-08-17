@@ -16,6 +16,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Public site URL (SEO / share cards)
+
+Canonical URLs, `sitemap.xml`, `robots.txt`, and Open Graph tags use this origin (no trailing slash).
+
+| Env var | Purpose |
+|---------|---------|
+| `NEXT_PUBLIC_SITE_URL` | Public site origin, e.g. `https://goldenstatecapitalmgt.com` |
+
+If unset, the app falls back to `https://goldenstatecapitalmgt.com`.
+
+## Google Analytics
+
+| Env var | Purpose |
+|---------|---------|
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | GA4 Measurement ID (`G-XXXXXXXXXX`). Leave unset to disable the tag. |
+
+Local and production both load the tag when this is set. Swap the ID when the client’s property is ready; no code change needed. Restart `npm run dev` after changing it.
+
 ## Invest meeting links (post-accreditation)
 
 Accredited investors schedule a call before wiring. Bank details are **never** shown in-app or emailed.
@@ -36,11 +54,11 @@ Investor accreditation documents and property images are stored on **Cloudflare 
 | `R2_BUCKET_PRIVATE` | Private bucket for investor docs (no public access) |
 | `R2_BUCKET_PUBLIC` | Public bucket for property images |
 | `R2_PUBLIC_BASE_URL` | Public base URL for the public bucket (R2 custom domain or `https://pub-….r2.dev`) |
-| `STORAGE_DRIVER` | Optional: `local` (force disk under `public/uploads`), `r2` (force R2 even in dev). Production always uses R2 unless `STORAGE_DRIVER=local`. |
+| `STORAGE_DRIVER` | Optional: `local` (private files under `storage/private`, public images under `public/uploads`), `r2` (force R2 even in dev). Production always uses R2 unless `STORAGE_DRIVER=local`. |
 
-Investor docs are never exposed as public URLs. Preview/download goes through `GET /api/investor-documents/[id]` (admin or owning investor only).
+Investor docs, receipts, and property progress files are never exposed as public URLs. Preview/download goes through authenticated API routes (admin, owning investor, or property holder).
 
-Local development defaults to writing under `public/uploads/` so you can work without R2 credentials.
+Local development writes **private** objects to `storage/private/` (not web-accessible) and **public** marketing images to `public/uploads/`. Do not set `STORAGE_DRIVER=local` in production.
 
 ## Deploy on Vercel
 

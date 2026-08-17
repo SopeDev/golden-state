@@ -3,11 +3,14 @@ import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { contributionInclude } from '@/lib/fundingContributions'
-import {
-  assertContributionFitsGoal,
-  syncPropertyFundingStatus,
-} from '@/lib/propertyFunding'
+import { assertContributionFitsGoal } from '@/lib/propertyFunding'
+import { syncPropertyFundingStatusWithHolderNotify } from '@/lib/investorUpdates'
 import { markIntentCompleted } from '@/lib/investmentIntents'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendContributionAssignedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { formatUsd } from '@/lib/formatMoney'
 
 const prisma = new PrismaClient()
 
@@ -126,10 +129,26 @@ export async function POST(request) {
       include: contributionInclude,
     })
 
-    await syncPropertyFundingStatus(prisma, propertyId)
+    await syncPropertyFundingStatusWithHolderNotify(prisma, propertyId)
 
     if (source === 'INVESTOR' && userId) {
       await markIntentCompleted(prisma, { userId, propertyId })
+
+      const investor = await prisma.user.findUnique({
+        where: { id: userId },
+        select: investorEmailSelect,
+      })
+      if (investor?.email) {
+        const locale = resolveUserLocale(investor)
+        await sendSafely('Contribution assigned email', () =>
+          sendContributionAssignedEmail({
+            to: investor.email,
+            locale,
+            propertyName: contribution.property?.name || 'property',
+            amountLabel: formatUsd(contribution.amount),
+          })
+        )
+      }
     }
 
     return NextResponse.json(contribution, { status: 201 })

@@ -4,7 +4,9 @@ import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { investmentIntentInclude, INTENT_STATUSES } from '@/lib/investmentIntents'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
-import { sendAwaitingWireEmail } from '@/lib/email/mailer'
+import { sendAwaitingWireEmail, sendInvestmentRequestCancelledEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { investorEmailSelect } from '@/lib/email/appLinks'
 
 const prisma = new PrismaClient()
 
@@ -34,7 +36,7 @@ export async function PATCH(request, { params }) {
     const existing = await prisma.investmentIntent.findUnique({
       where: { id },
       include: {
-        user: { select: { email: true, profile: true } },
+        user: { select: investorEmailSelect },
         property: { select: { name: true, investmentId: true } },
       },
     })
@@ -60,16 +62,25 @@ export async function PATCH(request, { params }) {
       existing.user?.email
     ) {
       const locale = resolveUserLocale(existing.user)
-      try {
-        await sendAwaitingWireEmail({
+      await sendSafely('Awaiting wire investor email', () =>
+        sendAwaitingWireEmail({
           to: existing.user.email,
           locale,
           propertyName: existing.property?.name || 'property',
           investmentId: existing.property?.investmentId,
         })
-      } catch (emailError) {
-        console.error('Awaiting wire investor email failed:', emailError)
-      }
+      )
+    }
+
+    if (status === 'CANCELLED' && previousStatus !== 'CANCELLED' && existing.user?.email) {
+      const locale = resolveUserLocale(existing.user)
+      await sendSafely('Investment request cancelled email', () =>
+        sendInvestmentRequestCancelledEmail({
+          to: existing.user.email,
+          locale,
+          propertyName: existing.property?.name || 'property',
+        })
+      )
     }
 
     return NextResponse.json(intent)

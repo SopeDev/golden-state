@@ -6,8 +6,15 @@ import { contributionInclude } from '@/lib/fundingContributions'
 import { reinvestRequestInclude } from '@/lib/investorWallet'
 import {
   assertContributionFitsGoal,
-  syncPropertyFundingStatus,
+  getEffectiveMinInvestment,
+  getPropertyFundedAmount,
 } from '@/lib/propertyFunding'
+import { formatMoneyAmount, formatUsd } from '@/lib/formatMoney'
+import { syncPropertyFundingStatusWithHolderNotify } from '@/lib/investorUpdates'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendReinvestReviewedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
 
 const prisma = new PrismaClient()
 
@@ -28,6 +35,25 @@ export async function POST(request, { params }) {
     }
     if (row.status !== 'PENDING') {
       return NextResponse.json({ error: 'Only pending requests can be confirmed' }, { status: 400 })
+    }
+
+    const property = await prisma.property.findUnique({
+      where: { id: row.destinationPropertyId },
+      select: { price: true },
+    })
+    const funded = await getPropertyFundedAmount(prisma, row.destinationPropertyId)
+    const minTicket = getEffectiveMinInvestment({
+      goal: property?.price,
+      fundedAmount: funded,
+    })
+    if (row.amount < minTicket) {
+      return NextResponse.json(
+        {
+          error: `Amount must be at least $${formatMoneyAmount(minTicket)}`,
+          code: 'BELOW_MIN',
+        },
+        { status: 400 }
+      )
     }
 
     try {
@@ -69,12 +95,30 @@ export async function POST(request, { params }) {
       return { request: updated, contribution }
     })
 
-    await syncPropertyFundingStatus(prisma, row.destinationPropertyId)
+    await syncPropertyFundingStatusWithHolderNotify(prisma, row.destinationPropertyId)
 
     const full = await prisma.reinvestRequest.findUnique({
       where: { id },
       include: reinvestRequestInclude,
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: row.userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Reinvest confirmed email', () =>
+        sendReinvestReviewedEmail({
+          to: investor.email,
+          locale,
+          confirmed: true,
+          propertyName: full?.destinationProperty?.name || 'property',
+          amountLabel: formatUsd(row.amount),
+          adminNote,
+        })
+      )
+    }
 
     return NextResponse.json({
       request: full,

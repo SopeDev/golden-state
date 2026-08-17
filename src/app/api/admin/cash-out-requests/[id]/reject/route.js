@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { cashOutRequestInclude } from '@/lib/investorWallet'
+import { cashOutRequestInclude, toClientCashOutRequest } from '@/lib/investorWallet'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendCashOutReviewedEmail } from '@/lib/email/mailer'
+import { sendSafely } from '@/lib/email/sendSafely'
+import { formatUsd } from '@/lib/formatMoney'
 
 const prisma = new PrismaClient()
 
@@ -36,7 +41,24 @@ export async function POST(request, { params }) {
       include: cashOutRequestInclude,
     })
 
-    return NextResponse.json(updated)
+    const investor = await prisma.user.findUnique({
+      where: { id: updated.userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Cash-out rejected email', () =>
+        sendCashOutReviewedEmail({
+          to: investor.email,
+          locale,
+          confirmed: false,
+          amountLabel: formatUsd(updated.amount),
+          adminNote,
+        })
+      )
+    }
+
+    return NextResponse.json(toClientCashOutRequest(updated))
   } catch (error) {
     console.error('Error rejecting cash-out:', error)
     return NextResponse.json({ error: 'Failed to reject cash-out' }, { status: 500 })

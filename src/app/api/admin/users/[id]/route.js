@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { userSecretOmit } from '@/lib/auth/prismaUserSelect'
 
 const prisma = new PrismaClient()
 
@@ -28,6 +29,7 @@ export async function GET(request, { params }) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      omit: userSecretOmit,
       include: {
         _count: {
           select: {
@@ -44,10 +46,7 @@ export async function GET(request, { params }) {
       )
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user
-
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(user)
   } catch (error) {
     console.error('Error fetching user:', error)
     return NextResponse.json(
@@ -141,12 +140,14 @@ export async function PUT(request, { params }) {
     // Only update password if provided
     if (password) {
       updateData.password = await bcrypt.hash(password, 12)
+      updateData.sessionEpoch = { increment: 1 }
     }
 
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
+      omit: userSecretOmit,
       include: {
         _count: {
           select: {
@@ -156,10 +157,7 @@ export async function PUT(request, { params }) {
       }
     })
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = updatedUser
-
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(updatedUser)
   } catch (error) {
     console.error('Error updating user:', error)
     return NextResponse.json(

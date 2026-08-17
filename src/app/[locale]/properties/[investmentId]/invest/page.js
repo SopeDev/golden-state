@@ -3,6 +3,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import { resolveInvestorOnboardingPath } from '@/lib/auth/userStatus'
+import { SITE_NAME, buildPageMetadata } from '@/lib/seo'
 import {
   enrichPropertyWithFunding,
   isPropertyOpenForInvestment,
@@ -11,6 +12,16 @@ import { propertyTypeInclude, toClientProperty } from '@/lib/propertyTypes'
 import InvestFlowClient from './InvestFlowClient'
 
 const prisma = new PrismaClient()
+
+export async function generateMetadata({ params }) {
+  const { locale, investmentId } = await params
+  return buildPageMetadata({
+    locale,
+    path: `/properties/${investmentId}/invest`,
+    title: `Invest | ${SITE_NAME}`,
+    noIndex: true,
+  })
+}
 
 export default async function InvestPage({ params }) {
   const { investmentId } = await params

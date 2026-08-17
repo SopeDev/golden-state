@@ -22,6 +22,8 @@ export default async function InvestmentsSectionPage({ section, searchParams }) 
     typeof params.propertyId === 'string' && params.propertyId.trim()
       ? params.propertyId.trim()
       : ''
+  const initialRecordId =
+    typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
   if (!session || session.user?.type !== 'ADMIN') {
     await redirect('/')
@@ -76,6 +78,7 @@ export default async function InvestmentsSectionPage({ section, searchParams }) 
           investors={investors}
           locale={locale}
           initialPropertyId={resolvedPropertyId}
+          initialRecordId={initialRecordId}
         />
       </div>
     )

@@ -1,5 +1,6 @@
 import ReturnsSectionPage from '../returns/ReturnsSectionPage'
 
-export default function CashOutsAdminPage() {
-  return <ReturnsSectionPage section="cashouts" />
+export default async function CashOutsAdminPage({ searchParams }) {
+  const params = (await searchParams) || {}
+  return <ReturnsSectionPage section="cashouts" searchParams={params} />
 }

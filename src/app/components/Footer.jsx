@@ -68,6 +68,11 @@ export default function Footer({ propertyTypes = [] }) {
                 </Link>
               </li>
               <li>
+                <Link href="/work-with-us" className="text-primary-foreground/80 transition-colors hover:text-primary-foreground">
+                  {t('workWithUs')}
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-primary-foreground/80 transition-colors hover:text-primary-foreground">
                   {t('contact')}
                 </Link>
@@ -140,11 +145,17 @@ export default function Footer({ propertyTypes = [] }) {
                 <Link href="/privacy" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                   {t('privacyPolicy')}
                 </Link>
+                <Link href="/aviso-de-privacidad" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+                  {t('avisoDePrivacidad')}
+                </Link>
                 <Link href="/terms" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                   {t('termsOfService')}
                 </Link>
                 <Link href="/legal" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                   {t('legalDisclaimers')}
+                </Link>
+                <Link href="/cookies" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+                  {t('cookiePolicy')}
                 </Link>
               </div>
               <div className="flex items-center md:border-l md:border-primary-foreground/20 md:pl-6">

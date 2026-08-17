@@ -5,11 +5,17 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { assertCanReserveWallet, reinvestRequestInclude } from '@/lib/investorWallet'
 import {
   assertContributionFitsGoal,
+  getEffectiveMinInvestment,
   getPropertyFundedAmount,
   getRemainingCapacity,
   isPropertyOpenForInvestment,
 } from '@/lib/propertyFunding'
+import { formatMoneyAmount } from '@/lib/formatMoney'
 import { notDeletedProperty } from '@/lib/propertyTypes'
+import { resolveUserLocale } from '@/lib/auth/userLocale'
+import { notifyAdminsReinvestRequested } from '@/lib/email/adminNotify'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendSafely } from '@/lib/email/sendSafely'
 
 const prisma = new PrismaClient()
 
@@ -72,12 +78,26 @@ export async function POST(request) {
 
     const funded = await getPropertyFundedAmount(prisma, property.id)
     const remaining = getRemainingCapacity(property.price, funded)
+    const minTicket = getEffectiveMinInvestment({
+      goal: property.price,
+      fundedAmount: funded,
+    })
     if (amount > remaining + 1e-6) {
       return NextResponse.json(
         {
           error: 'Amount exceeds remaining raise capacity',
           code: 'OVERFUND',
           remaining,
+        },
+        { status: 400 }
+      )
+    }
+    if (!Number.isFinite(amount) || amount < minTicket) {
+      return NextResponse.json(
+        {
+          error: `Amount must be at least $${formatMoneyAmount(minTicket)}`,
+          code: 'BELOW_MIN',
+          min: minTicket,
         },
         { status: 400 }
       )
@@ -114,6 +134,23 @@ export async function POST(request) {
         include: reinvestRequestInclude,
       })
     })
+
+    const investor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: investorEmailSelect,
+    })
+    if (investor?.email) {
+      const locale = resolveUserLocale(investor)
+      await sendSafely('Reinvest requested admin notify', () =>
+        notifyAdminsReinvestRequested({
+          investor,
+          property,
+          amount,
+          reinvestId: row.id,
+          locale,
+        })
+      )
+    }
 
     return NextResponse.json(row, { status: 201 })
   } catch (error) {

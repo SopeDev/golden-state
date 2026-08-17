@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
 import { validateAccountRegistration } from '@/lib/auth/registerValidation'
-import { generateSecureToken, verificationExpiry } from '@/lib/auth/tokens'
+import { generateSecureToken, hashAuthToken, verificationExpiry } from '@/lib/auth/tokens'
 import { sendVerificationEmail } from '@/lib/email/mailer'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/security/rateLimit'
 
 const prisma = new PrismaClient()
 
 export async function POST(request) {
+  const limited = enforceRateLimit(request, 'register', RATE_LIMITS.register)
+  if (limited) return limited
+
   try {
     const body = await request.json()
     const locale = body.locale === 'es' ? 'es' : 'en'
@@ -37,7 +41,7 @@ export async function POST(request) {
         type: 'INVESTOR',
         provider: 'credentials',
         accountStatus: 'PENDING_EMAIL',
-        emailVerificationToken: token,
+        emailVerificationToken: hashAuthToken(token),
         emailVerificationExpires: verificationExpiry(),
       },
     })

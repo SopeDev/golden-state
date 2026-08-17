@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { notifyAdminsInvestorPendingApproval } from '@/lib/email/adminNotify'
 import { sendPendingAdminEmail } from '@/lib/email/mailer'
+import { findUserByHashedToken } from '@/lib/auth/tokens'
 
 const prisma = new PrismaClient()
 
@@ -18,12 +19,12 @@ export async function GET(request) {
   }
 
   try {
-    const user = await prisma.user.findFirst({
-      where: {
-        emailVerificationToken: token,
-        emailVerificationExpires: { gt: new Date() },
-      },
-    })
+    const user = await findUserByHashedToken(
+      prisma,
+      'emailVerificationToken',
+      token,
+      'emailVerificationExpires'
+    )
 
     if (!user) {
       return NextResponse.redirect(redirectFail)

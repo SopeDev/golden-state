@@ -6,6 +6,8 @@ import path from 'path'
 
 import { INVESTOR_DOCUMENT_KIND_MAP } from '@/lib/investorDocumentFields'
 import { notifyAdminsAccreditationSubmitted } from '@/lib/email/adminNotify'
+import { investorEmailSelect } from '@/lib/email/appLinks'
+import { sendSafely } from '@/lib/email/sendSafely'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
 import { parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 import {
@@ -156,20 +158,18 @@ export async function POST(request) {
 
     const investor = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, profile: true },
+      select: investorEmailSelect,
     })
 
     if (investor) {
       const locale = resolveUserLocale(investor)
-      try {
-        await notifyAdminsAccreditationSubmitted({
+      await sendSafely('Accreditation admin notify', () =>
+        notifyAdminsAccreditationSubmitted({
           investor,
           documentCount: createdDocs.length,
           locale,
         })
-      } catch (emailError) {
-        console.error('Accreditation admin notify failed:', emailError)
-      }
+      )
     }
 
     if (propertyId) {

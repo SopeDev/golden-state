@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input'
 import RequiredLabel from '@/components/ui/RequiredLabel'
 import GoogleIcon from '@/components/GoogleIcon/GoogleIcon'
+import { legalAgreementTags } from '@/components/Legal/legalAgreementTags'
 
 export default function Form() {
   const t = useTranslations('Register')
@@ -152,18 +153,7 @@ export default function Form() {
                 className="mt-0.5"
               />
               <span className="leading-relaxed text-muted-foreground">
-                {t.rich('legalAcknowledgment', {
-                  terms: (chunks) => (
-                    <Link href="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
-                      {chunks}
-                    </Link>
-                  ),
-                  privacy: (chunks) => (
-                    <Link href="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
-                      {chunks}
-                    </Link>
-                  ),
-                })}
+                {t.rich('legalAcknowledgment', legalAgreementTags)}
               </span>
             </label>
             {errors.acceptLegal ? (
@@ -184,7 +174,7 @@ export default function Form() {
               {t('googleSignUp')}
             </Button>
             <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              {t('googleLegalNote')}
+              {t.rich('googleLegalNote', legalAgreementTags)}
             </p>
             <p className="text-center text-sm text-muted-foreground">
               {t('signInHint')}{' '}

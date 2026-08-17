@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { getTranslations } from 'next-intl/server'
 import ProjectsClient from './ProjectsClient'
+import { buildPageMetadata } from '@/lib/seo'
 import {
   activeProjectWhere,
   notDeletedProperty,
@@ -15,10 +16,12 @@ export async function generateMetadata({ params }) {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'Projects' })
 
-  return {
+  return buildPageMetadata({
+    locale,
+    path: '/projects',
     title: t('headers.all.metaTitle'),
     description: t('headers.all.metaDescription'),
-  }
+  })
 }
 
 async function getProperties() {

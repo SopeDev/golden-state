@@ -17,6 +17,12 @@ import AdminListPagination, { paginateItems } from '@/components/admin/AdminList
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
 import { useMessaging } from '@/hooks/useMessaging'
+import {
+  adminRecordRowClass,
+  pageForRecord,
+  useScrollToAdminRecord,
+} from '@/hooks/useAdminRecordHighlight'
+import CashOutConfirmDialog from '@/components/admin/CashOutConfirmDialog'
 
 const emptyForm = {
   userId: '',
@@ -42,6 +48,7 @@ export default function ReturnsAdminClient({
   properties = [],
   locale,
   section = 'distributions',
+  initialRecordId = '',
 }) {
   const t = useTranslations('Admin.returns')
   const tc = useTranslations('Admin.common')
@@ -51,7 +58,7 @@ export default function ReturnsAdminClient({
   const [cashOuts, setCashOuts] = useState(initialCashOuts || [])
   const [reinvests, setReinvests] = useState(initialReinvests || [])
   const [statusFilter, setStatusFilter] = useState(
-    section === 'distributions' ? '' : 'PENDING'
+    initialRecordId ? '' : section === 'distributions' ? '' : 'PENDING'
   )
   const [propertyFilter, setPropertyFilter] = useState('')
   const [investorFilter, setInvestorFilter] = useState('')
@@ -62,6 +69,8 @@ export default function ReturnsAdminClient({
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [listPage, setListPage] = useState(1)
+  const [confirmCashOutId, setConfirmCashOutId] = useState(null)
+  useScrollToAdminRecord(initialRecordId)
 
   const pageTitle =
     section === 'distributions'
@@ -215,6 +224,11 @@ export default function ReturnsAdminClient({
     [listRows, listPage]
   )
 
+  useEffect(() => {
+    if (!initialRecordId) return
+    setListPage(pageForRecord(listRows, initialRecordId))
+  }, [initialRecordId, listRows])
+
   const notifyPending = () => {
     window.dispatchEvent(new Event('admin-pending-count-changed'))
   }
@@ -273,32 +287,34 @@ export default function ReturnsAdminClient({
     }
   }
 
-  const reviewCashOut = async (id, action) => {
-    let adminNote = null
+  const reviewCashOut = async (id, action, payload = {}) => {
+    let adminNote = payload.adminNote ?? null
     if (action === 'reject') {
       adminNote = await prompt({
         message: t('rejectNotePrompt'),
         label: t('rejectNoteLabel'),
       })
       if (adminNote === null) return
-    } else {
-      const ok = await confirm({
-        message: t('confirmCashOutDesc'),
-      })
-      if (!ok) return
     }
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/cash-out-requests/${id}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminNote }),
-      })
+      const isConfirm = action === 'confirm'
+      const options = { method: 'POST', credentials: 'include' }
+      if (isConfirm) {
+        const body = new FormData()
+        if (payload.receipt) body.append('receipt', payload.receipt)
+        if (adminNote) body.append('adminNote', adminNote)
+        options.body = body
+      } else {
+        options.headers = { 'Content-Type': 'application/json' }
+        options.body = JSON.stringify({ adminNote })
+      }
+      const res = await fetch(`/api/admin/cash-out-requests/${id}/${action}`, options)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || t('errorReview'))
-      setStatus(action === 'confirm' ? t('confirmedCashOut') : t('rejectedCashOut'))
+      setStatus(isConfirm ? t('confirmedCashOut') : t('rejectedCashOut'))
+      setConfirmCashOutId(null)
       await refreshCashOuts()
       notifyPending()
     } catch (err) {
@@ -574,7 +590,11 @@ export default function ReturnsAdminClient({
                   </tr>
                 ) : section === 'distributions' ? (
                   pagination.items.map((row) => (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      id={`admin-record-${row.id}`}
+                      className={adminRecordRowClass(initialRecordId, row.id)}
+                    >
                       <td className="whitespace-nowrap px-2 py-3">
                         {new Date(row.distributedAt).toLocaleDateString(dateLocale)}
                       </td>
@@ -617,7 +637,11 @@ export default function ReturnsAdminClient({
                   ))
                 ) : section === 'cashouts' ? (
                   pagination.items.map((row) => (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      id={`admin-record-${row.id}`}
+                      className={adminRecordRowClass(initialRecordId, row.id)}
+                    >
                       <td className="whitespace-nowrap px-2 py-3">
                         {new Date(row.createdAt).toLocaleDateString(dateLocale)}
                       </td>
@@ -637,6 +661,16 @@ export default function ReturnsAdminClient({
                         {row.adminNote ? (
                           <p className="mt-1 text-xs text-muted-foreground">{row.adminNote}</p>
                         ) : null}
+                        {row.hasReceipt ? (
+                          <a
+                            href={`/api/cash-out-receipts/${row.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-block text-xs text-primary underline"
+                          >
+                            {t('viewBankNotice')}
+                          </a>
+                        ) : null}
                       </td>
                       <td className="px-2 py-3">
                         {row.status === 'PENDING' ? (
@@ -645,7 +679,7 @@ export default function ReturnsAdminClient({
                               type="button"
                               size="sm"
                               disabled={isLoading}
-                              onClick={() => reviewCashOut(row.id, 'confirm')}
+                              onClick={() => setConfirmCashOutId(row.id)}
                             >
                               {t('confirm')}
                             </Button>
@@ -667,7 +701,11 @@ export default function ReturnsAdminClient({
                   ))
                 ) : (
                   pagination.items.map((row) => (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      id={`admin-record-${row.id}`}
+                      className={adminRecordRowClass(initialRecordId, row.id)}
+                    >
                       <td className="whitespace-nowrap px-2 py-3">
                         {new Date(row.createdAt).toLocaleDateString(dateLocale)}
                       </td>
@@ -733,6 +771,16 @@ export default function ReturnsAdminClient({
           />
         </CardContent>
       </Card>
+
+      <CashOutConfirmDialog
+        open={Boolean(confirmCashOutId)}
+        row={cashOuts.find((row) => row.id === confirmCashOutId) || null}
+        submitting={isLoading}
+        onClose={() => setConfirmCashOutId(null)}
+        onConfirm={({ receipt, adminNote }) =>
+          reviewCashOut(confirmCashOutId, 'confirm', { receipt, adminNote })
+        }
+      />
     </AdminPageFrame>
   )
 }

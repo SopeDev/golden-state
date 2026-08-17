@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatUsd } from '@/lib/formatMoney'
 import { floorDollars } from '@/lib/investorActivity'
+import { PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
 
 const ENDPOINTS = {
   cashout: '/api/investor/cash-out-requests',
@@ -29,6 +30,10 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
     [reinvestTargets, propertyId]
   )
   const remainingCap = selectedTarget ? floorDollars(selectedTarget.remainingCapacity) : null
+  const minAmount =
+    mode === 'reinvest'
+      ? floorDollars(selectedTarget?.effectiveMinInvestment ?? PLATFORM_MIN_INVESTMENT)
+      : 0
   const maxAmount =
     mode === 'reinvest' && remainingCap != null
       ? Math.min(availableCap, remainingCap)
@@ -95,6 +100,12 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
 
   const validateAmount = () => {
     if (!(parsedAmount > 0)) return false
+    if (mode === 'reinvest' && parsedAmount < minAmount) {
+      showStatus(
+        t('amountBelowMin', { amount: formatUsd(minAmount, { fallback: '$0' }) })
+      )
+      return false
+    }
     if (parsedAmount > availableCap) {
       showStatus(
         t('amountExceedsAvailable', { amount: formatUsd(availableCap, { fallback: '$0' }) })
@@ -114,6 +125,11 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
     if (data?.code === 'INSUFFICIENT_FUNDS') {
       return t('amountExceedsAvailable', {
         amount: formatUsd(floorDollars(data.available ?? wallet?.available), { fallback: '$0' }),
+      })
+    }
+    if (data?.code === 'BELOW_MIN') {
+      return t('amountBelowMin', {
+        amount: formatUsd(floorDollars(data.min ?? minAmount), { fallback: '$0' }),
       })
     }
     if (data?.code === 'OVERFUND') {
@@ -144,6 +160,7 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(mapApiError(data))
+      close()
       await onSubmitted?.()
       return true
     } catch (err) {
@@ -158,6 +175,7 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
     !submitting &&
     parsedAmount > 0 &&
     !amountOverMax &&
+    (minAmount <= 0 || parsedAmount + 1e-6 >= minAmount) &&
     (mode !== 'reinvest' || Boolean(propertyId))
 
   return {
@@ -172,6 +190,7 @@ export const useWalletRequestForm = ({ wallet, onSubmitted }) => {
     submitting,
     status,
     maxAmount,
+    minAmount,
     availableCap,
     reinvestTargets,
     canSubmit,

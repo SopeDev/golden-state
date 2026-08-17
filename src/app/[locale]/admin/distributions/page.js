@@ -1,5 +1,6 @@
 import ReturnsSectionPage from '../returns/ReturnsSectionPage'
 
-export default function DistributionsAdminPage() {
-  return <ReturnsSectionPage section="distributions" />
+export default async function DistributionsAdminPage({ searchParams }) {
+  const params = (await searchParams) || {}
+  return <ReturnsSectionPage section="distributions" searchParams={params} />
 }
