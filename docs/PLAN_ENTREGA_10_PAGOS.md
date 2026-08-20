@@ -1,19 +1,19 @@
 ---
 name: Plan de entrega en 10 pagos
-overview: "Plan vivo: pagos 6–8 cerrados (captación, dividendos/reinversión + admin, avisos vía docs/actividad/correos); pago 9 = legales + Work with us; pago 10 = publicación/analítica."
+overview: "Plan vivo: pagos 2–9 completados; pago 10 = publicación/analítica."
 todos:
   - id: payment-2
     content: "Página Quiénes somos (About) bilingüe; pulido de pantallas ya existentes; arquitectura front + shadcn/Magic alineados a reglas Cursor"
-    status: pending
+    status: completed
   - id: payment-3
     content: "Landing bilingüe; idioma por ubicación; FAQ y contacto con formulario; menú y pie sin enlaces rotos; terminados vs en desarrollo si aplica"
-    status: pending
+    status: completed
   - id: payment-4
     content: "Registro e inicio de sesión producción: verificación por correo, aprobación admin, Mi cuenta, inversionista acreditado (doble entrada), correos transaccionales"
     status: completed
   - id: payment-5
     content: Estado del proyecto, porcentaje de avance y fechas en la web y en el panel admin
-    status: in_progress
+    status: completed
   - id: payment-6
     content: "Archivos reales + flujo de captación: reunión, depósito bancario entrante y confirmación manual (dinero hacia la plataforma)"
     status: completed
@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: payment-9
     content: "Páginas estáticas: legales (términos, privacidad, avisos) y Trabaja con nosotros / Work with us"
-    status: pending
+    status: completed
   - id: payment-10
     content: "Publicación / salida del sitio: Google Analytics (u otra analítica), métricas, SEO y metadatos para compartir en redes alineados al go-live"
     status: pending

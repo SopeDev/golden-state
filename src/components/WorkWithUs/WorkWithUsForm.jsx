@@ -95,7 +95,7 @@ export default function WorkWithUsForm({
     <Card
       id="work-with-us-form"
       className={cn(
-        'scroll-mt-28 border-border/80 shadow-md transition-[box-shadow,border-color] duration-300',
+        'border-border/80 shadow-md transition-[box-shadow,border-color] duration-300',
         highlighted && 'border-main-gold shadow-[0_0_0_3px_rgba(212,175,55,0.35)]'
       )}
     >

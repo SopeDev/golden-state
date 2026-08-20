@@ -51,7 +51,7 @@ export default function FaqPageClient({ content, sections }) {
 
         <div className="space-y-10">
           {sections.map((section) => (
-            <section id={`faq-${section.id}`} key={section.id} className="scroll-mt-24">
+            <section id={`faq-${section.id}`} key={section.id}>
               <h2 className="font-heading mb-4 text-2xl font-semibold text-primary md:text-3xl">{section.title}</h2>
               <ul className="space-y-6">
                 {section.items.map((item, index) => (

@@ -171,6 +171,7 @@ body {
   }
   html {
     @apply font-sans;
+    scroll-padding-top: 6rem;
   }
   /* Senlot heading stack site-wide (matches About + shadcn CardTitle) */
   h1,

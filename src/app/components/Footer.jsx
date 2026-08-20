@@ -24,6 +24,11 @@ export default function Footer({ propertyTypes = [] }) {
     },
   ]
 
+  const privacyLink =
+    locale === 'es'
+      ? { href: '/aviso-de-privacidad', label: t('avisoDePrivacidad') }
+      : { href: '/privacy', label: t('privacyPolicy') }
+
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="mx-auto max-w-screen-xl px-4 py-12">
@@ -142,11 +147,11 @@ export default function Footer({ propertyTypes = [] }) {
             <div className="text-sm text-primary-foreground/70">{t('copyright')}</div>
             <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-                <Link href="/privacy" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
-                  {t('privacyPolicy')}
-                </Link>
-                <Link href="/aviso-de-privacidad" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
-                  {t('avisoDePrivacidad')}
+                <Link
+                  href={privacyLink.href}
+                  className="text-primary-foreground/70 transition-colors hover:text-primary-foreground"
+                >
+                  {privacyLink.label}
                 </Link>
                 <Link href="/terms" className="text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                   {t('termsOfService')}

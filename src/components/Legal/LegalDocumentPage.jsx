@@ -34,7 +34,7 @@ export default function LegalDocumentPage({ documentId, locale }) {
 
             <div className="mt-10 space-y-12">
               {content.sections.map((section) => (
-                <section id={section.id} key={section.id} className="scroll-mt-28">
+                <section id={section.id} key={section.id}>
                   <h2 className="font-heading text-2xl font-semibold text-primary md:text-3xl">
                     {section.title}
                   </h2>
