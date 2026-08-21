@@ -130,6 +130,8 @@ Cada bloque está pensado para **un mes y un pago**, en el orden que permite ir 
 
 ### Pago 2 — Quiénes somos, pulido de lo existente y base de arquitectura
 
+**Estado:** completado.
+
 **Qué entregamos (lado cliente / producto)**
 
 - **Quiénes somos:** página **About** acorde a la cotización, **en español e inglés**, con ruta enlazada desde el menú y el pie (p. ej. `/about`).
@@ -149,6 +151,8 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 
 ### Pago 3 — Landing, FAQ, contacto, navegación e idioma
 
+**Estado:** completado.
+
 **Qué entregamos**
 
 - **Página de inicio:** la **primera versión** de la landing principal que ustedes verán en la web pública, alineada a la cotización (captación, mensaje claro del modelo, llamados a la acción), **en español e inglés**, publicada bajo `/{idioma}` en el entorno en vivo acordado.
@@ -165,7 +169,7 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 
 ### Pago 4 — Registro, activación e inversionista acreditado
 
-**Estado:** en curso. Plan técnico detallado: [PAGO_4_PLAN.md](PAGO_4_PLAN.md).
+**Estado:** completado. Plan técnico detallado: [PAGO_4_PLAN.md](PAGO_4_PLAN.md).
 
 **Qué entregamos**
 
@@ -184,7 +188,7 @@ La sección **Quiénes somos** ya publicada y las pantallas existentes **más co
 
 - Onboarding completo, rechazo de cuenta, correos principales, OAuth Google, flujo de inversión desde proyecto (subida de docs), revisión admin de cuenta y acreditación, sincronización de sesión en tiempo real.
 
-**Qué falta para cerrar el pago 4**
+**Elementos incluidos en el cierre del pago 4**
 
 - Pantalla **Mi cuenta** y APIs de perfil / cambio de contraseña.
 - Página de acreditación **desde Mi cuenta** (formulario compartido con el flujo por proyecto).
@@ -210,6 +214,8 @@ Un proceso de alta e ingreso **confiable**, un área **Mi cuenta** para gestiona
 
 ### Pago 5 — Estado y avance de cada proyecto
 
+**Estado:** completado.
+
 **Qué entregamos**
 
 - En cada proyecto: **estado** (planeación, en desarrollo, completado), **porcentaje de avance** y **fechas** relevantes.
@@ -223,6 +229,8 @@ Cumplimiento directo de la promesa: **“consultar el progreso de los proyectos�
 ---
 
 ### Pago 6 — Archivos reales + captación de capital (dinero in)
+
+**Estado:** completado.
 
 **Qué entregamos**
 
@@ -269,6 +277,8 @@ Un inbox de “novedades de proyecto” con publicación masiva y correo al hold
 
 ### Pago 9 — Páginas legales y Trabaja con nosotros
 
+**Estado:** completado.
+
 **Qué entregamos**
 
 - Páginas **legales** bilingües (p. ej. términos de servicio, política de privacidad, avisos / disclaimers) enlazadas desde el pie y los flujos de registro.
@@ -282,6 +292,8 @@ Sitio institucional completo en lo legal y de talento/colaboración, no solo el 
 ---
 
 ### Pago 10 — Publicación del sitio, analítica y métricas
+
+**Estado:** pendiente.
 
 **Qué entregamos**
 
@@ -308,7 +320,7 @@ El sitio **medible** para el público y **presentado de forma profesional** en b
 - **Pagos 4 a 6:** núcleo de la **Fase 2** (acceso seguro, **Mi cuenta y acreditación**, avance de proyectos, archivos, **captación** de inversiones y depósitos entrantes).
 - **Pago 7 (cerrado):** **visibilidad financiera saliente** (dividendos / historial / reinversión) + **rediseño del admin**.
 - **Pago 8 (cerrado):** **comunicación** de avances vía documentos, actividad y correos transaccionales (sin inbox dedicado).
-- **Pago 9:** **páginas estáticas** legales y Trabaja con nosotros.
+- **Pago 9 (cerrado):** **páginas estáticas** legales y Trabaja con nosotros.
 - **Pago 10:** **cotización / extensión de Fase 1** en su parte de **analítica**: mediciones y metadatos de **lanzamiento**, junto con el cierre orientado a **publicación**.
 
 ---
@@ -321,16 +333,16 @@ Si desean, en la siguiente reunión podemos **marcar con fecha** cada pago 2–1
 
 ```mermaid
 flowchart LR
-  subgraph entregado [Pagos1_y_6_a_8]
+  subgraph entregado [Pagos1_a_9]
     A[Base_tecnica]
     B[Proyectos_y_fichas]
     C[Acceso_y_portafolio]
     D[Captacion_dinero_in]
     J[Dividendos_reinversion_admin]
     K[Avisos_via_docs_actividad_correos]
+    L[Legales_y_work_with_us]
   end
   subgraph pendiente [Siguiente]
-    L[Pago9_legales_y_work_with_us]
     M[Pago10_publicacion_analitica_SEO]
   end
   entregado --> pendiente

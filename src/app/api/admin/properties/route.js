@@ -138,7 +138,6 @@ export async function POST(request) {
     }
 
     const requiredFields = [
-      'investmentId',
       'name',
       'city',
       'state',
@@ -166,7 +165,6 @@ export async function POST(request) {
     let progressFields
     try {
       parsedFields = {
-        investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
         price: parseRequiredInt(body.price, 'price'),
         unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
         minInvestment: PLATFORM_MIN_INVESTMENT,
@@ -193,22 +191,10 @@ export async function POST(request) {
       return NextResponse.json({ message: fundingError.message }, { status: 400 })
     }
 
-    const existingByInvestmentId = await prisma.property.findFirst({
-      where: { investmentId: parsedFields.investmentId },
-    })
-
-    if (existingByInvestmentId) {
-      return NextResponse.json(
-        { message: 'Property with this Investment ID already exists' },
-        { status: 400 }
-      )
-    }
-
     const slug = await ensureUniquePropertySlug(prisma, body.name)
 
     const property = await prisma.property.create({
       data: {
-        investmentId: parsedFields.investmentId,
         name: body.name,
         slug,
         propertyType: { connect: { id: propertyType.id } },

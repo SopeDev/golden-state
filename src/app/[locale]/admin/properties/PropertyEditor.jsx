@@ -153,7 +153,6 @@ const rowsToObject = (rows) => {
 const buildInitialFormData = (property, propertyTypes = []) => {
   const lifecycle = normalizePropertyLifecycle(property || {})
   return {
-    investmentId: property?.investmentId || '',
     name: property?.name || '',
     typeId: property?.typeId || propertyTypes[0]?.id || '',
     status: lifecycle.fundingStatus,
@@ -459,16 +458,6 @@ export default function PropertyEditor({
             <TabsContent value="basic" keepMounted className="space-y-6 outline-none">
               <AdminFormSection title={t('basicInfo')}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label={t('investmentId')} htmlFor="prop-investmentId">
-                    <Input
-                      id="prop-investmentId"
-                      type="number"
-                      name="investmentId"
-                      value={formData.investmentId}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Field>
                   <Field label={t('propertyType')} htmlFor="prop-type">
                     <select
                       id="prop-type"

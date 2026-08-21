@@ -80,7 +80,7 @@ export async function PUT(request, { params }) {
     
     // Validate required fields
     const requiredFields = [
-      'investmentId', 'name', 'city', 'state',
+      'name', 'city', 'state',
       'address', 'price', 'unitCount',
       'estimatedROI', 'estimatedMonths'
     ]
@@ -152,12 +152,10 @@ export async function PUT(request, { params }) {
       )
     }
 
-    // Check if investmentId or slug already exists (excluding current property)
     let parsedFields
     let progressFields
     try {
       parsedFields = {
-        investmentId: parseRequiredInt(body.investmentId, 'investmentId'),
         price: parseRequiredInt(body.price, 'price'),
         unitCount: parseRequiredInt(body.unitCount, 'unitCount'),
         minInvestment: PLATFORM_MIN_INVESTMENT,
@@ -184,27 +182,12 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ message: fundingError.message }, { status: 400 })
     }
 
-    const duplicateProperty = await prisma.property.findFirst({
-      where: {
-        investmentId: parsedFields.investmentId,
-        NOT: { id },
-      },
-    })
-
-    if (duplicateProperty) {
-      return NextResponse.json(
-        { message: 'Property with this Investment ID already exists' },
-        { status: 400 }
-      )
-    }
-
     const slug = await ensureUniquePropertySlug(prisma, body.name, { excludeId: id })
 
     // Update the property
     let property = await prisma.property.update({
       where: { id },
       data: {
-        investmentId: parsedFields.investmentId,
         name: body.name,
         slug,
         propertyType: { connect: { id: propertyType.id } },

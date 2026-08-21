@@ -281,7 +281,6 @@ async function main() {
   // - FUNDED + PLANNING / IN_PROGRESS / COMPLETED
   const properties = [
     {
-      investmentId: 1001,
       name: 'Hornblend Street Development',
       typeId: typeIdByCode.BUILD_TO_SELL,
       status: 'FUNDING',
@@ -322,7 +321,6 @@ async function main() {
       ]
     },
     {
-      investmentId: 1002,
       name: 'Downtown LA Mixed-Use',
       typeId: typeIdByCode.BUILD_TO_RENT,
       status: 'FUNDING',
@@ -361,7 +359,6 @@ async function main() {
       ]
     },
     {
-      investmentId: 1003,
       name: 'Pacific Flip — Claremont Villas',
       typeId: typeIdByCode.FLIPHOUSE,
       status: 'FUNDED',
@@ -393,7 +390,6 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-2-Large.avif'],
     },
     {
-      investmentId: 1004,
       name: 'CrossBorder Logistics Park',
       typeId: typeIdByCode.MEX_TO_US,
       status: 'FUNDED',
@@ -424,7 +420,6 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
     },
     {
-      investmentId: 1005,
       name: 'Baja Coastal Hospitality Co-Invest',
       typeId: typeIdByCode.US_TO_MEX,
       status: 'FUNDING',
@@ -455,7 +450,6 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-1-HighDefinition.webp'],
     },
     {
-      investmentId: 902,
       name: 'Encinitas Coastal Flip Series',
       typeId: typeIdByCode.FLIPHOUSE,
       status: 'FUNDING',
@@ -484,7 +478,6 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-3-Large.avif'],
     },
     {
-      investmentId: 901,
       name: 'La Jolla Coastal Townhomes',
       typeId: typeIdByCode.BUILD_TO_SELL,
       status: 'FUNDED',
@@ -514,7 +507,6 @@ async function main() {
       images: ['/properties/2741-Hornblend-St-San-Diego-CA-Building-Photo-2-Large.avif'],
     },
     {
-      investmentId: 903,
       name: 'Tijuana Riverfront Logistics',
       typeId: typeIdByCode.MEX_TO_US,
       status: 'FUNDED',
@@ -547,7 +539,7 @@ async function main() {
   for (const propertyData of properties) {
     const slug = slugifyPropertyName(propertyData.name)
     const property = await prisma.property.upsert({
-      where: { investmentId: propertyData.investmentId },
+      where: { slug },
       update: { ...propertyData, slug },
       create: { ...propertyData, slug },
     })
@@ -557,7 +549,7 @@ async function main() {
   const propertyBySlug = Object.fromEntries(
     (
       await prisma.property.findMany({
-        where: { investmentId: { in: properties.map((p) => p.investmentId) } },
+        where: { slug: { in: properties.map((p) => slugifyPropertyName(p.name)) } },
         select: { id: true, slug: true },
       })
     ).map((p) => [p.slug, p.id])
