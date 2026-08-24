@@ -12,13 +12,21 @@ const prisma = new PrismaClient()
 export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const userId = parseInt((await params).id, 10)
     if (Number.isNaN(userId)) {
       return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { id: userId, type: 'INVESTOR' },
+      select: { id: true },
+    })
+    if (!target) {
+      return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
     }
 
     const body = await request.json()

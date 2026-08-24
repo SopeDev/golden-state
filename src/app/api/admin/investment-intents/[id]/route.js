@@ -21,7 +21,7 @@ const ADMIN_SETTABLE = new Set([
 export async function PATCH(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

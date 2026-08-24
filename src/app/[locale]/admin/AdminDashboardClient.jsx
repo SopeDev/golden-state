@@ -9,6 +9,7 @@ import {
   ClipboardList,
   HandCoins,
   Repeat2,
+  Files,
   Users,
 } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
@@ -19,6 +20,7 @@ import { formatUsd } from '@/lib/formatMoney'
 import { meetingChannelLabelKey } from '@/lib/investMeetingLinks'
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 function greetingKeyForHour(hour) {
   if (hour < 12) return 'greetingMorning'
@@ -121,6 +123,10 @@ export default function AdminDashboardClient() {
   const tInvest = useTranslations('Admin.investments')
   const locale = useLocale()
   const { data: session } = useSession()
+  const canNotifyPropertyInvestors = hasOperatorPermission(
+    session?.user,
+    OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS
+  )
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -166,6 +172,7 @@ export default function AdminDashboardClient() {
     pendingDeposits: 0,
     pendingCashOuts: 0,
     pendingReinvests: 0,
+    pendingDocumentNotifications: 0,
     attentionTotal: 0,
   }
   const queues = summary?.queues || {
@@ -175,6 +182,7 @@ export default function AdminDashboardClient() {
     pendingDeposits: [],
     pendingCashOuts: [],
     pendingReinvests: [],
+    pendingDocumentNotifications: [],
   }
 
   const channelLabel = (channel) => {
@@ -203,6 +211,30 @@ export default function AdminDashboardClient() {
       ) : null}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {canNotifyPropertyInvestors ? <QueueCard
+          title={t('documentNotificationsTitle')}
+          description={t('documentNotificationsDesc')}
+          count={counts.pendingDocumentNotifications}
+          emptyLabel={t('documentNotificationsEmpty')}
+          href="/admin/properties"
+          viewAllLabel={t('viewDocumentNotifications')}
+          icon={Files}
+          accentClass="bg-main-gold/15 text-primary"
+        >
+          {queues.pendingDocumentNotifications.map((row) => (
+            <PreviewRow
+              key={row.id}
+              primary={
+                <AdminPropertyLink propertyId={row.id} tab="documents">
+                  {row.propertyLabel}
+                </AdminPropertyLink>
+              }
+              secondary={t('pendingDocumentsCount', { count: row.count })}
+              meta={formatShortDate(row.at, locale)}
+            />
+          ))}
+        </QueueCard> : null}
+
         <QueueCard
           title={t('approvalsTitle')}
           description={t('approvalsDesc')}

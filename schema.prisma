@@ -36,6 +36,7 @@ model User {
   passwordResetExpires DateTime?
 
   sessionEpoch Int @default(0)
+  operatorPermissions Json @default("[]")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -58,6 +59,7 @@ model User {
 
 enum UserType {
   ADMIN
+  OPERATOR
   INVESTOR
 }
 

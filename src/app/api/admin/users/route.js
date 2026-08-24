@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { userSecretOmit } from '@/lib/auth/prismaUserSelect'
+import { DEFAULT_OPERATOR_PERMISSIONS, normalizeOperatorPermissions } from '@/lib/operatorPermissions'
 
 const prisma = new PrismaClient()
 
@@ -13,11 +14,12 @@ export async function GET() {
     const session = await getServerSession(authOptions)
     
     // Check if user is authenticated and is admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const users = await prisma.user.findMany({
+      where: session.user.type === 'OPERATOR' ? { type: 'INVESTOR' } : undefined,
       orderBy: { createdAt: 'desc' },
       omit: userSecretOmit,
       include: {
@@ -47,7 +49,7 @@ export async function POST(request) {
     const session = await getServerSession(authOptions)
     
     // Check if user is authenticated and is admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -72,7 +74,7 @@ export async function POST(request) {
     }
 
     // Validate user type
-    if (!['ADMIN', 'INVESTOR'].includes(type)) {
+    if (!['ADMIN', 'OPERATOR', 'INVESTOR'].includes(type)) {
       return NextResponse.json(
         { error: 'Invalid user type' },
         { status: 400 }
@@ -100,6 +102,10 @@ export async function POST(request) {
         email,
         password: hashedPassword,
         type,
+        operatorPermissions:
+          type === 'OPERATOR'
+            ? normalizeOperatorPermissions(body.operatorPermissions || DEFAULT_OPERATOR_PERMISSIONS)
+            : [],
         provider: 'credentials' // Always credentials for admin-created users
       },
       omit: userSecretOmit,
@@ -122,4 +128,4 @@ export async function POST(request) {
   } finally {
     await prisma.$disconnect()
   }
-} 
+}

@@ -74,12 +74,12 @@ export const canAccessInvestorUpdates = (user) =>
   user?.accreditedStatus === ACCREDITED_STATUS.APPROVED
 
 export const canAccessDashboard = (user) =>
-  Boolean(user && (user.type === 'ADMIN' || user.type === 'INVESTOR'))
+  Boolean(user && ['ADMIN', 'OPERATOR', 'INVESTOR'].includes(user.type))
 
 export const canInvest = (user) => canAccessPortfolio(user)
 
 export const needsEmailVerification = (user) =>
-  user?.type !== 'ADMIN' &&
+  !['ADMIN', 'OPERATOR'].includes(user?.type) &&
   user?.provider === 'credentials' &&
   !user?.emailVerified
 
@@ -87,14 +87,14 @@ export const needsAdminApproval = (user) =>
   user?.accountStatus === ACCOUNT_STATUS.PENDING_ADMIN
 
 export const needsProfileCompletion = (user) => {
-  if (!user || user.type === 'ADMIN') return false
+  if (!user || ['ADMIN', 'OPERATOR'].includes(user.type)) return false
   const profile = user.profile
   return !profile || typeof profile !== 'object' || !profile.completedAt
 }
 
 /** Session user shape: emailVerified, profileComplete, provider, accountStatus */
 export function resolveInvestorOnboardingPath(user) {
-  if (!user || user.type === 'ADMIN') return null
+  if (!user || ['ADMIN', 'OPERATOR'].includes(user.type)) return null
   if (user.accountStatus === ACCOUNT_STATUS.REJECTED) return '/account/rejected'
   if (needsEmailVerification(user)) return '/register/check-email'
   if (!user.profileComplete) return '/account/complete-profile'
@@ -106,7 +106,7 @@ export function resolveInvestorOnboardingPath(user) {
 /** Default destination after sign-in, or when an already-signed-in user hits /login. */
 export function resolvePostLoginPath(user) {
   if (!user) return '/dashboard'
-  if (user.type === 'ADMIN') return '/admin'
+  if (['ADMIN', 'OPERATOR'].includes(user.type)) return '/admin'
   const onboardingPath = resolveInvestorOnboardingPath(user)
   if (onboardingPath) return onboardingPath
   return '/dashboard'

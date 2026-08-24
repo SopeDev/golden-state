@@ -15,7 +15,7 @@ const prisma = new PrismaClient()
 
 const requireAdmin = async () => {
   const session = await getServerSession(authOptions)
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     return { error: NextResponse.json({ message: 'Unauthorized' }, { status: 401 }) }
   }
   return { session }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -106,6 +107,8 @@ export default function UsersAdminClient({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { alert, confirm } = useMessaging()
+  const { data: session } = useSession()
+  const canManageUsers = session?.user?.type === 'ADMIN'
 
   const accountStatusOptions = useMemo(
     () =>
@@ -369,10 +372,10 @@ export default function UsersAdminClient({
         title={t('users.title')}
         description={t('users.subtitle')}
         actions={
-          <Button type="button" onClick={handleNewUser} className="gap-1.5">
+          canManageUsers ? <Button type="button" onClick={handleNewUser} className="gap-1.5">
             <Plus className="size-4" aria-hidden />
             {t('common.new')}
-          </Button>
+          </Button> : null
         }
       />
 
@@ -433,8 +436,8 @@ export default function UsersAdminClient({
           ) : (
             <ul className="divide-y divide-border/60">
               {pagination.items.map((user) => {
-                const isAdmin = user.type === 'ADMIN'
-                const badge = isAdmin ? null : getInvestorListBadge(user, t)
+                const isStaff = user.type === 'ADMIN' || user.type === 'OPERATOR'
+                const badge = isStaff ? null : getInvestorListBadge(user, t)
                 return (
                   <li key={user.id}>
                     <button
@@ -450,9 +453,9 @@ export default function UsersAdminClient({
                           #{user.id}
                         </span>
                       </div>
-                      {isAdmin ? (
+                      {isStaff ? (
                         <span className="shrink-0 self-center rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          {adminUserTypeLabel(t, 'ADMIN')}
+                          {adminUserTypeLabel(t, user.type)}
                         </span>
                       ) : (
                         <span

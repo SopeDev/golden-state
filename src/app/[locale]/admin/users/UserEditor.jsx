@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,12 +29,22 @@ import { cn } from '@/lib/utils'
 import { useMessaging } from '@/hooks/useMessaging'
 import InvestorDocumentReviewGrid from '@/components/invest/InvestorDocumentReviewGrid'
 import { getFieldLabelKeyForKind, parseResubmitKinds } from '@/lib/investorDocumentResubmit'
+import {
+  DEFAULT_OPERATOR_PERMISSIONS,
+  OPERATOR_PERMISSION_GROUPS,
+  OPERATOR_PERMISSIONS,
+  normalizeOperatorPermissions,
+} from '@/lib/operatorPermissions'
 
 const buildInitialState = (user) => ({
   email: user?.email || '',
   password: '',
   type: user?.type || 'INVESTOR',
   provider: user?.provider || 'credentials',
+  operatorPermissions:
+    user?.type === 'OPERATOR'
+      ? normalizeOperatorPermissions(user.operatorPermissions)
+      : DEFAULT_OPERATOR_PERMISSIONS,
 })
 
 const PROFILE_FIELD_KEYS = [
@@ -113,6 +124,8 @@ export default function UserEditor({
   const tInvest = useTranslations('Invest')
   const locale = useLocale()
   const { alert } = useMessaging()
+  const { data: session } = useSession()
+  const canManageStaff = session?.user?.type === 'ADMIN'
   const initialState = useMemo(() => buildInitialState(user), [user])
   const [formData, setFormData] = useState(initialState)
   const [reviewNote, setReviewNote] = useState('')
@@ -174,6 +187,7 @@ export default function UserEditor({
     return (
       formData.email !== initialState.email ||
       formData.type !== initialState.type ||
+      JSON.stringify(formData.operatorPermissions) !== JSON.stringify(initialState.operatorPermissions) ||
       formData.password.length > 0
     )
   }, [formData, initialState])
@@ -181,6 +195,24 @@ export default function UserEditor({
   const handleChange = (event) => {
     const { name, value } = event.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const togglePermission = (permission) => {
+    setFormData((prev) => {
+      const current = new Set(prev.operatorPermissions || [])
+      if (current.has(permission)) {
+        current.delete(permission)
+        if (permission === OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS) {
+          current.delete(OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS)
+        }
+      } else {
+        current.add(permission)
+        if (permission === OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS) {
+          current.add(OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS)
+        }
+      }
+      return { ...prev, operatorPermissions: normalizeOperatorPermissions([...current]) }
+    })
   }
 
   const handleCancelClick = () => {
@@ -520,10 +552,16 @@ export default function UserEditor({
                       value={formData.type}
                       onChange={handleChange}
                       className={adminSelectClassName()}
+                      disabled={!canManageStaff}
                       required
                     >
                       <option value="INVESTOR">{adminUserTypeLabel(t, 'INVESTOR')}</option>
-                      <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
+                      {canManageStaff ? (
+                        <>
+                          <option value="OPERATOR">{adminUserTypeLabel(t, 'OPERATOR')}</option>
+                          <option value="ADMIN">{adminUserTypeLabel(t, 'ADMIN')}</option>
+                        </>
+                      ) : null}
                     </select>
                   </AdminFormField>
 
@@ -538,6 +576,61 @@ export default function UserEditor({
                 </div>
               </AdminFormSection>
 
+              {canManageStaff && formData.type === 'OPERATOR' ? (
+                <AdminFormSection
+                  title={t('users.operatorPermissionsTitle')}
+                  description={t('users.operatorPermissionsDescription')}
+                >
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {OPERATOR_PERMISSION_GROUPS.map((group) => (
+                      <fieldset key={group.id} className="rounded-lg border border-border/70 p-4">
+                        <legend className="px-1 text-sm font-semibold text-primary">
+                          {t(`users.permissionGroups.${group.id}`)}
+                        </legend>
+                        <div className="mt-2 space-y-3">
+                          {group.permissions.map((permission) => (
+                            <label key={permission} className="flex cursor-pointer items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={formData.operatorPermissions.includes(permission)}
+                                onChange={() => togglePermission(permission)}
+                                className="mt-1 size-4 accent-primary"
+                              />
+                              <span>
+                                <span className="block text-sm font-medium text-foreground">
+                                  {t(`users.permissions.${permission}.label`)}
+                                </span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {t(`users.permissions.${permission}.description`)}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, operatorPermissions: DEFAULT_OPERATOR_PERMISSIONS }))}
+                    >
+                      {t('users.resetDefaultPermissions')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, operatorPermissions: [] }))}
+                    >
+                      {t('users.clearPermissions')}
+                    </Button>
+                  </div>
+                </AdminFormSection>
+              ) : null}
+
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <p className="text-xs text-muted-foreground">
@@ -549,7 +642,7 @@ export default function UserEditor({
                       t('common.noUnsavedChanges')
                     )}
                   </p>
-                  {!isCreating && user ? (
+                  {canManageStaff && !isCreating && user ? (
                     <button
                       type="button"
                       onClick={() => onDelete?.(user.id)}

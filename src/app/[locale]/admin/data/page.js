@@ -20,7 +20,7 @@ export default async function DataPage() {
   const dateLocale = locale === 'es' ? 'es-ES' : 'en-US'
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
 

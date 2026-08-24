@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { usePathname, useRouter, Link } from '@/i18n/navigation'
 import {
@@ -29,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed'
 
@@ -218,6 +220,7 @@ export default function AdminSidebar() {
   const t = useTranslations('Admin')
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
   const [pendingApproval, setPendingApproval] = useState(0)
   const [meetingRequests, setMeetingRequests] = useState(0)
   const [pendingDeposits, setPendingDeposits] = useState(0)
@@ -228,10 +231,10 @@ export default function AdminSidebar() {
 
   const navEntries = useMemo(
     () => [
-      { type: 'link', href: '/admin', label: t('nav.home'), icon: Home, exact: true },
+      { type: 'link', href: '/admin', label: t('nav.home'), icon: Home, exact: true, permission: P.VIEW_DASHBOARD },
       { type: 'section', label: t('nav.properties') },
-      { type: 'link', href: '/admin/properties', label: t('nav.properties'), icon: Building2 },
-      { type: 'link', href: '/admin/property-types', label: t('nav.propertyTypes'), icon: Tags },
+      { type: 'link', href: '/admin/properties', label: t('nav.properties'), icon: Building2, permission: P.VIEW_PROPERTIES },
+      { type: 'link', href: '/admin/property-types', label: t('nav.propertyTypes'), icon: Tags, permission: P.MANAGE_PROPERTY_TYPES },
       { type: 'section', label: t('nav.investments') },
       {
         type: 'link',
@@ -241,6 +244,7 @@ export default function AdminSidebar() {
         exact: true,
         badgeCount: meetingRequests,
         badgeAria: t('nav.pendingMeetingRequestsAria', { count: meetingRequests }),
+        permission: P.MANAGE_INVESTMENT_REQUESTS,
       },
       {
         type: 'link',
@@ -249,12 +253,14 @@ export default function AdminSidebar() {
         icon: HandCoins,
         badgeCount: pendingDeposits,
         badgeAria: t('nav.pendingDepositsAria', { count: pendingDeposits }),
+        permission: P.VIEW_FINANCIAL_ACTIVITY,
       },
       {
         type: 'link',
         href: '/admin/contributions',
         label: t('nav.contributions'),
         icon: Wallet,
+        permission: P.VIEW_FINANCIAL_ACTIVITY,
       },
       { type: 'section', label: t('nav.returns') },
       {
@@ -262,6 +268,7 @@ export default function AdminSidebar() {
         href: '/admin/distributions',
         label: t('nav.distributions'),
         icon: TrendingUp,
+        permission: P.VIEW_FINANCIAL_ACTIVITY,
       },
       {
         type: 'link',
@@ -270,6 +277,7 @@ export default function AdminSidebar() {
         icon: Banknote,
         badgeCount: pendingCashOuts,
         badgeAria: t('nav.pendingCashOutsAria', { count: pendingCashOuts }),
+        permission: P.VIEW_FINANCIAL_ACTIVITY,
       },
       {
         type: 'link',
@@ -278,6 +286,7 @@ export default function AdminSidebar() {
         icon: Repeat2,
         badgeCount: pendingReinvests,
         badgeAria: t('nav.pendingReinvestsAria', { count: pendingReinvests }),
+        permission: P.VIEW_FINANCIAL_ACTIVITY,
       },
       { type: 'divider' },
       {
@@ -287,11 +296,12 @@ export default function AdminSidebar() {
         icon: Users,
         badgeCount: pendingApproval,
         badgeAria: t('nav.pendingUsersAria', { count: pendingApproval }),
+        permission: P.VIEW_INVESTORS,
       },
       { type: 'divider' },
-      { type: 'link', href: '/admin/content', label: t('nav.content'), icon: FileText },
-    ],
-    [t, meetingRequests, pendingDeposits, pendingCashOuts, pendingReinvests, pendingApproval]
+      { type: 'link', href: '/admin/content', label: t('nav.content'), icon: FileText, permission: P.EDIT_WEBSITE_CONTENT },
+    ].filter((entry) => entry.type !== 'link' || hasOperatorPermission(session?.user, entry.permission)),
+    [t, session, meetingRequests, pendingDeposits, pendingCashOuts, pendingReinvests, pendingApproval]
   )
 
   const fetchPendingCount = useCallback(async () => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import AdminFilterCheckboxMenu from '@/components/admin/AdminFilterCheckboxMenu'
 import AdminListPagination, { paginateItems } from '@/components/admin/AdminListPagination'
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import PropertyEditor from './PropertyEditor'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const STATUS_OPTION_IDS = [
   'FUNDING',
@@ -41,6 +43,8 @@ export default function PropertiesAdminClient({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { alert, confirm } = useMessaging()
+  const { data: session } = useSession()
+  const canCreateProperties = hasOperatorPermission(session?.user, P.CREATE_PROPERTIES)
 
   const activePropertyTypes = useMemo(
     () => propertyTypes.filter((type) => !type.deletedAt),
@@ -275,10 +279,10 @@ export default function PropertiesAdminClient({
         title={t('properties.title')}
         description={t('properties.subtitle')}
         actions={
-          <Button type="button" onClick={handleNewProperty} className="gap-1.5">
+          canCreateProperties ? <Button type="button" onClick={handleNewProperty} className="gap-1.5">
             <Plus className="size-4" aria-hidden />
             {t('common.new')}
-          </Button>
+          </Button> : null
         }
       />
 

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +32,7 @@ import {
 } from '@/lib/propertyStatusUi'
 import { PLATFORM_MIN_INVESTMENT } from '@/lib/propertyFunding'
 import { useMessaging } from '@/hooks/useMessaging'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const keyToLabel = (key) => {
   if (!key) return ''
@@ -204,6 +207,17 @@ export default function PropertyEditor({
   const tf = useTranslations('Admin.filter')
   const locale = useLocale()
   const { alert } = useMessaging()
+  const { data: session } = useSession()
+  const searchParams = useSearchParams()
+  const canEdit = hasOperatorPermission(session?.user, isCreating ? P.CREATE_PROPERTIES : P.EDIT_PROPERTIES)
+  const canArchive = hasOperatorPermission(session?.user, P.ARCHIVE_PROPERTIES)
+  const canManageDocuments = hasOperatorPermission(session?.user, P.MANAGE_PROPERTY_DOCUMENTS)
+  const canViewFinance = hasOperatorPermission(session?.user, P.VIEW_FINANCIAL_ACTIVITY)
+  const requestedTab = searchParams.get('tab')
+  const initialTab =
+    requestedTab === 'documents' && canManageDocuments && !isCreating && property?.id
+      ? 'documents'
+      : 'basic'
   const [formData, setFormData] = useState(() => buildInitialFormData(property, propertyTypes))
   const [propertyFactsRows, setPropertyFactsRows] = useState(() =>
     objectToRows(property?.propertyFacts)
@@ -429,7 +443,7 @@ export default function PropertyEditor({
 
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs defaultValue="basic" className="gap-4">
+          <Tabs key={`${property?.id || 'new'}:${initialTab}`} defaultValue={initialTab} className="gap-4">
             <TabsList
               variant="line"
               className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border/70 bg-transparent p-0"
@@ -443,12 +457,12 @@ export default function PropertyEditor({
               <TabsTrigger value="content" className="px-3 py-2">
                 {t('tabContent')}
               </TabsTrigger>
-              {!isCreating && property?.id ? (
+              {!isCreating && property?.id && canViewFinance ? (
                 <TabsTrigger value="capital" className="px-3 py-2">
                   {t('tabCapital')}
                 </TabsTrigger>
               ) : null}
-              {!isCreating && property?.id ? (
+              {!isCreating && property?.id && canManageDocuments ? (
                 <TabsTrigger value="documents" className="px-3 py-2">
                   {t('tabDocuments')}
                 </TabsTrigger>
@@ -836,7 +850,7 @@ export default function PropertyEditor({
               </AdminFormSection>
             </TabsContent>
 
-            {!isCreating && property?.id ? (
+            {!isCreating && property?.id && canViewFinance ? (
               <TabsContent value="capital" keepMounted className="outline-none">
                 <AdminFormSection title={t('capitalRaise')} description={t('capitalRaiseDesc')}>
                   <AdminPropertyCapitalRaise
@@ -847,7 +861,7 @@ export default function PropertyEditor({
               </TabsContent>
             ) : null}
 
-            {!isCreating && property?.id ? (
+            {!isCreating && property?.id && canManageDocuments ? (
               <TabsContent value="documents" keepMounted className="outline-none">
                 <AdminFormSection title={t('progressDocuments')} description={t('progressDocumentsHint')}>
                   <AdminPropertyDocuments propertyId={property.id} />
@@ -867,7 +881,7 @@ export default function PropertyEditor({
                   tc('noUnsavedChanges')
                 )}
               </p>
-              {!isCreating && property ? (
+              {canArchive && !isCreating && property ? (
                 <button
                   type="button"
                   onClick={() => onDelete?.(property.id)}
@@ -887,9 +901,9 @@ export default function PropertyEditor({
               >
                 {isCreating ? tc('cancel') : tc('discardChanges')}
               </Button>
-              <Button type="submit" disabled={isLoading || (!isCreating && !isDirty)}>
+              {canEdit ? <Button type="submit" disabled={isLoading || (!isCreating && !isDirty)}>
                 {isLoading ? tc('saving') : isCreating ? t('createProperty') : tc('saveChanges')}
-              </Button>
+              </Button> : null}
             </div>
           </div>
         </form>

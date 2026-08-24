@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 
 export async function POST(_request, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }
 

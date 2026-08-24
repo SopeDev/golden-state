@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@prisma/client'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { getPrivateObject } from '@/lib/storage/r2'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const prisma = new PrismaClient()
 
@@ -29,7 +30,7 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ error: 'Bank notice not found' }, { status: 404 })
     }
 
-    const isAdmin = session.user.type === 'ADMIN'
+    const isAdmin = hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY)
     const isOwner = Number(session.user.id) === cashOut.userId
     if (!isAdmin && !isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

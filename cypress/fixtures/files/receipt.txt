@@ -1,0 +1,1 @@
+This intentionally unsupported upload fixture is used only by automated tests.

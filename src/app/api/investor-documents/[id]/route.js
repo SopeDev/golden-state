@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { getPrivateObject } from '@/lib/storage/r2'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const prisma = new PrismaClient()
 
@@ -33,7 +34,7 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ message: 'Not found' }, { status: 404 })
     }
 
-    const isAdmin = session.user.type === 'ADMIN'
+    const isAdmin = hasOperatorPermission(session.user, P.VIEW_INVESTORS)
     const isOwner = Number(session.user.id) === Number(doc.userId)
     if (!isAdmin && !isOwner) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })

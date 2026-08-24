@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { FileText, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
@@ -11,6 +12,7 @@ import {
 } from '@/lib/propertyDocuments'
 import { useMessaging } from '@/hooks/useMessaging'
 import NotifyDocumentsDialog from '@/components/invest/NotifyDocumentsDialog'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 const fileInputClassName =
   'block w-full min-w-0 cursor-pointer text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50'
@@ -21,6 +23,11 @@ export default function AdminPropertyDocuments({ propertyId }) {
   const t = useTranslations('PropertyDocuments')
   const tc = useTranslations('Admin.common')
   const { confirm } = useMessaging()
+  const { data: session } = useSession()
+  const canNotify = hasOperatorPermission(
+    session?.user,
+    OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS
+  )
   const [documents, setDocuments] = useState([])
   const [unannouncedCount, setUnannouncedCount] = useState(0)
   const [kind, setKind] = useState('CONSTRUCTION_PHOTOS')
@@ -93,7 +100,7 @@ export default function AdminPropertyDocuments({ propertyId }) {
       setFileInputKey((key) => key + 1)
       if (uploaded > 0) {
         await loadDocuments()
-        setNotifyPrompt({ uploadedCount: uploaded })
+        if (canNotify) setNotifyPrompt({ uploadedCount: uploaded })
       }
     }
   }
@@ -244,7 +251,7 @@ export default function AdminPropertyDocuments({ propertyId }) {
         </p>
       ) : null}
 
-      {!notifyPrompt && unannouncedCount > 0 ? (
+      {canNotify && !notifyPrompt && unannouncedCount > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-main-gold/40 bg-main-gold/10 px-3 py-2">
           <p className="text-sm text-foreground">
             {t('unannouncedHint', { count: unannouncedCount })}

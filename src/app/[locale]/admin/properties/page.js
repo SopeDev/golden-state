@@ -26,7 +26,7 @@ export default async function PropertiesAdminPage({ searchParams }) {
     typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
   // Redirect if not authenticated as admin
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
 

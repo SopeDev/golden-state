@@ -15,12 +15,13 @@ export default async function UsersAdminPage({ searchParams }) {
   const params = (await searchParams) || {}
 
   // Redirect if not authenticated as admin
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
 
   try {
     const users = await prisma.user.findMany({
+      where: session.user.type === 'OPERATOR' ? { type: 'INVESTOR' } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
         investorDocuments: { orderBy: { uploadedAt: 'desc' } },
@@ -72,4 +73,4 @@ export default async function UsersAdminPage({ searchParams }) {
   } finally {
     await prisma.$disconnect()
   }
-} 
+}

@@ -25,7 +25,7 @@ export default async function InvestmentsSectionPage({ section, searchParams }) 
   const initialRecordId =
     typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
 

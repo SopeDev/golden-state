@@ -1,0 +1,4 @@
+ALTER TYPE "UserType" ADD VALUE 'OPERATOR';
+
+ALTER TABLE "User"
+ADD COLUMN "operatorPermissions" JSONB NOT NULL DEFAULT '[]';

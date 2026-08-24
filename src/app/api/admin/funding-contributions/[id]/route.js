@@ -10,7 +10,7 @@ const prisma = new PrismaClient()
 
 const requireAdmin = async () => {
   const session = await getServerSession(authOptions)
-  if (!session || session.user?.type !== 'ADMIN') return null
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) return null
   return session
 }
 

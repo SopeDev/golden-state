@@ -6,7 +6,7 @@ import HomePreviewClient from './HomePreviewClient'
 export default async function HomePreviewPage() {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user?.type !== 'ADMIN') {
+  if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
 

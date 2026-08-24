@@ -1,8 +1,10 @@
 /** Admin deep-link helpers for property / investor editor pages. */
 
-export function adminPropertyPath(propertyId) {
+export function adminPropertyPath(propertyId, { tab } = {}) {
   if (!propertyId) return '/admin/properties'
-  return `/admin/properties?id=${encodeURIComponent(propertyId)}`
+  const params = new URLSearchParams({ id: String(propertyId) })
+  if (tab) params.set('tab', tab)
+  return `/admin/properties?${params.toString()}`
 }
 
 export function adminUserPath(userId) {

@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { userSecretOmit } from '@/lib/auth/prismaUserSelect'
+import { normalizeOperatorPermissions } from '@/lib/operatorPermissions'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 const prisma = new PrismaClient()
 
@@ -13,7 +15,7 @@ export async function GET(request, { params }) {
     const session = await getServerSession(authOptions)
     
     // Check if user is authenticated and is admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -64,7 +66,7 @@ export async function PUT(request, { params }) {
     const session = await getServerSession(authOptions)
     
     // Check if user is authenticated and is admin
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -99,7 +101,7 @@ export async function PUT(request, { params }) {
     }
 
     // Validate user type
-    if (!['ADMIN', 'INVESTOR'].includes(type)) {
+    if (!['ADMIN', 'OPERATOR', 'INVESTOR'].includes(type)) {
       return NextResponse.json(
         { error: 'Invalid user type' },
         { status: 400 }
@@ -133,8 +135,27 @@ export async function PUT(request, { params }) {
     // Prepare update data
     const updateData = {
       email,
-      type
+      type,
+      operatorPermissions:
+        type === 'OPERATOR' ? normalizeOperatorPermissions(body.operatorPermissions) : [],
       // Don't update provider - it should remain as originally set
+    }
+
+    if (
+      session.user.type === 'OPERATOR' &&
+      (existingUser.type !== 'INVESTOR' ||
+        type !== 'INVESTOR' ||
+        !hasOperatorPermission(session.user, OPERATOR_PERMISSIONS.EDIT_INVESTORS))
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    if (
+      existingUser.type !== type ||
+      JSON.stringify(existingUser.operatorPermissions || []) !==
+        JSON.stringify(updateData.operatorPermissions)
+    ) {
+      updateData.sessionEpoch = { increment: 1 }
     }
 
     // Only update password if provided
@@ -175,7 +196,7 @@ export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user?.type !== 'ADMIN') {
+    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

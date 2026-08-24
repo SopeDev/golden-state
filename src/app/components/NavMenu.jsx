@@ -164,6 +164,14 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               {user.email ? (
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               ) : null}
+              {['ADMIN', 'OPERATOR'].includes(user.type) && (
+                <>
+                  <Link href="/admin" onClick={closeMenu}>
+                    <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('admin')}</div>
+                  </Link>
+                  <hr className="border-border" />
+                </>
+              )}
               <Link href={dashboardHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('dashboard')}</div>
               </Link>
@@ -179,11 +187,6 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               <Link href={myAccountHref} onClick={closeMenu}>
                 <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('myAccount')}</div>
               </Link>
-              {user.type === 'ADMIN' && (
-                <Link href="/admin" onClick={closeMenu}>
-                  <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('admin')}</div>
-                </Link>
-              )}
               <button
                 type="button"
                 onClick={handleMobileSignOut}

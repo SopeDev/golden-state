@@ -8,6 +8,7 @@ export const sessionUserSelect = {
   provider: true,
   emailVerifiedAt: true,
   sessionEpoch: true,
+  operatorPermissions: true,
 }
 
 export const userSecretOmit = {

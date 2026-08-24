@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment } from 'react'
 import { signOut } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import {
@@ -61,14 +62,14 @@ export default function AccountNavMenu({ user, className }) {
 
   // Activity hosts investment requests + returns wallet.
   const links = [
+    ...(['ADMIN', 'OPERATOR'].includes(user?.type)
+      ? [{ href: '/admin', label: t('admin'), icon: Shield }]
+      : []),
     { href: dashboardHref, label: t('dashboard'), icon: LayoutDashboard },
     { href: portfolioHref, label: t('portfolio'), icon: Briefcase },
     { href: activityHref, label: t('activity'), icon: Activity },
     { href: updatesHref, label: t('updates'), icon: Bell },
     { href: myAccountHref, label: t('myAccount'), icon: UserRound },
-    ...(user?.type === 'ADMIN'
-      ? [{ href: '/admin', label: t('admin'), icon: Shield }]
-      : []),
   ]
 
   return (
@@ -110,15 +111,19 @@ export default function AccountNavMenu({ user, className }) {
           {links.map((item) => {
             const Icon = item.icon
             return (
-              <DropdownMenuItem
-                key={item.href}
-                nativeButton={false}
-                className="cursor-pointer gap-2.5 px-2 py-2"
-                render={<Link href={item.href} />}
-              >
-                <Icon className="size-4 text-muted-foreground" aria-hidden />
-                <span>{item.label}</span>
-              </DropdownMenuItem>
+              <Fragment key={item.href}>
+                {['ADMIN', 'OPERATOR'].includes(user?.type) && item.href === dashboardHref ? (
+                  <DropdownMenuSeparator />
+                ) : null}
+                <DropdownMenuItem
+                  nativeButton={false}
+                  className="cursor-pointer gap-2.5 px-2 py-2"
+                  render={<Link href={item.href} />}
+                >
+                  <Icon className="size-4 text-muted-foreground" aria-hidden />
+                  <span>{item.label}</span>
+                </DropdownMenuItem>
+              </Fragment>
             )
           })}
         </DropdownMenuGroup>

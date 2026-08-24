@@ -22,6 +22,7 @@ const mapDbUserToToken = (dbUser) => ({
   profileComplete: Boolean(dbUser.profile?.completedAt),
   emailVerified: Boolean(dbUser.emailVerifiedAt) || dbUser.provider === 'google',
   sessionEpoch: dbUser.sessionEpoch ?? 0,
+  operatorPermissions: dbUser.operatorPermissions || [],
 })
 
 export const authOptions = {
@@ -135,6 +136,7 @@ export const authOptions = {
       token.accreditedStatus = mapped.accreditedStatus
       token.profileComplete = mapped.profileComplete
       token.emailVerified = mapped.emailVerified
+      token.operatorPermissions = mapped.operatorPermissions
       token.invalid = false
 
       return token
@@ -152,6 +154,7 @@ export const authOptions = {
         session.user.accreditedStatus = token.accreditedStatus
         session.user.profileComplete = token.profileComplete
         session.user.emailVerified = token.emailVerified
+        session.user.operatorPermissions = token.operatorPermissions || []
       }
       return session
     },
