@@ -37,6 +37,7 @@ export default function PropertiesAdminClient({
   properties,
   propertyTypes = [],
   initialSelectedId = '',
+  canViewPropertyDetails = true,
 }) {
   const t = useTranslations('Admin')
   const locale = useLocale()
@@ -44,7 +45,8 @@ export default function PropertiesAdminClient({
   const searchParams = useSearchParams()
   const { alert, confirm } = useMessaging()
   const { data: session } = useSession()
-  const canCreateProperties = hasOperatorPermission(session?.user, P.CREATE_PROPERTIES)
+  const canCreateProperties =
+    canViewPropertyDetails && hasOperatorPermission(session?.user, P.CREATE_PROPERTIES)
 
   const activePropertyTypes = useMemo(
     () => propertyTypes.filter((type) => !type.deletedAt),
@@ -98,14 +100,23 @@ export default function PropertiesAdminClient({
 
   useEffect(() => {
     if (isCreating) return
-    if (idFromUrl && propertiesList.some((property) => property.id === idFromUrl)) {
+    if (
+      canViewPropertyDetails &&
+      idFromUrl &&
+      propertiesList.some((property) => property.id === idFromUrl)
+    ) {
       setSelectedId(idFromUrl)
+      return
+    }
+    if (idFromUrl && !canViewPropertyDetails) {
+      setSelectedId(null)
+      router.replace('/admin/properties', { scroll: false })
       return
     }
     if (!idFromUrl) {
       setSelectedId(null)
     }
-  }, [idFromUrl, propertiesList, isCreating])
+  }, [idFromUrl, propertiesList, isCreating, canViewPropertyDetails, router])
 
   const filteredProperties = useMemo(() => {
     let list = propertiesList
@@ -152,6 +163,7 @@ export default function PropertiesAdminClient({
   }
 
   const handleSelectProperty = (propertyId) => {
+    if (!canViewPropertyDetails) return
     setSelectedId(propertyId)
     setIsCreating(false)
     syncPropertyUrl(propertyId)
@@ -351,7 +363,13 @@ export default function PropertiesAdminClient({
                     <button
                       type="button"
                       onClick={() => handleSelectProperty(property.id)}
-                      className="flex w-full cursor-pointer items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50"
+                      disabled={!canViewPropertyDetails}
+                      className={cn(
+                        'flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors',
+                        canViewPropertyDetails
+                          ? 'cursor-pointer hover:bg-muted/50'
+                          : 'cursor-default'
+                      )}
                     >
                       <div className="min-w-0 space-y-1">
                         <span className="block truncate text-sm font-medium text-primary">

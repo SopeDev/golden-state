@@ -2,7 +2,7 @@ import createMiddleware from 'next-intl/middleware'
 import { NextResponse } from 'next/server'
 import { routing } from './i18n/routing'
 import { resolvePortfolioAccessRedirect } from './lib/auth/userStatus'
-import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from './lib/operatorPermissions'
+import { getAdminLandingPath, hasOperatorPermission, OPERATOR_PERMISSIONS as P } from './lib/operatorPermissions'
 
 const intlMiddleware = createMiddleware(routing)
 
@@ -105,11 +105,26 @@ export default async function middleware(request) {
     }
 
     if (user.type === 'OPERATOR') {
+      const isPropertyListPage =
+        pathWithoutLocale === '/admin/properties' && !request.nextUrl.searchParams.has('id')
+      const isPropertyListApi =
+        pathname === '/api/admin/properties' && ['GET', 'HEAD'].includes(request.method)
       const permission = adminPermissionFor(pathname, request.method)
-      if (!permission || !hasOperatorPermission(user, permission)) {
+      if (
+        !isPropertyListPage &&
+        !isPropertyListApi &&
+        (!permission || !hasOperatorPermission(user, permission))
+      ) {
         if (isAdminApi) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         const url = request.nextUrl.clone()
-        url.pathname = `/${locale}`
+        const fallbackPath =
+          pathWithoutLocale === '/admin'
+            ? getAdminLandingPath(user)
+            : pathWithoutLocale === '/admin/properties'
+              ? '/admin/properties'
+              : '/'
+        url.pathname = `/${locale}${fallbackPath === '/' ? '' : fallbackPath}`
+        url.search = ''
         return NextResponse.redirect(url)
       }
     }

@@ -1,3 +1,5 @@
+import { getAdminLandingPath } from '@/lib/operatorPermissions'
+
 export const ACCOUNT_STATUS = {
   PENDING_EMAIL: 'PENDING_EMAIL',
   PENDING_ADMIN: 'PENDING_ADMIN',
@@ -106,7 +108,7 @@ export function resolveInvestorOnboardingPath(user) {
 /** Default destination after sign-in, or when an already-signed-in user hits /login. */
 export function resolvePostLoginPath(user) {
   if (!user) return '/dashboard'
-  if (['ADMIN', 'OPERATOR'].includes(user.type)) return '/admin'
+  if (['ADMIN', 'OPERATOR'].includes(user.type)) return getAdminLandingPath(user)
   const onboardingPath = resolveInvestorOnboardingPath(user)
   if (onboardingPath) return onboardingPath
   return '/dashboard'

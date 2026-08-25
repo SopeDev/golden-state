@@ -20,6 +20,7 @@ import {
   resolveProtectedUpdatesHref,
 } from '@/lib/auth/userStatus'
 import { cn } from '@/lib/utils'
+import { getAdminLandingPath } from '@/lib/operatorPermissions'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +64,7 @@ export default function AccountNavMenu({ user, className }) {
   // Activity hosts investment requests + returns wallet.
   const links = [
     ...(['ADMIN', 'OPERATOR'].includes(user?.type)
-      ? [{ href: '/admin', label: t('admin'), icon: Shield }]
+      ? [{ href: getAdminLandingPath(user), label: t('admin'), icon: Shield }]
       : []),
     { href: dashboardHref, label: t('dashboard'), icon: LayoutDashboard },
     { href: portfolioHref, label: t('portfolio'), icon: Briefcase },

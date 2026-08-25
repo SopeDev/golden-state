@@ -233,7 +233,7 @@ export default function AdminSidebar() {
     () => [
       { type: 'link', href: '/admin', label: t('nav.home'), icon: Home, exact: true, permission: P.VIEW_DASHBOARD },
       { type: 'section', label: t('nav.properties') },
-      { type: 'link', href: '/admin/properties', label: t('nav.properties'), icon: Building2, permission: P.VIEW_PROPERTIES },
+      { type: 'link', href: '/admin/properties', label: t('nav.properties'), icon: Building2 },
       { type: 'link', href: '/admin/property-types', label: t('nav.propertyTypes'), icon: Tags, permission: P.MANAGE_PROPERTY_TYPES },
       { type: 'section', label: t('nav.investments') },
       {
@@ -300,7 +300,12 @@ export default function AdminSidebar() {
       },
       { type: 'divider' },
       { type: 'link', href: '/admin/content', label: t('nav.content'), icon: FileText, permission: P.EDIT_WEBSITE_CONTENT },
-    ].filter((entry) => entry.type !== 'link' || hasOperatorPermission(session?.user, entry.permission)),
+    ].filter(
+      (entry) =>
+        entry.type !== 'link' ||
+        !entry.permission ||
+        hasOperatorPermission(session?.user, entry.permission)
+    ),
     [t, session, meetingRequests, pendingDeposits, pendingCashOuts, pendingReinvests, pendingApproval]
   )
 

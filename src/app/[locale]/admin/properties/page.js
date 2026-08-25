@@ -5,6 +5,7 @@ import { redirect } from '@/i18n/navigation'
 import { PrismaClient } from '@prisma/client'
 import PropertiesAdminClient from './PropertiesAdminClient'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 import { attachFundingToProperties } from '@/lib/propertyFunding'
 import {
@@ -22,13 +23,19 @@ export default async function PropertiesAdminPage({ searchParams }) {
   const session = await getServerSession(authOptions)
   const params = (await searchParams) || {}
   const { includeArchived } = params
-  const initialSelectedId =
-    typeof params.id === 'string' && params.id.trim() ? params.id.trim() : ''
 
   // Redirect if not authenticated as admin
   if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
     await redirect('/')
   }
+  const canViewPropertyDetails = hasOperatorPermission(
+    session.user,
+    OPERATOR_PERMISSIONS.VIEW_PROPERTIES
+  )
+  const initialSelectedId =
+    canViewPropertyDetails && typeof params.id === 'string' && params.id.trim()
+      ? params.id.trim()
+      : ''
 
   try {
     const [properties, propertyTypes] = await Promise.all([
@@ -39,7 +46,21 @@ export default async function PropertiesAdminPage({ searchParams }) {
       }),
       listAllPropertyTypes(prisma, { includeDeleted: true }),
     ])
-    const withFunding = await attachFundingToProperties(prisma, toClientProperties(properties))
+    const clientProperties = toClientProperties(properties)
+    const withFunding = canViewPropertyDetails
+      ? await attachFundingToProperties(prisma, clientProperties)
+      : clientProperties.map((property) => ({
+          id: property.id,
+          investmentId: property.investmentId,
+          name: property.name,
+          city: property.city,
+          state: property.state,
+          typeId: property.typeId,
+          propertyType: property.propertyType,
+          status: property.status,
+          executionStatus: property.executionStatus,
+          deletedAt: property.deletedAt,
+        }))
 
     return (
       <div className="flex-1 bg-background">
@@ -47,6 +68,7 @@ export default async function PropertiesAdminPage({ searchParams }) {
           properties={withFunding}
           propertyTypes={propertyTypes.map(toClientPropertyType)}
           initialSelectedId={initialSelectedId}
+          canViewPropertyDetails={canViewPropertyDetails}
         />
       </div>
     )
@@ -67,4 +89,4 @@ export default async function PropertiesAdminPage({ searchParams }) {
   } finally {
     await prisma.$disconnect()
   }
-} 
+}

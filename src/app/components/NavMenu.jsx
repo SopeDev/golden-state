@@ -9,6 +9,7 @@ import DropdownNavItem from './DropdownNavItem'
 import AuthButton from './AuthButton'
 import AccountNavMenu from './AccountNavMenu'
 import UpdatesNavBell from '@/components/invest/UpdatesNavBell'
+import { getAdminLandingPath } from '@/lib/operatorPermissions'
 
 export default function NavMenu({ session: serverSession, propertyTypes = [] }) {
   const t = useTranslations('Navbar')
@@ -167,7 +168,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
               ) : null}
               {['ADMIN', 'OPERATOR'].includes(user.type) && (
                 <>
-                  <Link href="/admin" onClick={closeMenu}>
+                  <Link href={getAdminLandingPath(user)} onClick={closeMenu}>
                     <div className="py-1 text-sm text-primary hover:text-secondary-blue">{t('admin')}</div>
                   </Link>
                   <hr className="border-border" />

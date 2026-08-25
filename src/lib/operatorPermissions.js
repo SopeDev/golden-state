@@ -95,3 +95,40 @@ export function isAdminActor(user) {
   return user?.type === 'ADMIN' || user?.type === 'OPERATOR'
 }
 
+/** First admin page the current staff account can actually enter. */
+export function getAdminLandingPath(user) {
+  if (user?.type === 'ADMIN') return '/admin'
+  if (user?.type !== 'OPERATOR') return '/'
+
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.VIEW_DASHBOARD)) return '/admin'
+
+  const hasPropertyAccess = [
+    OPERATOR_PERMISSIONS.VIEW_PROPERTIES,
+    OPERATOR_PERMISSIONS.EDIT_PROPERTIES,
+    OPERATOR_PERMISSIONS.CREATE_PROPERTIES,
+    OPERATOR_PERMISSIONS.ARCHIVE_PROPERTIES,
+    OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS,
+    OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS,
+    OPERATOR_PERMISSIONS.MANAGE_PROPERTY_TYPES,
+  ].some((permission) => hasOperatorPermission(user, permission))
+  if (hasPropertyAccess) return '/admin/properties'
+
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.MANAGE_INVESTMENT_REQUESTS)) {
+    return '/admin/investments'
+  }
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY)) {
+    return '/admin/deposits'
+  }
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.VIEW_INVESTORS)) {
+    return '/admin/users'
+  }
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.EDIT_WEBSITE_CONTENT)) {
+    return '/admin/content'
+  }
+  if (hasOperatorPermission(user, OPERATOR_PERMISSIONS.VIEW_TECHNICAL_DATA)) {
+    return '/admin/data'
+  }
+
+  // The property table is intentionally the minimum operator-accessible admin page.
+  return '/admin/properties'
+}
