@@ -33,6 +33,7 @@ import {
   DEFAULT_OPERATOR_PERMISSIONS,
   OPERATOR_PERMISSION_GROUPS,
   OPERATOR_PERMISSIONS,
+  arePermissionRequirementsMet,
   hasOperatorPermission,
   normalizeOperatorPermissions,
 } from '@/lib/operatorPermissions'
@@ -215,14 +216,8 @@ export default function UserEditor({
       const current = new Set(prev.operatorPermissions || [])
       if (current.has(permission)) {
         current.delete(permission)
-        if (permission === OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS) {
-          current.delete(OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS)
-        }
       } else {
         current.add(permission)
-        if (permission === OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS) {
-          current.add(OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS)
-        }
       }
       return { ...prev, operatorPermissions: normalizeOperatorPermissions([...current]) }
     })
@@ -606,11 +601,28 @@ export default function UserEditor({
                         </legend>
                         <div className="mt-2 space-y-3">
                           {group.permissions.map((permission) => (
-                            <label key={permission} className="flex cursor-pointer items-start gap-3">
+                            <label
+                              key={permission}
+                              className={cn(
+                                'flex items-start gap-3',
+                                arePermissionRequirementsMet(
+                                  permission,
+                                  formData.operatorPermissions
+                                )
+                                  ? 'cursor-pointer'
+                                  : 'cursor-not-allowed opacity-50'
+                              )}
+                            >
                               <input
                                 type="checkbox"
                                 checked={formData.operatorPermissions.includes(permission)}
                                 onChange={() => togglePermission(permission)}
+                                disabled={
+                                  !arePermissionRequirementsMet(
+                                    permission,
+                                    formData.operatorPermissions
+                                  )
+                                }
                                 className="mt-1 size-4 accent-primary"
                               />
                               <span>

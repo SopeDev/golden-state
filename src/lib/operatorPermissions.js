@@ -34,6 +34,29 @@ export const DEFAULT_OPERATOR_PERMISSIONS = [
   OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY,
 ]
 
+/** Permissions that must be enabled before a dependent permission can be granted. */
+export const OPERATOR_PERMISSION_REQUIREMENTS = {
+  [OPERATOR_PERMISSIONS.EDIT_PROPERTIES]: [OPERATOR_PERMISSIONS.VIEW_PROPERTIES],
+  [OPERATOR_PERMISSIONS.CREATE_PROPERTIES]: [OPERATOR_PERMISSIONS.VIEW_PROPERTIES],
+  [OPERATOR_PERMISSIONS.ARCHIVE_PROPERTIES]: [OPERATOR_PERMISSIONS.VIEW_PROPERTIES],
+  [OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS]: [OPERATOR_PERMISSIONS.VIEW_PROPERTIES],
+  [OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS]: [
+    OPERATOR_PERMISSIONS.VIEW_PROPERTIES,
+    OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS,
+  ],
+  [OPERATOR_PERMISSIONS.MANAGE_PROPERTY_TYPES]: [OPERATOR_PERMISSIONS.VIEW_PROPERTIES],
+  [OPERATOR_PERMISSIONS.EDIT_INVESTORS]: [OPERATOR_PERMISSIONS.VIEW_INVESTORS],
+  [OPERATOR_PERMISSIONS.REVIEW_INVESTOR_ACCOUNTS]: [OPERATOR_PERMISSIONS.VIEW_INVESTORS],
+  [OPERATOR_PERMISSIONS.REVIEW_ACCREDITATION]: [OPERATOR_PERMISSIONS.VIEW_INVESTORS],
+  [OPERATOR_PERMISSIONS.REVIEW_DEPOSITS]: [OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY],
+  [OPERATOR_PERMISSIONS.MANAGE_CONTRIBUTIONS]: [OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY],
+  [OPERATOR_PERMISSIONS.MANAGE_RETURN_DISTRIBUTIONS]: [
+    OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY,
+  ],
+  [OPERATOR_PERMISSIONS.REVIEW_CASH_OUTS]: [OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY],
+  [OPERATOR_PERMISSIONS.REVIEW_REINVESTMENTS]: [OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY],
+}
+
 export const OPERATOR_PERMISSION_GROUPS = [
   { id: 'dashboard', permissions: [OPERATOR_PERMISSIONS.VIEW_DASHBOARD] },
   {
@@ -77,13 +100,30 @@ const VALID_PERMISSIONS = new Set(Object.values(OPERATOR_PERMISSIONS))
 
 export function normalizeOperatorPermissions(value) {
   const permissions = Array.isArray(value) ? value.filter((item) => VALID_PERMISSIONS.has(item)) : []
-  const unique = [...new Set(permissions)]
-  if (unique.includes(OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS)) {
-    if (!unique.includes(OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS)) {
-      unique.push(OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS)
-    }
+  let normalized = [...new Set(permissions)]
+  let changed = true
+
+  // Drop orphaned children. Repeat so transitive dependencies cascade, e.g.
+  // View properties -> Manage documents -> Notify investors.
+  while (changed) {
+    changed = false
+    const enabled = new Set(normalized)
+    const next = normalized.filter((permission) => {
+      const requirements = OPERATOR_PERMISSION_REQUIREMENTS[permission] || []
+      return requirements.every((required) => enabled.has(required))
+    })
+    if (next.length !== normalized.length) changed = true
+    normalized = next
   }
-  return unique
+
+  return normalized
+}
+
+export function arePermissionRequirementsMet(permission, enabledPermissions) {
+  const enabled = new Set(enabledPermissions || [])
+  return (OPERATOR_PERMISSION_REQUIREMENTS[permission] || []).every((required) =>
+    enabled.has(required)
+  )
 }
 
 export function hasOperatorPermission(user, permission) {
