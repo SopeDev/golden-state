@@ -8,7 +8,7 @@ import { buttonVariants } from '@/components/ui/button'
 export default function AuthButton({ t }) {
   const { data: session } = useSession()
 
-  if (session) return null
+  if (session?.user) return null
 
   return (
     <div className="flex items-center gap-2">

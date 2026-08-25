@@ -16,8 +16,9 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
   const locale = useLocale()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const { data: clientSession } = useSession()
-  const user = clientSession?.user ?? serverSession?.user
+  const { data: clientSession, status: sessionStatus } = useSession()
+  const user =
+    sessionStatus === 'loading' ? serverSession?.user : clientSession?.user
   const dashboardHref = '/dashboard'
   const portfolioHref = user ? resolveProtectedPortfolioHref(user) : '/login'
   const activityHref = user ? resolveProtectedActivityHref(user) : '/login'

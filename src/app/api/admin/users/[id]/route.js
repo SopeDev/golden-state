@@ -150,14 +150,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (
-      existingUser.type !== type ||
-      JSON.stringify(existingUser.operatorPermissions || []) !==
-        JSON.stringify(updateData.operatorPermissions)
-    ) {
-      updateData.sessionEpoch = { increment: 1 }
-    }
-
     // Only update password if provided
     if (password) {
       updateData.password = await bcrypt.hash(password, 12)
