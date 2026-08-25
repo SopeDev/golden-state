@@ -212,7 +212,7 @@ export async function DELETE(request, { params }) {
       include: {
         _count: {
           select: {
-            fundingContributions: true,
+            fundingContributions: { where: { status: 'ACTIVE' } },
             depositRequests: true,
           },
         },
@@ -244,6 +244,12 @@ export async function DELETE(request, { params }) {
         await tx.fundingContribution.deleteMany({ where: { userId } })
         await tx.depositRequest.deleteMany({ where: { userId } })
         await tx.investmentIntent.deleteMany({ where: { userId } })
+      } else {
+        // Cancelled contributions no longer represent a holding and should not
+        // prevent removal of an otherwise unreferenced test/inactive user.
+        await tx.fundingContribution.deleteMany({
+          where: { userId, status: 'CANCELLED' },
+        })
       }
 
       await tx.user.updateMany({

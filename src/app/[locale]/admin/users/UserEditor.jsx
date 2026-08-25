@@ -285,6 +285,16 @@ export default function UserEditor({
     user?.accountStatus === 'ACTIVE' &&
     (user?.accreditedStatus === 'APPROVED' ||
       (user?.accreditedStatus === 'PENDING_REVIEW' && hasSubmittedAccreditationDocs))
+  const canRequestAccreditationResubmit =
+    canReviewAccreditation &&
+    user?.accreditedStatus === 'PENDING_REVIEW' &&
+    hasSubmittedAccreditationDocs
+  const hasAvailableReviewAction =
+    canApproveAccount ||
+    canRejectAccount ||
+    canApproveAccredited ||
+    canRejectAccredited ||
+    canRequestAccreditationResubmit
   const pendingResubmitKinds = parseResubmitKinds(user?.accreditationResubmitKinds)
 
   const toggleResubmitKind = (kind) => {
@@ -482,15 +492,16 @@ export default function UserEditor({
                       </div>
                     </div>
                   ) : null}
-                  <AdminFormField label={t('users.reviewNote')} htmlFor="review-note">
-                    <Input
-                      id="review-note"
-                      value={reviewNote}
-                      onChange={(e) => setReviewNote(e.target.value)}
-                      placeholder={t('users.reviewNotePlaceholder')}
-                      disabled={!canReviewAccounts && !canReviewAccreditation}
-                    />
-                  </AdminFormField>
+                  {hasAvailableReviewAction ? (
+                    <AdminFormField label={t('users.reviewNote')} htmlFor="review-note">
+                      <Input
+                        id="review-note"
+                        value={reviewNote}
+                        onChange={(e) => setReviewNote(e.target.value)}
+                        placeholder={t('users.reviewNotePlaceholder')}
+                      />
+                    </AdminFormField>
+                  ) : null}
                 </div>
               </AdminFormSection>
             </TabsContent>
