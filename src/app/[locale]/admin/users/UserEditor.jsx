@@ -33,6 +33,7 @@ import {
   DEFAULT_OPERATOR_PERMISSIONS,
   OPERATOR_PERMISSION_GROUPS,
   OPERATOR_PERMISSIONS,
+  hasOperatorPermission,
   normalizeOperatorPermissions,
 } from '@/lib/operatorPermissions'
 
@@ -126,6 +127,18 @@ export default function UserEditor({
   const { alert } = useMessaging()
   const { data: session } = useSession()
   const canManageStaff = session?.user?.type === 'ADMIN'
+  const canEditAccount =
+    canManageStaff ||
+    (user?.type === 'INVESTOR' &&
+      hasOperatorPermission(session?.user, OPERATOR_PERMISSIONS.EDIT_INVESTORS))
+  const canReviewAccounts = hasOperatorPermission(
+    session?.user,
+    OPERATOR_PERMISSIONS.REVIEW_INVESTOR_ACCOUNTS
+  )
+  const canReviewAccreditation = hasOperatorPermission(
+    session?.user,
+    OPERATOR_PERMISSIONS.REVIEW_ACCREDITATION
+  )
   const initialState = useMemo(() => buildInitialState(user), [user])
   const [formData, setFormData] = useState(initialState)
   const [reviewNote, setReviewNote] = useState('')
@@ -263,14 +276,16 @@ export default function UserEditor({
   const headingPrefix = isCreating ? t('users.createTitle') : t('users.editTitle')
   const profile = user?.profile && typeof user.profile === 'object' ? user.profile : null
   const documents = user?.investorDocuments || []
-  const canApproveAccount = user?.accountStatus !== 'ACTIVE'
-  const canRejectAccount = user?.accountStatus !== 'REJECTED'
+  const canApproveAccount = canReviewAccounts && user?.accountStatus !== 'ACTIVE'
+  const canRejectAccount = canReviewAccounts && user?.accountStatus !== 'REJECTED'
   const hasSubmittedAccreditationDocs = documents.length > 0
   const canApproveAccredited =
+    canReviewAccreditation &&
     user?.accountStatus === 'ACTIVE' &&
     hasSubmittedAccreditationDocs &&
     user?.accreditedStatus !== 'APPROVED'
   const canRejectAccredited =
+    canReviewAccreditation &&
     user?.accountStatus === 'ACTIVE' &&
     (user?.accreditedStatus === 'APPROVED' ||
       (user?.accreditedStatus === 'PENDING_REVIEW' && hasSubmittedAccreditationDocs))
@@ -402,12 +417,12 @@ export default function UserEditor({
                         closeLabel={t('common.close')}
                         openInNewTabLabel={t('common.openInNewTab')}
                         previewUnavailableLabel={t('common.previewUnavailable')}
-                        selectable={user.accreditedStatus === 'PENDING_REVIEW'}
+                        selectable={canReviewAccreditation && user.accreditedStatus === 'PENDING_REVIEW'}
                         selectedKinds={selectedResubmitKinds}
                         onToggleKind={toggleResubmitKind}
                         selectLabel={t('users.resubmitSelectDocument')}
                       />
-                      {user.accreditedStatus === 'PENDING_REVIEW' ? (
+                      {canReviewAccreditation && user.accreditedStatus === 'PENDING_REVIEW' ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="w-full text-xs text-muted-foreground">{t('users.resubmitSelectHelp')}</p>
                           <Button
@@ -477,6 +492,7 @@ export default function UserEditor({
                       value={reviewNote}
                       onChange={(e) => setReviewNote(e.target.value)}
                       placeholder={t('users.reviewNotePlaceholder')}
+                      disabled={!canReviewAccounts && !canReviewAccreditation}
                     />
                   </AdminFormField>
                 </div>
@@ -513,6 +529,7 @@ export default function UserEditor({
 
           <TabsContent value="account" keepMounted className="outline-none">
             <form onSubmit={handleSubmit}>
+              <fieldset disabled={!canEditAccount} className="contents">
               <AdminFormSection title={t('users.accountDetailsSectionTitle')}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <AdminFormField label={t('users.emailAddress')} htmlFor="user-email">
@@ -630,8 +647,9 @@ export default function UserEditor({
                   </div>
                 </AdminFormSection>
               ) : null}
+              </fieldset>
 
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+              {canEditAccount ? <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <p className="text-xs text-muted-foreground">
                     {isDirty ? (
@@ -673,7 +691,7 @@ export default function UserEditor({
                         : t('common.saveChanges')}
                   </Button>
                 </div>
-              </div>
+              </div> : null}
             </form>
           </TabsContent>
 

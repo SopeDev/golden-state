@@ -470,6 +470,7 @@ export default function PropertyEditor({
             </TabsList>
 
             <TabsContent value="basic" keepMounted className="space-y-6 outline-none">
+              <fieldset disabled={!canEdit} className="contents">
               <AdminFormSection title={t('basicInfo')}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t('propertyType')} htmlFor="prop-type">
@@ -638,9 +639,11 @@ export default function PropertyEditor({
                   </Field>
                 </div>
               </AdminFormSection>
+              </fieldset>
             </TabsContent>
 
             <TabsContent value="financial" keepMounted className="outline-none">
+              <fieldset disabled={!canEdit} className="contents">
               <AdminFormSection title={t('financialInfo')}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                   <Field label={t('investmentGoal')} htmlFor="prop-price" emphasis>
@@ -675,9 +678,11 @@ export default function PropertyEditor({
                   </Field>
                 </div>
               </AdminFormSection>
+              </fieldset>
             </TabsContent>
 
             <TabsContent value="content" keepMounted className="space-y-6 outline-none">
+              <fieldset disabled={!canEdit} className="contents">
               <AdminFormSection title={t('summary')}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label={t('summaryEn')} htmlFor="prop-summary-en">
@@ -830,7 +835,7 @@ export default function PropertyEditor({
                               className="h-full w-full object-cover"
                             />
                           </div>
-                          <Button
+                          {canEdit ? <Button
                             type="button"
                             variant="outline"
                             size="sm"
@@ -839,7 +844,7 @@ export default function PropertyEditor({
                           >
                             <Trash2 className="size-4" aria-hidden />
                             {t('removeImage')}
-                          </Button>
+                          </Button> : null}
                         </div>
                       ))}
                     </div>
@@ -848,6 +853,7 @@ export default function PropertyEditor({
                   )}
                 </div>
               </AdminFormSection>
+              </fieldset>
             </TabsContent>
 
             {!isCreating && property?.id && canViewFinance ? (
@@ -872,7 +878,7 @@ export default function PropertyEditor({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
             <div className="flex min-w-0 flex-col gap-1.5">
-              <p className="text-xs text-muted-foreground">
+              {canEdit ? <p className="text-xs text-muted-foreground">
                 {isDirty ? (
                   <span className="text-main-gold">{tc('unsavedChanges')}</span>
                 ) : isCreating ? (
@@ -880,7 +886,7 @@ export default function PropertyEditor({
                 ) : (
                   tc('noUnsavedChanges')
                 )}
-              </p>
+              </p> : null}
               {canArchive && !isCreating && property ? (
                 <button
                   type="button"
@@ -893,14 +899,14 @@ export default function PropertyEditor({
               ) : null}
             </div>
             <div className="flex flex-wrap justify-end gap-3">
-              <Button
+              {canEdit ? <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancelClick}
                 disabled={isLoading || (!isCreating && !isDirty)}
               >
                 {isCreating ? tc('cancel') : tc('discardChanges')}
-              </Button>
+              </Button> : null}
               {canEdit ? <Button type="submit" disabled={isLoading || (!isCreating && !isDirty)}>
                 {isLoading ? tc('saving') : isCreating ? t('createProperty') : tc('saveChanges')}
               </Button> : null}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { Link } from '@/i18n/navigation'
 import { Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { formatUsd } from '@/lib/formatMoney'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
 import { AdminInvestorLink } from '@/components/admin/AdminEntityLinks'
 import { useMessaging } from '@/hooks/useMessaging'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const emptyForm = {
   source: 'INVESTOR',
@@ -27,6 +29,11 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
   const tc = useTranslations('Admin.common')
   const locale = useLocale()
   const { confirm } = useMessaging()
+  const { data: session } = useSession()
+  const canManageContributions = hasOperatorPermission(
+    session?.user,
+    P.MANAGE_CONTRIBUTIONS
+  )
 
   const [rows, setRows] = useState([])
   const [investors, setInvestors] = useState([])
@@ -132,10 +139,10 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
           >
             {t('openInvestmentsHub')}
           </Link>
-          <Button type="button" size="sm" onClick={() => setShowForm((v) => !v)}>
+          {canManageContributions ? <Button type="button" size="sm" onClick={() => setShowForm((v) => !v)}>
             <Plus className="size-4" aria-hidden />
             {t('addContribution')}
-          </Button>
+          </Button> : null}
         </div>
       </div>
 
@@ -253,7 +260,7 @@ export default function AdminPropertyCapitalRaise({ propertyId, investmentGoal =
                     {row.status === 'ACTIVE' ? t('statusActive') : t('statusCancelled')}
                   </td>
                   <td className="px-3 py-2">
-                    {row.status === 'ACTIVE' ? (
+                    {canManageContributions && row.status === 'ACTIVE' ? (
                       <Button
                         type="button"
                         size="sm"

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   pageForRecord,
   useScrollToAdminRecord,
 } from '@/hooks/useAdminRecordHighlight'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const emptyContributionForm = {
   source: 'INVESTOR',
@@ -55,6 +57,9 @@ export default function InvestmentsAdminClient({
   const t = useTranslations('Admin.investments')
   const tc = useTranslations('Admin.common')
   const { confirm, prompt } = useMessaging()
+  const { data: session } = useSession()
+  const canManageContributions = hasOperatorPermission(session?.user, P.MANAGE_CONTRIBUTIONS)
+  const canReviewDeposits = hasOperatorPermission(session?.user, P.REVIEW_DEPOSITS)
 
   const [contributions, setContributions] = useState(initialContributions || [])
   const [deposits, setDeposits] = useState(initialDeposits || [])
@@ -339,7 +344,8 @@ export default function InvestmentsAdminClient({
         title={pageTitle}
         description={pageSubtitle}
         actions={
-          section !== 'intents' ? (
+          (section === 'contributions' && canManageContributions) ||
+          (section === 'deposits' && canReviewDeposits) ? (
             <Button
               type="button"
               className="gap-1.5"
@@ -731,7 +737,7 @@ export default function InvestmentsAdminClient({
                           {row.status === 'ACTIVE' ? t('statusActive') : t('statusCancelled')}
                         </td>
                         <td className="px-2 py-3">
-                          {row.status === 'ACTIVE' ? (
+                          {canManageContributions && row.status === 'ACTIVE' ? (
                             <Button
                               type="button"
                               size="sm"
@@ -828,7 +834,7 @@ export default function InvestmentsAdminClient({
                               : t('statusRejected')}
                         </td>
                         <td className="px-2 py-3">
-                          {row.status === 'PENDING' ? (
+                          {canReviewDeposits && row.status === 'PENDING' ? (
                             <div className="flex flex-wrap gap-2">
                               <Button
                                 type="button"

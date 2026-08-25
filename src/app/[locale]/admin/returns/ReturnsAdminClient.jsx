@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   useScrollToAdminRecord,
 } from '@/hooks/useAdminRecordHighlight'
 import CashOutConfirmDialog from '@/components/admin/CashOutConfirmDialog'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS as P } from '@/lib/operatorPermissions'
 
 const emptyForm = {
   userId: '',
@@ -53,6 +55,16 @@ export default function ReturnsAdminClient({
   const t = useTranslations('Admin.returns')
   const tc = useTranslations('Admin.common')
   const { confirm, prompt } = useMessaging()
+  const { data: session } = useSession()
+  const canManageDistributions = hasOperatorPermission(
+    session?.user,
+    P.MANAGE_RETURN_DISTRIBUTIONS
+  )
+  const canReviewCashOuts = hasOperatorPermission(session?.user, P.REVIEW_CASH_OUTS)
+  const canReviewReinvestments = hasOperatorPermission(
+    session?.user,
+    P.REVIEW_REINVESTMENTS
+  )
 
   const [distributions, setDistributions] = useState(initialDistributions || [])
   const [cashOuts, setCashOuts] = useState(initialCashOuts || [])
@@ -368,7 +380,7 @@ export default function ReturnsAdminClient({
         title={pageTitle}
         description={pageSubtitle}
         actions={
-          section === 'distributions' ? (
+          section === 'distributions' && canManageDistributions ? (
             <Button type="button" onClick={() => setShowForm((v) => !v)}>
               <Plus className="size-4" />
               {t('assignReturn')}
@@ -619,7 +631,7 @@ export default function ReturnsAdminClient({
                         </span>
                       </td>
                       <td className="px-2 py-3">
-                        {row.status === 'ACTIVE' ? (
+                        {canManageDistributions && row.status === 'ACTIVE' ? (
                           <Button
                             type="button"
                             size="sm"
@@ -673,7 +685,7 @@ export default function ReturnsAdminClient({
                         ) : null}
                       </td>
                       <td className="px-2 py-3">
-                        {row.status === 'PENDING' ? (
+                        {canReviewCashOuts && row.status === 'PENDING' ? (
                           <div className="flex flex-wrap gap-2">
                             <Button
                               type="button"
@@ -730,7 +742,7 @@ export default function ReturnsAdminClient({
                         ) : null}
                       </td>
                       <td className="px-2 py-3">
-                        {row.status === 'PENDING' ? (
+                        {canReviewReinvestments && row.status === 'PENDING' ? (
                           <div className="flex flex-wrap gap-2">
                             <Button
                               type="button"
