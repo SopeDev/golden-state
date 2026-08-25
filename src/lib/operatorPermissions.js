@@ -126,6 +126,19 @@ export function arePermissionRequirementsMet(permission, enabledPermissions) {
   )
 }
 
+export function getPermissionDependencyDepth(permission, visited = new Set()) {
+  if (visited.has(permission)) return 0
+  const requirements = OPERATOR_PERMISSION_REQUIREMENTS[permission] || []
+  if (requirements.length === 0) return 0
+  const nextVisited = new Set(visited).add(permission)
+  return 1 + Math.max(
+    0,
+    ...requirements.map((required) =>
+      getPermissionDependencyDepth(required, nextVisited)
+    )
+  )
+}
+
 export function hasOperatorPermission(user, permission) {
   if (user?.type === 'ADMIN') return true
   return user?.type === 'OPERATOR' && normalizeOperatorPermissions(user.operatorPermissions).includes(permission)

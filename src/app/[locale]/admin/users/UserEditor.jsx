@@ -34,6 +34,7 @@ import {
   OPERATOR_PERMISSION_GROUPS,
   OPERATOR_PERMISSIONS,
   arePermissionRequirementsMet,
+  getPermissionDependencyDepth,
   hasOperatorPermission,
   normalizeOperatorPermissions,
 } from '@/lib/operatorPermissions'
@@ -605,6 +606,8 @@ export default function UserEditor({
                               key={permission}
                               className={cn(
                                 'flex items-start gap-3',
+                                getPermissionDependencyDepth(permission) === 1 && 'ml-5',
+                                getPermissionDependencyDepth(permission) >= 2 && 'ml-10',
                                 arePermissionRequirementsMet(
                                   permission,
                                   formData.operatorPermissions
