@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 import { getPrivateObject } from '@/lib/storage/r2'
 import { investorHoldingWhere } from '@/lib/fundingContributions'
+import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 const prisma = new PrismaClient()
 
@@ -34,8 +35,11 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ message: 'Not found' }, { status: 404 })
     }
 
-    const isAdmin = session.user.type === 'ADMIN'
-    let canAccess = isAdmin
+    const canManageDocuments = hasOperatorPermission(
+      session.user,
+      OPERATOR_PERMISSIONS.MANAGE_PROPERTY_DOCUMENTS
+    )
+    let canAccess = canManageDocuments
 
     if (!canAccess) {
       const holding = await prisma.fundingContribution.findFirst({
