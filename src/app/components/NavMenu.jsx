@@ -129,7 +129,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
       </div>
 
       {menuOpen && (
-        <div className="mt-3 flex flex-col gap-2 bg-background px-4 pb-4 lg:hidden">
+        <div className="mt-3 flex max-h-[calc(100vh-5rem)] touch-pan-y flex-col gap-2 overflow-y-auto overscroll-contain bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden [max-height:calc(100dvh-5rem)]">
           <hr />
           <span className="text-lg">Info</span>
           <Link href="/about" onClick={closeMenu}>
