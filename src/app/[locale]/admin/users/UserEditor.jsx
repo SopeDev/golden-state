@@ -272,8 +272,10 @@ export default function UserEditor({
   const headingPrefix = isCreating ? t('users.createTitle') : t('users.editTitle')
   const profile = user?.profile && typeof user.profile === 'object' ? user.profile : null
   const documents = user?.investorDocuments || []
-  const canApproveAccount = canReviewAccounts && user?.accountStatus !== 'ACTIVE'
-  const canRejectAccount = canReviewAccounts && user?.accountStatus !== 'REJECTED'
+  const canReviewCurrentAccount =
+    canReviewAccounts && user?.accountStatus !== 'PENDING_EMAIL'
+  const canApproveAccount = canReviewCurrentAccount && user?.accountStatus !== 'ACTIVE'
+  const canRejectAccount = canReviewCurrentAccount && user?.accountStatus !== 'REJECTED'
   const hasSubmittedAccreditationDocs = documents.length > 0
   const canApproveAccredited =
     canReviewAccreditation &&

@@ -25,6 +25,13 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
     }
 
+    if (target.accountStatus === 'PENDING_EMAIL') {
+      return NextResponse.json(
+        { error: 'The investor must confirm their email before the account can be reviewed' },
+        { status: 409 }
+      )
+    }
+
     const body = await request.json()
     const action = body.action
 
