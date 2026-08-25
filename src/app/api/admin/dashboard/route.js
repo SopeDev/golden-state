@@ -14,9 +14,12 @@ export async function GET() {
     if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const canViewInvestors = hasOperatorPermission(session.user, P.VIEW_INVESTORS)
+    const canReviewAccounts = hasOperatorPermission(session.user, P.REVIEW_INVESTOR_ACCOUNTS)
+    const canReviewAccreditation = hasOperatorPermission(session.user, P.REVIEW_ACCREDITATION)
     const canManageInvestments = hasOperatorPermission(session.user, P.MANAGE_INVESTMENT_REQUESTS)
-    const canViewFinance = hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY)
+    const canReviewDeposits = hasOperatorPermission(session.user, P.REVIEW_DEPOSITS)
+    const canReviewCashOuts = hasOperatorPermission(session.user, P.REVIEW_CASH_OUTS)
+    const canReviewReinvestments = hasOperatorPermission(session.user, P.REVIEW_REINVESTMENTS)
     const canNotifyDocuments = hasOperatorPermission(session.user, P.NOTIFY_PROPERTY_INVESTORS)
 
     const [
@@ -164,27 +167,39 @@ export async function GET() {
 
     return NextResponse.json({
       counts: {
-        pendingApproval: canViewInvestors ? pendingApprovalCount : 0,
-        pendingAccreditation: canViewInvestors ? pendingAccreditationCount : 0,
+        pendingApproval: canReviewAccounts ? pendingApprovalCount : 0,
+        pendingAccreditation: canReviewAccreditation ? pendingAccreditationCount : 0,
         meetingRequests: canManageInvestments ? meetingRequestCount : 0,
-        pendingDeposits: canViewFinance ? pendingDepositCount : 0,
-        pendingCashOuts: canViewFinance ? pendingCashOutCount : 0,
-        pendingReinvests: canViewFinance ? pendingReinvestCount : 0,
+        pendingDeposits: canReviewDeposits ? pendingDepositCount : 0,
+        pendingCashOuts: canReviewCashOuts ? pendingCashOutCount : 0,
+        pendingReinvests: canReviewReinvestments ? pendingReinvestCount : 0,
         pendingDocumentNotifications: canNotifyDocuments ? pendingDocumentProperties.length : 0,
         attentionTotal:
-          (canViewInvestors ? pendingApprovalCount + pendingAccreditationCount : 0) +
+          (canReviewAccounts ? pendingApprovalCount : 0) +
+          (canReviewAccreditation ? pendingAccreditationCount : 0) +
           (canManageInvestments ? meetingRequestCount : 0) +
-          (canViewFinance ? pendingDepositCount + pendingCashOutCount + pendingReinvestCount : 0) +
+          (canReviewDeposits ? pendingDepositCount : 0) +
+          (canReviewCashOuts ? pendingCashOutCount : 0) +
+          (canReviewReinvestments ? pendingReinvestCount : 0) +
           (canNotifyDocuments ? pendingDocumentProperties.length : 0),
       },
+      panels: {
+        pendingApproval: canReviewAccounts,
+        pendingAccreditation: canReviewAccreditation,
+        meetingRequests: canManageInvestments,
+        pendingDeposits: canReviewDeposits,
+        pendingCashOuts: canReviewCashOuts,
+        pendingReinvests: canReviewReinvestments,
+        pendingDocumentNotifications: canNotifyDocuments,
+      },
       queues: {
-        pendingApproval: (canViewInvestors ? pendingApprovals : []).map((user) => ({
+        pendingApproval: (canReviewAccounts ? pendingApprovals : []).map((user) => ({
           id: user.id,
           email: user.email,
           name: profileName(user.profile),
           at: user.createdAt,
         })),
-        pendingAccreditation: (canViewInvestors ? pendingAccreditation : []).map((user) => ({
+        pendingAccreditation: (canReviewAccreditation ? pendingAccreditation : []).map((user) => ({
           id: user.id,
           email: user.email,
           name: profileName(user.profile),
@@ -203,7 +218,7 @@ export async function GET() {
           amount: row.intendedAmount,
           at: row.meetingRequestedAt || row.updatedAt,
         })),
-        pendingDeposits: (canViewFinance ? pendingDeposits : []).map((row) => ({
+        pendingDeposits: (canReviewDeposits ? pendingDeposits : []).map((row) => ({
           id: row.id,
           email: row.user?.email || null,
           userId: row.user?.id || null,
@@ -214,14 +229,14 @@ export async function GET() {
           amount: row.amount,
           at: row.createdAt,
         })),
-        pendingCashOuts: (canViewFinance ? pendingCashOuts : []).map((row) => ({
+        pendingCashOuts: (canReviewCashOuts ? pendingCashOuts : []).map((row) => ({
           id: row.id,
           email: row.user?.email || null,
           userId: row.user?.id || null,
           amount: row.amount,
           at: row.createdAt,
         })),
-        pendingReinvests: (canViewFinance ? pendingReinvests : []).map((row) => ({
+        pendingReinvests: (canReviewReinvestments ? pendingReinvests : []).map((row) => ({
           id: row.id,
           email: row.user?.email || null,
           userId: row.user?.id || null,

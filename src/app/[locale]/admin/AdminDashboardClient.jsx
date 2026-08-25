@@ -20,7 +20,6 @@ import { formatUsd } from '@/lib/formatMoney'
 import { meetingChannelLabelKey } from '@/lib/investMeetingLinks'
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminInvestorLink, AdminPropertyLink } from '@/components/admin/AdminEntityLinks'
-import { hasOperatorPermission, OPERATOR_PERMISSIONS } from '@/lib/operatorPermissions'
 
 function greetingKeyForHour(hour) {
   if (hour < 12) return 'greetingMorning'
@@ -123,10 +122,6 @@ export default function AdminDashboardClient() {
   const tInvest = useTranslations('Admin.investments')
   const locale = useLocale()
   const { data: session } = useSession()
-  const canNotifyPropertyInvestors = hasOperatorPermission(
-    session?.user,
-    OPERATOR_PERMISSIONS.NOTIFY_PROPERTY_INVESTORS
-  )
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -184,6 +179,7 @@ export default function AdminDashboardClient() {
     pendingReinvests: [],
     pendingDocumentNotifications: [],
   }
+  const panels = summary?.panels || {}
 
   const channelLabel = (channel) => {
     const key = meetingChannelLabelKey(channel)
@@ -211,7 +207,7 @@ export default function AdminDashboardClient() {
       ) : null}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {canNotifyPropertyInvestors ? <QueueCard
+        {panels.pendingDocumentNotifications ? <QueueCard
           title={t('documentNotificationsTitle')}
           description={t('documentNotificationsDesc')}
           count={counts.pendingDocumentNotifications}
@@ -235,7 +231,7 @@ export default function AdminDashboardClient() {
           ))}
         </QueueCard> : null}
 
-        <QueueCard
+        {panels.pendingApproval ? <QueueCard
           title={t('approvalsTitle')}
           description={t('approvalsDesc')}
           count={counts.pendingApproval}
@@ -253,9 +249,9 @@ export default function AdminDashboardClient() {
               meta={formatShortDate(row.at, locale)}
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
 
-        <QueueCard
+        {panels.pendingAccreditation ? <QueueCard
           title={t('accreditationTitle')}
           description={t('accreditationDesc')}
           count={counts.pendingAccreditation}
@@ -273,9 +269,9 @@ export default function AdminDashboardClient() {
               meta={formatShortDate(row.at, locale)}
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
 
-        <QueueCard
+        {panels.meetingRequests ? <QueueCard
           title={t('meetingsTitle')}
           description={t('meetingsDesc')}
           count={counts.meetingRequests}
@@ -307,9 +303,9 @@ export default function AdminDashboardClient() {
               }
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
 
-        <QueueCard
+        {panels.pendingDeposits ? <QueueCard
           title={t('depositsTitle')}
           description={t('depositsDesc')}
           count={counts.pendingDeposits}
@@ -329,9 +325,9 @@ export default function AdminDashboardClient() {
               meta={row.amount != null ? formatUsd(row.amount) : formatShortDate(row.at, locale)}
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
 
-        <QueueCard
+        {panels.pendingCashOuts ? <QueueCard
           title={t('cashOutsTitle')}
           description={t('cashOutsDesc')}
           count={counts.pendingCashOuts}
@@ -349,9 +345,9 @@ export default function AdminDashboardClient() {
               meta={row.amount != null ? formatUsd(row.amount) : null}
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
 
-        <QueueCard
+        {panels.pendingReinvests ? <QueueCard
           title={t('reinvestsTitle')}
           description={t('reinvestsDesc')}
           count={counts.pendingReinvests}
@@ -371,7 +367,7 @@ export default function AdminDashboardClient() {
               meta={row.amount != null ? formatUsd(row.amount) : formatShortDate(row.at, locale)}
             />
           ))}
-        </QueueCard>
+        </QueueCard> : null}
       </div>
     </AdminPageFrame>
   )
