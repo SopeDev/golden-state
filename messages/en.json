@@ -1020,8 +1020,6 @@
       "reinvestQueue": "Reinvest queue",
       "users": "Users",
       "content": "Content",
-      "data": "Database Records",
-      "schema": "Database Schema",
       "pendingUsersAria": "{count} users pending approval or accreditation",
       "pendingMeetingRequestsAria": "{count} investment requests pending",
       "pendingDepositsAria": "{count} deposits pending confirmation",
@@ -1224,7 +1222,7 @@
       "operatorPermissionsDescription": "Choose which admin functions this operator can access. Notification access automatically requires document management.",
       "resetDefaultPermissions": "Reset to defaults",
       "clearPermissions": "Clear all",
-      "permissionGroups": { "dashboard": "Dashboard", "properties": "Properties", "investors": "Investors and accounts", "investments": "Investments", "returns": "Returns", "content": "Website content", "technical": "Technical access" },
+      "permissionGroups": { "dashboard": "Dashboard", "properties": "Properties", "investors": "Investors and accounts", "investments": "Investments", "returns": "Returns", "content": "Website content" },
       "permissions": {
         "VIEW_DASHBOARD": { "label": "View dashboard", "description": "Access operational summaries and pending queues." },
         "VIEW_PROPERTIES": { "label": "View properties", "description": "View property records and progress." },
@@ -1246,8 +1244,7 @@
         "MANAGE_RETURN_DISTRIBUTIONS": { "label": "Manage return distributions", "description": "Create or void investor return distributions." },
         "REVIEW_CASH_OUTS": { "label": "Review cash-outs", "description": "Confirm or reject cash-out requests." },
         "REVIEW_REINVESTMENTS": { "label": "Review reinvestments", "description": "Confirm or reject reinvestment requests." },
-        "EDIT_WEBSITE_CONTENT": { "label": "Edit website content", "description": "Edit public website pages and FAQs." },
-        "VIEW_TECHNICAL_DATA": { "label": "View technical data", "description": "Access database summaries and schema inspection." }
+        "EDIT_WEBSITE_CONTENT": { "label": "Edit website content", "description": "Edit public website pages and FAQs." }
       },
       "createUser": "Create user",
       "profile": {
@@ -1639,40 +1636,6 @@
         "moveRoleUp": "Move role up",
         "moveRoleDown": "Move role down"
       }
-    },
-    "data": {
-      "eyebrow": "Database",
-      "title": "Database Records",
-      "subtitle": "Read-only view of properties, users, and investments in the database.",
-      "propertiesSection": "Properties ({count})",
-      "usersSection": "Users ({count})",
-      "investmentsSection": "Investments ({count})",
-      "userId": "User ID",
-      "property": "Property",
-      "investor": "Investor",
-      "amount": "Amount",
-      "investmentId": "Investment ID",
-      "location": "Location",
-      "minInvestment": "Min Investment",
-      "estimatedRoi": "Est. ROI",
-      "created": "Created",
-      "provider": "Provider",
-      "investments": "Investments",
-      "joined": "Joined",
-      "date": "Date",
-      "loadErrorTitle": "Error Loading Data",
-      "loadErrorDesc": "Failed to load database records. Please try again."
-    },
-    "schema": {
-      "eyebrow": "Database",
-      "title": "Database Schema",
-      "subtitle": "Reference for models, fields, and relationships used in this application.",
-      "modelsHeading": "Database Models",
-      "enumsHeading": "Enums",
-      "fieldsHeading": "Fields",
-      "relationsHeading": "Relations",
-      "modelBadge": "Model",
-      "enumBadge": "Enum"
     }
   },
   "Footer": {

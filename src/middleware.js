@@ -85,7 +85,6 @@ const adminPermissionFor = (pathname, method) => {
     return write ? P.REVIEW_REINVESTMENTS : P.VIEW_RETURN_ACTIVITY
   }
   if (path.startsWith('/admin/content') || path.startsWith('/api/admin/content')) return P.EDIT_WEBSITE_CONTENT
-  if (path.startsWith('/admin/data') || path.startsWith('/admin/schema')) return P.VIEW_TECHNICAL_DATA
   return null
 }
 
