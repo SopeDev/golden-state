@@ -229,8 +229,8 @@ export default function AdminSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
-  const navEntries = useMemo(
-    () => [
+  const navEntries = useMemo(() => {
+    const permittedEntries = [
       { type: 'link', href: '/admin', label: t('nav.home'), icon: Home, exact: true, permission: P.VIEW_DASHBOARD },
       { type: 'section', label: t('nav.properties') },
       { type: 'link', href: '/admin/properties', label: t('nav.properties'), icon: Building2 },
@@ -305,9 +305,30 @@ export default function AdminSidebar() {
         entry.type !== 'link' ||
         !entry.permission ||
         hasOperatorPermission(session?.user, entry.permission)
-    ),
-    [t, session, meetingRequests, pendingDeposits, pendingCashOuts, pendingReinvests, pendingApproval]
-  )
+    )
+
+    const withoutEmptySections = permittedEntries.filter((entry, index, entries) => {
+      if (entry.type !== 'section') return true
+      const nextBoundary = entries.findIndex(
+        (candidate, candidateIndex) =>
+          candidateIndex > index &&
+          (candidate.type === 'section' || candidate.type === 'divider')
+      )
+      const end = nextBoundary === -1 ? entries.length : nextBoundary
+      return entries.slice(index + 1, end).some((candidate) => candidate.type === 'link')
+    })
+
+    const cleanedEntries = withoutEmptySections.reduce((entries, entry) => {
+      if (entry.type === 'divider' && (entries.length === 0 || entries.at(-1)?.type === 'divider')) {
+        return entries
+      }
+      entries.push(entry)
+      return entries
+    }, [])
+
+    if (cleanedEntries.at(-1)?.type === 'divider') cleanedEntries.pop()
+    return cleanedEntries
+  }, [t, session, meetingRequests, pendingDeposits, pendingCashOuts, pendingReinvests, pendingApproval])
 
   const fetchPendingCount = useCallback(async () => {
     try {
