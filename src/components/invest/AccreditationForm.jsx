@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 import DocumentUploadFieldGrid from '@/components/invest/DocumentUploadField'
 import { parseResubmitKinds, resubmitKindsToFieldNames } from '@/lib/investorDocumentResubmit'
+import {
+  getAccreditationUploadSize,
+  MAX_ACCREDITATION_FILE_BYTES,
+  MAX_ACCREDITATION_UPLOAD_BYTES,
+  MAX_ACCREDITATION_UPLOAD_MB,
+} from '@/lib/accreditationUploads'
 
 export default function AccreditationForm({ propertyId, subtitle, resubmitFieldNames: resubmitFieldNamesProp }) {
   const t = useTranslations('Invest')
@@ -38,21 +44,43 @@ export default function AccreditationForm({ propertyId, subtitle, resubmitFieldN
     setSubmitting(true)
     setError('')
     const formData = new FormData(e.currentTarget)
+    const files = [...formData.values()].filter(
+      (value) => value instanceof File && value.size > 0
+    )
+    const oversizedFile = files.find((file) => file.size > MAX_ACCREDITATION_FILE_BYTES)
+
+    if (oversizedFile) {
+      setError(t('fileTooLarge', { file: oversizedFile.name, max: MAX_ACCREDITATION_UPLOAD_MB }))
+      setSubmitting(false)
+      return
+    }
+
+    if (getAccreditationUploadSize(files) > MAX_ACCREDITATION_UPLOAD_BYTES) {
+      setError(t('uploadTooLarge', { max: MAX_ACCREDITATION_UPLOAD_MB }))
+      setSubmitting(false)
+      return
+    }
+
     if (propertyId) {
       formData.set('propertyId', propertyId)
     }
     formData.set('selfCertify', formData.get('selfCertify') ? 'true' : 'false')
 
-    const res = await fetch('/api/investor/accreditation', {
-      method: 'POST',
-      body: formData,
-    })
-    setSubmitting(false)
-    if (!res.ok) {
-      setError('failed')
-      return
+    try {
+      const res = await fetch('/api/investor/accreditation', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        setError(res.status === 413 ? t('uploadTooLarge', { max: MAX_ACCREDITATION_UPLOAD_MB }) : t('uploadFailed'))
+        return
+      }
+      window.location.reload()
+    } catch {
+      setError(t('uploadFailed'))
+    } finally {
+      setSubmitting(false)
     }
-    window.location.reload()
   }
 
   return (
@@ -82,7 +110,9 @@ export default function AccreditationForm({ propertyId, subtitle, resubmitFieldN
               fieldNames={isPartialResubmit ? resubmitFieldNames : undefined}
               requiredFieldNames={isPartialResubmit ? resubmitFieldNames : undefined}
             />
-            <p className="text-xs text-muted-foreground">{t('fileTypesHint')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('fileTypesAndSizeHint', { max: MAX_ACCREDITATION_UPLOAD_MB })}
+            </p>
           </div>
 
           <label
@@ -114,7 +144,7 @@ export default function AccreditationForm({ propertyId, subtitle, resubmitFieldN
 
           {error ? (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {t('uploadFailed')}
+              {error}
             </p>
           ) : null}
 

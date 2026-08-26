@@ -188,8 +188,12 @@ export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || !['ADMIN', 'OPERATOR'].includes(session.user?.type)) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (session.user?.type !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { id } = await params

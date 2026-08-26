@@ -11,6 +11,11 @@ import { sendSafely } from '@/lib/email/sendSafely'
 import { resolveUserLocale } from '@/lib/auth/userLocale'
 import { parseResubmitKinds } from '@/lib/investorDocumentResubmit'
 import {
+  getAccreditationUploadSize,
+  MAX_ACCREDITATION_FILE_BYTES,
+  MAX_ACCREDITATION_UPLOAD_BYTES,
+} from '@/lib/accreditationUploads'
+import {
   putPrivateObject,
   toClientInvestorDocuments,
 } from '@/lib/storage/r2'
@@ -75,6 +80,16 @@ export async function POST(request) {
 
   try {
     const formData = await request.formData()
+    const uploadedFiles = [...formData.values()].filter(
+      (value) => value instanceof File && value.size > 0
+    )
+    if (
+      uploadedFiles.some((file) => file.size > MAX_ACCREDITATION_FILE_BYTES) ||
+      getAccreditationUploadSize(uploadedFiles) > MAX_ACCREDITATION_UPLOAD_BYTES
+    ) {
+      return NextResponse.json({ message: 'Upload too large' }, { status: 413 })
+    }
+
     const selfCertify = formData.get('selfCertify') === 'true' || formData.get('selfCertify') === 'on'
     const propertyId = typeof formData.get('propertyId') === 'string' ? formData.get('propertyId') : null
 
