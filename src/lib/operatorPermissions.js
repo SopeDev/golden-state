@@ -148,6 +148,45 @@ export function isAdminActor(user) {
   return user?.type === 'ADMIN' || user?.type === 'OPERATOR'
 }
 
+/** Permission required to keep viewing an admin page after live session updates. */
+export function getOperatorAdminPagePermission(pathname, { hasPropertyId = false } = {}) {
+  const path = (pathname || '').replace(/^\/(?:en|es)(?=\/)/, '')
+
+  if (path === '/admin') return OPERATOR_PERMISSIONS.VIEW_DASHBOARD
+  if (path.startsWith('/admin/property-types')) return OPERATOR_PERMISSIONS.MANAGE_PROPERTY_TYPES
+  if (path.startsWith('/admin/properties')) {
+    return hasPropertyId ? OPERATOR_PERMISSIONS.VIEW_PROPERTIES : null
+  }
+  if (path.startsWith('/admin/users')) return OPERATOR_PERMISSIONS.VIEW_INVESTORS
+  if (path.startsWith('/admin/investments')) {
+    return OPERATOR_PERMISSIONS.MANAGE_INVESTMENT_REQUESTS
+  }
+  if (
+    path.startsWith('/admin/deposits') ||
+    path.startsWith('/admin/contributions') ||
+    path.startsWith('/admin/distributions') ||
+    path.startsWith('/admin/cash-outs') ||
+    path.startsWith('/admin/reinvests')
+  ) {
+    return OPERATOR_PERMISSIONS.VIEW_FINANCIAL_ACTIVITY
+  }
+  if (path.startsWith('/admin/content')) return OPERATOR_PERMISSIONS.EDIT_WEBSITE_CONTENT
+  if (path.startsWith('/admin/data') || path.startsWith('/admin/schema')) {
+    return OPERATOR_PERMISSIONS.VIEW_TECHNICAL_DATA
+  }
+  return undefined
+}
+
+export function canAccessOperatorAdminPage(user, pathname, options) {
+  if (user?.type === 'ADMIN') return true
+  if (user?.type !== 'OPERATOR') return false
+
+  const permission = getOperatorAdminPagePermission(pathname, options)
+  // The properties table is intentionally available to every operator.
+  if (permission === null) return true
+  return Boolean(permission && hasOperatorPermission(user, permission))
+}
+
 /** First admin page the current staff account can actually enter. */
 export function getAdminLandingPath(user) {
   if (user?.type === 'ADMIN') return '/admin'
