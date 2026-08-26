@@ -374,6 +374,7 @@ export default function AccreditedInvestPanel({ property, onActiveRequestChange 
           <DepositConfirmForm
             propertyId={property.id}
             minAmount={effectiveMin}
+            maxAmount={remainingCapacity}
             onSubmitted={() => refresh()}
           />
         ) : null}

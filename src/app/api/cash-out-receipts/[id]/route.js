@@ -30,7 +30,7 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ error: 'Bank notice not found' }, { status: 404 })
     }
 
-    const isAdmin = hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY)
+    const isAdmin = hasOperatorPermission(session.user, P.VIEW_RETURN_ACTIVITY)
     const isOwner = Number(session.user.id) === cashOut.userId
     if (!isAdmin && !isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

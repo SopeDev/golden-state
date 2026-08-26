@@ -1224,7 +1224,7 @@
       "operatorPermissionsDescription": "Choose which admin functions this operator can access. Notification access automatically requires document management.",
       "resetDefaultPermissions": "Reset to defaults",
       "clearPermissions": "Clear all",
-      "permissionGroups": { "dashboard": "Dashboard", "properties": "Properties", "investors": "Investors and accounts", "investments": "Investments", "finance": "Finance", "content": "Website content", "technical": "Technical access" },
+      "permissionGroups": { "dashboard": "Dashboard", "properties": "Properties", "investors": "Investors and accounts", "investments": "Investments", "returns": "Returns", "content": "Website content", "technical": "Technical access" },
       "permissions": {
         "VIEW_DASHBOARD": { "label": "View dashboard", "description": "Access operational summaries and pending queues." },
         "VIEW_PROPERTIES": { "label": "View properties", "description": "View property records and progress." },
@@ -1239,7 +1239,8 @@
         "REVIEW_INVESTOR_ACCOUNTS": { "label": "Review investor accounts", "description": "Approve or reject investor access." },
         "REVIEW_ACCREDITATION": { "label": "Review accreditation", "description": "Approve, reject, or request replacement documents." },
         "MANAGE_INVESTMENT_REQUESTS": { "label": "Manage investment requests", "description": "Update requests, meetings, amounts, and notes." },
-        "VIEW_FINANCIAL_ACTIVITY": { "label": "View financial activity", "description": "View deposits, contributions, returns, cash-outs, and reinvestments." },
+        "VIEW_FINANCIAL_ACTIVITY": { "label": "View investment activity", "description": "View deposits and contributions." },
+        "VIEW_RETURN_ACTIVITY": { "label": "View return activity", "description": "View distributions, cash-outs, and reinvestments." },
         "REVIEW_DEPOSITS": { "label": "Review deposits", "description": "Confirm or reject deposit requests." },
         "MANAGE_CONTRIBUTIONS": { "label": "Manage contributions", "description": "Create, edit, or cancel funding contributions." },
         "MANAGE_RETURN_DISTRIBUTIONS": { "label": "Manage return distributions", "description": "Create or void investor return distributions." },

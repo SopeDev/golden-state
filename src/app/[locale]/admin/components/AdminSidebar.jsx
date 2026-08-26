@@ -268,7 +268,7 @@ export default function AdminSidebar() {
         href: '/admin/distributions',
         label: t('nav.distributions'),
         icon: TrendingUp,
-        permission: P.VIEW_FINANCIAL_ACTIVITY,
+        permission: P.VIEW_RETURN_ACTIVITY,
       },
       {
         type: 'link',
@@ -277,7 +277,7 @@ export default function AdminSidebar() {
         icon: Banknote,
         badgeCount: pendingCashOuts,
         badgeAria: t('nav.pendingCashOutsAria', { count: pendingCashOuts }),
-        permission: P.VIEW_FINANCIAL_ACTIVITY,
+        permission: P.VIEW_RETURN_ACTIVITY,
       },
       {
         type: 'link',
@@ -286,7 +286,7 @@ export default function AdminSidebar() {
         icon: Repeat2,
         badgeCount: pendingReinvests,
         badgeAria: t('nav.pendingReinvestsAria', { count: pendingReinvests }),
-        permission: P.VIEW_FINANCIAL_ACTIVITY,
+        permission: P.VIEW_RETURN_ACTIVITY,
       },
       { type: 'divider' },
       {

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { formatMoneyAmount } from '@/lib/formatMoney'
 import AdminFormattedNumberInput from '@/components/admin/AdminFormattedNumberInput'
 
-export default function DepositConfirmForm({ propertyId, minAmount, onSubmitted }) {
+export default function DepositConfirmForm({ propertyId, minAmount, maxAmount, onSubmitted }) {
   const t = useTranslations('Invest')
   const [amount, setAmount] = useState('')
   const [reference, setReference] = useState('')
@@ -31,6 +31,10 @@ export default function DepositConfirmForm({ propertyId, minAmount, onSubmitted 
     const parsedAmount = Number(amount)
     if (minAmount && parsedAmount < Number(minAmount)) {
       setStatus(t('intendedAmountMinError', { amount: formatMoneyAmount(minAmount) }))
+      return
+    }
+    if (maxAmount != null && parsedAmount > Number(maxAmount) + 1e-6) {
+      setStatus(t('intendedAmountMaxError', { max: formatMoneyAmount(maxAmount) }))
       return
     }
     setIsLoading(true)
@@ -69,12 +73,16 @@ export default function DepositConfirmForm({ propertyId, minAmount, onSubmitted 
             name="amount"
             required
             min={minAmount}
+            max={maxAmount}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          {minAmount ? (
+          {minAmount && maxAmount != null ? (
             <p className="text-xs text-muted-foreground">
-              {t('depositMinHint', { amount: formatMoneyAmount(minAmount) })}
+              {t('intendedAmountMinHint', {
+                amount: formatMoneyAmount(minAmount),
+                max: formatMoneyAmount(maxAmount),
+              })}
             </p>
           ) : null}
         </div>

@@ -91,16 +91,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 })
     }
 
-    if (confirmNow) {
-      try {
-        await assertContributionFitsGoal(prisma, { propertyId, amount })
-      } catch (err) {
-        if (err.code === 'OVERFUND') {
-          return NextResponse.json({ error: err.message, code: err.code }, { status: 400 })
-        }
-        throw err
+    try {
+      await assertContributionFitsGoal(prisma, { propertyId, amount })
+    } catch (err) {
+      if (err.code === 'OVERFUND') {
+        return NextResponse.json({ error: err.message, code: err.code }, { status: 400 })
       }
+      throw err
+    }
 
+    if (confirmNow) {
       const result = await prisma.$transaction(async (tx) => {
         const deposit = await tx.depositRequest.create({
           data: {

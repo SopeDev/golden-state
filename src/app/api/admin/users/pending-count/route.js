@@ -47,8 +47,8 @@ export async function GET() {
       pendingApproval: hasOperatorPermission(session.user, P.VIEW_INVESTORS) ? pendingApproval : 0,
       meetingRequests: hasOperatorPermission(session.user, P.MANAGE_INVESTMENT_REQUESTS) ? meetingRequests : 0,
       pendingDeposits: hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY) ? pendingDeposits : 0,
-      pendingCashOuts: hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY) ? pendingCashOuts : 0,
-      pendingReinvests: hasOperatorPermission(session.user, P.VIEW_FINANCIAL_ACTIVITY) ? pendingReinvests : 0,
+      pendingCashOuts: hasOperatorPermission(session.user, P.VIEW_RETURN_ACTIVITY) ? pendingCashOuts : 0,
+      pendingReinvests: hasOperatorPermission(session.user, P.VIEW_RETURN_ACTIVITY) ? pendingReinvests : 0,
     })
   } catch (error) {
     console.error('Pending count error:', error)

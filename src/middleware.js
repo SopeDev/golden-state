@@ -76,13 +76,13 @@ const adminPermissionFor = (pathname, method) => {
     return write ? P.MANAGE_CONTRIBUTIONS : P.VIEW_FINANCIAL_ACTIVITY
   }
   if (path.startsWith('/admin/distributions') || path.startsWith('/api/admin/return-distributions')) {
-    return write ? P.MANAGE_RETURN_DISTRIBUTIONS : P.VIEW_FINANCIAL_ACTIVITY
+    return write ? P.MANAGE_RETURN_DISTRIBUTIONS : P.VIEW_RETURN_ACTIVITY
   }
   if (path.startsWith('/admin/cash-outs') || path.startsWith('/api/admin/cash-out-requests')) {
-    return write ? P.REVIEW_CASH_OUTS : P.VIEW_FINANCIAL_ACTIVITY
+    return write ? P.REVIEW_CASH_OUTS : P.VIEW_RETURN_ACTIVITY
   }
   if (path.startsWith('/admin/reinvests') || path.startsWith('/api/admin/reinvest-requests')) {
-    return write ? P.REVIEW_REINVESTMENTS : P.VIEW_FINANCIAL_ACTIVITY
+    return write ? P.REVIEW_REINVESTMENTS : P.VIEW_RETURN_ACTIVITY
   }
   if (path.startsWith('/admin/content') || path.startsWith('/api/admin/content')) return P.EDIT_WEBSITE_CONTENT
   if (path.startsWith('/admin/data') || path.startsWith('/admin/schema')) return P.VIEW_TECHNICAL_DATA

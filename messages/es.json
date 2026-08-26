@@ -1224,7 +1224,7 @@
       "operatorPermissionsDescription": "Elige qué funciones administrativas puede usar este operador. Notificar requiere administrar documentos.",
       "resetDefaultPermissions": "Restablecer predeterminados",
       "clearPermissions": "Desmarcar todos",
-      "permissionGroups": { "dashboard": "Panel", "properties": "Propiedades", "investors": "Inversionistas y cuentas", "investments": "Inversiones", "finance": "Finanzas", "content": "Contenido del sitio", "technical": "Acceso técnico" },
+      "permissionGroups": { "dashboard": "Panel", "properties": "Propiedades", "investors": "Inversionistas y cuentas", "investments": "Inversiones", "returns": "Retornos", "content": "Contenido del sitio", "technical": "Acceso técnico" },
       "permissions": {
         "VIEW_DASHBOARD": { "label": "Ver panel", "description": "Acceder a resúmenes operativos y pendientes." },
         "VIEW_PROPERTIES": { "label": "Ver propiedades", "description": "Ver registros y progreso de propiedades." },
@@ -1239,7 +1239,8 @@
         "REVIEW_INVESTOR_ACCOUNTS": { "label": "Revisar cuentas", "description": "Aprobar o rechazar acceso de inversionistas." },
         "REVIEW_ACCREDITATION": { "label": "Revisar acreditación", "description": "Aprobar, rechazar o solicitar documentos nuevos." },
         "MANAGE_INVESTMENT_REQUESTS": { "label": "Administrar solicitudes", "description": "Actualizar solicitudes, reuniones, montos y notas." },
-        "VIEW_FINANCIAL_ACTIVITY": { "label": "Ver actividad financiera", "description": "Ver depósitos, contribuciones, retornos, retiros y reinversiones." },
+        "VIEW_FINANCIAL_ACTIVITY": { "label": "Ver actividad de inversiones", "description": "Ver depósitos y contribuciones." },
+        "VIEW_RETURN_ACTIVITY": { "label": "Ver actividad de retornos", "description": "Ver distribuciones, retiros y reinversiones." },
         "REVIEW_DEPOSITS": { "label": "Revisar depósitos", "description": "Confirmar o rechazar depósitos." },
         "MANAGE_CONTRIBUTIONS": { "label": "Administrar contribuciones", "description": "Crear, editar o cancelar contribuciones." },
         "MANAGE_RETURN_DISTRIBUTIONS": { "label": "Administrar distribuciones", "description": "Crear o anular distribuciones de retornos." },

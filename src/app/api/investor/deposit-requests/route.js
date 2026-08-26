@@ -16,6 +16,7 @@ import { formatMoneyAmount } from '@/lib/formatMoney'
 import {
   getEffectiveMinInvestment,
   getPropertyFundedAmount,
+  getRemainingCapacity,
 } from '@/lib/propertyFunding'
 
 const prisma = new PrismaClient()
@@ -108,6 +109,7 @@ export async function POST(request) {
     }
 
     const fundedAmount = await getPropertyFundedAmount(prisma, property.id)
+    const remaining = getRemainingCapacity(property.price, fundedAmount)
     const minTicket = getEffectiveMinInvestment({
       goal: property.price,
       fundedAmount,
@@ -115,6 +117,15 @@ export async function POST(request) {
     if (amount < minTicket) {
       return NextResponse.json(
         { error: `Amount must be at least $${formatMoneyAmount(minTicket)}` },
+        { status: 400 }
+      )
+    }
+    if (remaining <= 0) {
+      return NextResponse.json({ error: 'This property is fully funded' }, { status: 400 })
+    }
+    if (amount > remaining + 1e-6) {
+      return NextResponse.json(
+        { error: `Only $${formatMoneyAmount(remaining)} remains on this raise`, code: 'OVERFUND' },
         { status: 400 }
       )
     }

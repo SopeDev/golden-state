@@ -44,6 +44,11 @@ export async function POST(_request, { params }) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      await assertContributionFitsGoal(tx, {
+        propertyId: deposit.propertyId,
+        amount: deposit.amount,
+      })
+
       const updated = await tx.depositRequest.update({
         where: { id },
         data: {
@@ -67,7 +72,7 @@ export async function POST(_request, { params }) {
       })
 
       return { deposit: updated, contribution }
-    })
+    }, { isolationLevel: 'Serializable' })
 
     await syncPropertyFundingStatusWithHolderNotify(prisma, deposit.propertyId)
     await markIntentCompleted(prisma, {
@@ -101,10 +106,18 @@ export async function POST(_request, { params }) {
       contribution: result.contribution,
     })
   } catch (error) {
+    if (error.code === 'OVERFUND') {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 })
+    }
+    if (error.code === 'P2034') {
+      return NextResponse.json(
+        { error: 'Funding changed while confirming. Please refresh and try again.' },
+        { status: 409 }
+      )
+    }
     console.error('Error confirming deposit:', error)
     return NextResponse.json({ error: 'Failed to confirm deposit' }, { status: 500 })
   } finally {
     await prisma.$disconnect()
   }
 }
-
