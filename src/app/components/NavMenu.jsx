@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -16,6 +17,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
   const tProjects = useTranslations('Projects')
   const locale = useLocale()
   const router = useRouter()
+  const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: clientSession, status: sessionStatus } = useSession()
   const user =
@@ -40,6 +42,10 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
 
   const closeMenu = () => setMenuOpen(false)
 
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
+
   const handleMobileSignOut = async () => {
     closeMenu()
     await signOut({ redirect: false })
@@ -54,7 +60,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
     >
       <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between px-3 md:max-w-screen-md lg:max-w-screen-lg xl:max-w-screen-xl">
         <div className="shrink-0">
-          <Link href="/">
+          <Link href="/" onClick={closeMenu}>
             <img src="/logo.png" alt="Golden State" className="h-13" />
           </Link>
         </div>
@@ -202,7 +208,7 @@ export default function NavMenu({ session: serverSession, propertyTypes = [] }) 
             <>
               <hr />
               <div className="flex justify-center sm:justify-end">
-                <AuthButton t={t} />
+                <AuthButton t={t} onNavigate={closeMenu} />
               </div>
             </>
           )}
