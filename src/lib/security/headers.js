@@ -32,3 +32,10 @@ export const SECURITY_HEADERS = [
     value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
   },
 ]
+
+// Private document streams are rendered inside the app's preview iframe. They
+// may be framed only by this same origin; all other routes remain DENY/none.
+export const SAME_ORIGIN_DOCUMENT_HEADERS = [
+  { key: 'Content-Security-Policy', value: "default-src 'none'; frame-ancestors 'self'" },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+]

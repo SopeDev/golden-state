@@ -49,6 +49,8 @@ export async function GET(_request, { params }) {
     )
     headers.set('Cache-Control', 'private, no-store')
     headers.set('X-Content-Type-Options', 'nosniff')
+    headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'self'")
+    headers.set('X-Frame-Options', 'SAMEORIGIN')
 
     return new NextResponse(body, { status: 200, headers })
   } catch (error) {
