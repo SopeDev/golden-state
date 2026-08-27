@@ -39,3 +39,16 @@ export const SAME_ORIGIN_DOCUMENT_HEADERS = [
   { key: 'Content-Security-Policy', value: "default-src 'none'; frame-ancestors 'self'" },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
 ]
+
+// Content-editor previews run the normal application UI inside a same-origin
+// iframe, so retain the full page policy while allowing only this site to frame it.
+export const SAME_ORIGIN_PREVIEW_HEADERS = SECURITY_HEADERS.map((header) => {
+  if (header.key === 'Content-Security-Policy') {
+    return {
+      ...header,
+      value: CONTENT_SECURITY_POLICY.replace("frame-ancestors 'none'", "frame-ancestors 'self'"),
+    }
+  }
+  if (header.key === 'X-Frame-Options') return { ...header, value: 'SAMEORIGIN' }
+  return header
+})

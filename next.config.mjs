@@ -1,6 +1,7 @@
 import createNextIntlPlugin from 'next-intl/plugin'
 import {
   SAME_ORIGIN_DOCUMENT_HEADERS,
+  SAME_ORIGIN_PREVIEW_HEADERS,
   SECURITY_HEADERS,
 } from './src/lib/security/headers.js'
 
@@ -21,6 +22,14 @@ const nextConfig = {
       {
         source: '/api/property-documents/:id',
         headers: SAME_ORIGIN_DOCUMENT_HEADERS,
+      },
+      {
+        source: '/en/admin/content/preview/:path*',
+        headers: SAME_ORIGIN_PREVIEW_HEADERS,
+      },
+      {
+        source: '/es/admin/content/preview/:path*',
+        headers: SAME_ORIGIN_PREVIEW_HEADERS,
       },
     ]
   },
