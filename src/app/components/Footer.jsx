@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getPropertyTypeLabel } from '@/lib/propertyTypes'
 import LocaleToggle from './LocaleToggle'
+import { trackGaEvent } from '@/lib/analytics'
 
 export default function Footer({ propertyTypes = [] }) {
   const t = useTranslations('Footer')
@@ -128,6 +129,12 @@ export default function Footer({ propertyTypes = [] }) {
             <div className="pt-2">
               <a
                 href="mailto:investors@goldenstatecap.com"
+                onClick={() => trackGaEvent('contact_click', {
+                  contact_method: 'email',
+                  source_page: window.location.pathname,
+                  cta_location: 'footer',
+                  locale,
+                })}
                 className={cn(
                   buttonVariants({ variant: 'outline', size: 'default' }),
                   'w-full border-main-gold text-main-gold hover:bg-main-gold hover:text-primary-foreground'

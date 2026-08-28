@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -24,6 +25,7 @@ import InvestNowButton from '@/components/invest/InvestNowButton'
 import PropertyProgressSummary from '@/components/invest/PropertyProgressSummary'
 import ViewProgressDocumentsButton from '@/components/invest/ViewProgressDocumentsButton'
 import PropertyImageGallery from '@/components/invest/PropertyImageGallery'
+import { toGaPropertyItem, trackGaEvent } from '@/lib/analytics'
 
 export default function PropertyDetailsClient({ property, canViewProgressDocuments = false }) {
   const t = useTranslations('PropertyDetails')
@@ -88,6 +90,14 @@ export default function PropertyDetailsClient({ property, canViewProgressDocumen
   const showInvestmentDetails = Boolean(
     investmentDetailsIntro || investmentDetailsEntries.length > 0
   )
+
+  useEffect(() => {
+    if (!property) return
+    trackGaEvent('view_item', {
+      locale,
+      items: [toGaPropertyItem(property)],
+    })
+  }, [locale, property])
 
   if (!property) {
     return (

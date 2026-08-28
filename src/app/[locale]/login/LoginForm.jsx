@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,9 +21,11 @@ import GoogleIcon from '@/components/GoogleIcon/GoogleIcon'
 import { legalAgreementTags } from '@/components/Legal/legalAgreementTags'
 
 import { resolveLoginDestination } from '@/lib/auth/userStatus'
+import { trackGaEvent } from '@/lib/analytics'
 
 export default function LoginForm() {
   const t = useTranslations('Login')
+  const locale = useLocale()
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || ''
@@ -59,6 +61,7 @@ export default function LoginForm() {
     const session = await sessionRes.json()
     const user = session?.user
     const destination = resolveLoginDestination(user, callbackUrl)
+    trackGaEvent('login', { method: 'credentials', locale })
     router.push(destination)
     router.refresh()
   }

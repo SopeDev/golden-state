@@ -25,6 +25,7 @@ import { getPropertyTypeBadgeClass, resolvePropertyTypeLabel } from '@/lib/prope
 import { getPropertyTypeDescription, getPropertyTypeLabel } from '@/lib/propertyTypes'
 import { getActualDurationMonths } from '@/lib/propertyStatusUi'
 import PropertyCardHighlights from '@/components/invest/PropertyCardHighlights'
+import { toGaPropertyItem, trackGaEvent } from '@/lib/analytics'
 
 const STRATEGY_ICON_BY_SLUG = {
   'build-to-sell': Building2,
@@ -421,8 +422,17 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
           </div>
         ) : (
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {liveOpportunities.map((property) => {
+            {liveOpportunities.map((property, index) => {
               const typeLabel = resolvePropertyTypeLabel(property, locale)
+              const trackSelection = (clickTarget) => trackGaEvent('select_item', {
+                item_list_name: 'home_live_opportunities',
+                locale,
+                click_target: clickTarget,
+                items: [toGaPropertyItem(property, {
+                  item_list_name: 'home_live_opportunities',
+                  index,
+                })],
+              })
               return (
                 <Card
                   key={property.id}
@@ -430,6 +440,7 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
                 >
                   <Link
                     href={`/properties/${property.investmentId}`}
+                    onClick={() => trackSelection('image')}
                     className="relative block aspect-[4/3] overflow-hidden bg-muted"
                   >
                     {property.images?.[0] ? (
@@ -453,7 +464,10 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         #{property.investmentId} · {property.city}, {property.state}
                       </p>
-                      <Link href={`/properties/${property.investmentId}`}>
+                      <Link
+                        href={`/properties/${property.investmentId}`}
+                        onClick={() => trackSelection('title')}
+                      >
                         <h3 className="font-heading mt-1 text-lg font-semibold text-primary transition-colors hover:text-secondary-blue">
                           {property.name}
                         </h3>
@@ -484,6 +498,7 @@ function HomeLiveOpportunities({ content, liveOpportunities }) {
 
                     <Link
                       href={`/properties/${property.investmentId}`}
+                      onClick={() => trackSelection('view_details')}
                       className={cn(buttonVariants({ variant: 'gold', size: 'sm' }), 'mt-auto w-full')}
                     >
                       {tProjects('viewDetails')}

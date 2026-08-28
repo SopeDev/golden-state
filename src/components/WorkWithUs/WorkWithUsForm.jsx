@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { adminSelectClassName } from '@/lib/adminFormClasses'
 import { GENERAL_INTEREST_VALUE } from '@/lib/careerRoles'
 import { cn } from '@/lib/utils'
+import { trackGaEvent } from '@/lib/analytics'
 
 const HIGHLIGHT_MS = 1800
 const MAX_RESUME_BYTES = 3 * 1024 * 1024
@@ -103,6 +104,12 @@ export default function WorkWithUsForm({
       }
 
       setStatus('success')
+      trackGaEvent('job_application_submit', {
+        role_id: roleId,
+        role_title: selectedRole?.title || content.formInterestGeneral,
+        has_resume: Boolean(resume),
+        locale,
+      })
       form.reset()
       onSelectedRoleChange?.(GENERAL_INTEREST_VALUE)
     } catch {

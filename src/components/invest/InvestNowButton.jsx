@@ -1,12 +1,13 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { resolveInvestNextStep } from '@/lib/auth/userStatus'
 import { isPropertyOpenForInvestment } from '@/lib/propertyFunding'
+import { trackGaEvent } from '@/lib/analytics'
 
 function closedLabel(t, propertyStatus, executionStatus) {
   if (executionStatus === 'COMPLETED') return t('investCompleted')
@@ -22,6 +23,7 @@ export default function InvestNowButton({
 }) {
   const { data: session, status } = useSession()
   const t = useTranslations('PropertyDetails')
+  const locale = useLocale()
   const open = isPropertyOpenForInvestment(propertyStatus)
 
   if (!open) {
@@ -61,6 +63,14 @@ export default function InvestNowButton({
   return (
     <Link
       href={step.href}
+      onClick={() => trackGaEvent('invest_intent', {
+        property_id: String(propertyId),
+        property_status: propertyStatus,
+        user_state: status === 'authenticated' ? 'authenticated' : 'anonymous',
+        destination: step.href,
+        cta_location: 'property_sidebar',
+        locale,
+      })}
       className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full', className)}
     >
       {t('investNow')}

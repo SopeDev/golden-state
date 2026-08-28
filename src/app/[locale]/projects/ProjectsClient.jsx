@@ -25,8 +25,13 @@ export default function ProjectsClient({ properties, headerKey = 'all', fallback
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
+            {properties.map((property, index) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                listName={headerKey}
+                index={index}
+              />
             ))}
           </div>
         )}

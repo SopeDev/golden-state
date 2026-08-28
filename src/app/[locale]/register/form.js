@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import RequiredLabel from '@/components/ui/RequiredLabel'
 import GoogleIcon from '@/components/GoogleIcon/GoogleIcon'
 import { legalAgreementTags } from '@/components/Legal/legalAgreementTags'
+import { trackGaEvent } from '@/lib/analytics'
 
 export default function Form() {
   const t = useTranslations('Register')
@@ -69,6 +70,8 @@ export default function Form() {
         setFormError(t(messageKey))
         return
       }
+
+      trackGaEvent('sign_up', { method: 'credentials', locale })
 
       const signInResult = await signIn('credentials', {
         email,

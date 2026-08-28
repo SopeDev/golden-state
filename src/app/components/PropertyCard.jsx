@@ -14,6 +14,7 @@ import {
   getActualDurationMonths,
   getPropertyDisplayFlags,
 } from '@/lib/propertyStatusUi'
+import { toGaPropertyItem, trackGaEvent } from '@/lib/analytics'
 
 function StatCell({ label, value, valueClassName }) {
   return (
@@ -24,7 +25,7 @@ function StatCell({ label, value, valueClassName }) {
   )
 }
 
-export default function PropertyCard({ property }) {
+export default function PropertyCard({ property, listName = 'projects', index = 0 }) {
   const t = useTranslations('Projects')
   const locale = useLocale()
   const typeLabel = resolvePropertyTypeLabel(property, locale)
@@ -74,12 +75,24 @@ export default function PropertyCard({ property }) {
   const showStats = Boolean(leftStat || rightStat)
   const twoCols = Boolean(leftStat && rightStat)
   const summaryText = getLocalizedPropertySummary(property, locale)
+  const trackSelection = (clickTarget) => {
+    trackGaEvent('select_item', {
+      item_list_name: listName,
+      locale,
+      click_target: clickTarget,
+      items: [toGaPropertyItem(property, { item_list_name: listName, index })],
+    })
+  }
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border-border/80 py-0 shadow-md transition-shadow hover:shadow-lg gap-0">
       <div className="relative h-64 overflow-hidden bg-muted">
         {property.images && property.images.length > 0 ? (
-          <Link href={`/properties/${property.investmentId}`} className="block h-full">
+          <Link
+            href={`/properties/${property.investmentId}`}
+            className="block h-full"
+            onClick={() => trackSelection('image')}
+          >
             <img
               src={property.images[0]}
               alt={property.name}
@@ -105,7 +118,10 @@ export default function PropertyCard({ property }) {
       </div>
 
       <CardContent className="flex flex-1 flex-col p-6 pt-6">
-        <Link href={`/properties/${property.investmentId}`}>
+        <Link
+          href={`/properties/${property.investmentId}`}
+          onClick={() => trackSelection('title')}
+        >
           <h3 className="mb-2 font-heading text-3xl font-semibold text-primary transition-colors hover:text-secondary-blue">
             {property.name}
           </h3>
@@ -148,6 +164,7 @@ export default function PropertyCard({ property }) {
       <CardFooter className="bg-muted/20 px-6 pb-6 pt-4">
         <Link
           href={`/properties/${property.investmentId}`}
+          onClick={() => trackSelection('view_details')}
           className={cn(buttonVariants({ variant: 'gold', size: 'cta' }), 'w-full')}
         >
           {t('viewDetails')}

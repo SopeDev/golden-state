@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
+import { useLocale } from 'next-intl'
 import { CalendarClock, Clock, Mail, MapPin, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,10 +10,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { trackGaEvent } from '@/lib/analytics'
 
 const DEFAULT_SCHEDULING_URL = 'https://calendly.com/goldenstate-capital/discovery-call'
 
 export default function ContactPageClient({ content }) {
+  const locale = useLocale()
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -55,6 +58,11 @@ export default function ContactPageClient({ content }) {
 
       setStatus('success')
       form.reset()
+      trackGaEvent('generate_lead', {
+        lead_source: 'contact_form',
+        source_page: '/contact',
+        locale,
+      })
     } catch {
       setStatus('error')
     } finally {
@@ -111,7 +119,17 @@ export default function ContactPageClient({ content }) {
               </CardHeader>
               <CardContent className="flex flex-col justify-center gap-2 border-t border-border/80 bg-card p-8 md:border-l md:border-t-0 md:p-10">
                 <Button asChild size="lg" className="w-full sm:w-auto sm:self-start" variant="gold">
-                  <a href={schedulingUrl} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={schedulingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackGaEvent('schedule_call_click', {
+                      source_page: '/contact',
+                      cta_location: 'contact_schedule_card',
+                      destination: schedulingUrl,
+                      locale,
+                    })}
+                  >
                     {content.scheduleCta}
                   </a>
                 </Button>
@@ -153,6 +171,12 @@ export default function ContactPageClient({ content }) {
                     <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{content.phoneLabel}</p>
                     <a
                       href={`tel:${content.phoneHref}`}
+                      onClick={() => trackGaEvent('contact_click', {
+                        contact_method: 'phone',
+                        source_page: '/contact',
+                        cta_location: 'contact_details',
+                        locale,
+                      })}
                       className="mt-1 block text-sm font-medium text-secondary-blue hover:underline"
                     >
                       {content.phoneValue}
@@ -167,6 +191,12 @@ export default function ContactPageClient({ content }) {
                     <p className="text-xs font-semibold uppercase tracking-wide text-main-gold">{content.emailLabel}</p>
                     <a
                       href={`mailto:${content.emailValue}`}
+                      onClick={() => trackGaEvent('contact_click', {
+                        contact_method: 'email',
+                        source_page: '/contact',
+                        cta_location: 'contact_details',
+                        locale,
+                      })}
                       className="mt-1 block text-sm font-medium text-secondary-blue hover:underline break-all"
                     >
                       {content.emailValue}

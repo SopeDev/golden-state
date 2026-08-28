@@ -2,11 +2,11 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 const cspDirectives = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' blob:${isDev ? " 'unsafe-eval'" : ''} https://calendly.com https://assets.calendly.com`,
+  `script-src 'self' 'unsafe-inline' blob:${isDev ? " 'unsafe-eval'" : ''} https://www.googletagmanager.com https://calendly.com https://assets.calendly.com`,
   "style-src 'self' 'unsafe-inline' https://assets.calendly.com",
   "img-src 'self' blob: data: https:",
   "font-src 'self' data: https://assets.calendly.com",
-  `connect-src 'self' https://accounts.google.com https://www.googleapis.com https://calendly.com https://assets.calendly.com${isDev ? ' ws: wss:' : ''}`,
+  `connect-src 'self' https://accounts.google.com https://www.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://calendly.com https://assets.calendly.com${isDev ? ' ws: wss:' : ''}`,
   "frame-src 'self' https://accounts.google.com https://calendly.com https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
   "frame-ancestors 'none'",
   "object-src 'none'",

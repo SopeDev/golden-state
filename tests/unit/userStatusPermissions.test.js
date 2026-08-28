@@ -54,7 +54,13 @@ describe('investor route decisions', () => {
 
   it('sends admins/operators to admin and investors through onboarding', () => {
     expect(resolvePostLoginPath({ type: 'ADMIN' })).toBe('/admin')
-    expect(resolvePostLoginPath({ type: 'OPERATOR' })).toBe('/admin')
+    expect(
+      resolvePostLoginPath({
+        type: 'OPERATOR',
+        operatorPermissions: [P.VIEW_DASHBOARD],
+      })
+    ).toBe('/admin')
+    expect(resolvePostLoginPath({ type: 'OPERATOR' })).toBe('/admin/properties')
     expect(resolvePostLoginPath(investor({ accountStatus: 'PENDING_ADMIN' }))).toBe(
       '/account/pending'
     )
@@ -80,7 +86,7 @@ describe('investor route decisions', () => {
 })
 
 describe('operator permission normalization', () => {
-  it('deduplicates permissions, rejects unknown values, and adds the document dependency', () => {
+  it('deduplicates permissions, rejects unknown values, and drops orphaned dependencies', () => {
     expect(
       normalizeOperatorPermissions([
         P.VIEW_PROPERTIES,
@@ -88,10 +94,20 @@ describe('operator permission normalization', () => {
         'NOT_A_PERMISSION',
         P.NOTIFY_PROPERTY_INVESTORS,
       ])
+    ).toEqual([P.VIEW_PROPERTIES])
+  })
+
+  it('retains dependent permissions when all requirements are enabled', () => {
+    expect(
+      normalizeOperatorPermissions([
+        P.VIEW_PROPERTIES,
+        P.MANAGE_PROPERTY_DOCUMENTS,
+        P.NOTIFY_PROPERTY_INVESTORS,
+      ])
     ).toEqual([
       P.VIEW_PROPERTIES,
-      P.NOTIFY_PROPERTY_INVESTORS,
       P.MANAGE_PROPERTY_DOCUMENTS,
+      P.NOTIFY_PROPERTY_INVESTORS,
     ])
   })
 })
