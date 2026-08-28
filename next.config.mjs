@@ -3,7 +3,7 @@ import {
   SAME_ORIGIN_DOCUMENT_HEADERS,
   SAME_ORIGIN_PREVIEW_HEADERS,
   SECURITY_HEADERS,
-} from './src/lib/security/headers.js'
+} from './src/lib/security/headers.mjs'
 
 const withNextIntl = createNextIntlPlugin()
 

@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import OpenRoles from './OpenRoles'
 import WorkWithUsForm from './WorkWithUsForm'
+import WorkWithUsRolesManager from './WorkWithUsRolesManager'
 import { GENERAL_INTEREST_VALUE, buildRolesFromContent } from '@/lib/careerRoles'
 
-export default function WorkWithUsPage({ content, roles: rolesProp, initialRoleId }) {
+export default function WorkWithUsPage({ content, roles: rolesProp, initialRoleId, roleContentByLocale }) {
   const roles = useMemo(() => {
     if (Array.isArray(rolesProp)) return rolesProp
     return buildRolesFromContent(content)
@@ -43,10 +44,11 @@ export default function WorkWithUsPage({ content, roles: rolesProp, initialRoleI
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">
           <Image
-            src="/images/skyline-3_1920.webp"
+            src={content.heroImageUrl || '/images/skyline-3_1920.webp'}
             alt={content.heroTitle || 'Work with us'}
             fill
             priority
+            unoptimized
             className="object-cover object-[center_35%]"
             sizes="100vw"
           />
@@ -67,6 +69,10 @@ export default function WorkWithUsPage({ content, roles: rolesProp, initialRoleI
           </div>
         </div>
       </section>
+
+      {roleContentByLocale ? (
+        <WorkWithUsRolesManager initialContentByLocale={roleContentByLocale} />
+      ) : null}
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:py-16">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">

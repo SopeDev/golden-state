@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { AdminPageFrame, AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { Link } from '@/i18n/navigation'
 import FaqStructuredEditor, { faqInputId } from './FaqStructuredEditor'
-import RolesStructuredEditor from './RolesStructuredEditor'
 import {
   parseFaqStructure,
   composeFaqFlat,
@@ -23,16 +23,7 @@ import {
   moveQuestion as faqMoveQuestion,
   updateQuestionField as faqUpdateQuestionField,
 } from '@/lib/faqEditor'
-import {
-  parseCareersRoles,
-  composeCareersFlat,
-  isCareersStructuredKey,
-  addRole as careersAddRole,
-  removeRole as careersRemoveRole,
-  moveRole as careersMoveRole,
-  updateRoleField as careersUpdateRoleField,
-  roleInputId,
-} from '@/lib/careersEditor'
+import { isCareersStructuredKey } from '@/lib/careersEditor'
 import { stripCareersStructuredKeys } from '@/lib/careerRoles'
 
 const PREVIEW_CONFIG = {
@@ -46,6 +37,15 @@ const PREVIEW_CONFIG = {
     selectType: 'WORK_WITH_US_PREVIEW_SELECT',
   },
 }
+
+const IMAGE_FIELD_KEYS = new Set([
+  'heroImageUrl',
+  'whyUsImageUrl',
+  'governanceImageUrl',
+  'investImageUrl',
+  'reportingImageUrl',
+])
+const HIDDEN_LEGACY_FIELD_KEYS = new Set(['whyUsVideoUrl', 'whyUsVideoCaption'])
 
 const stripFaqStructuredKeys = (obj) => {
   if (!obj) return {}
@@ -80,6 +80,7 @@ const ABOUT_KEY_ORDER = [
   'heroEyebrow',
   'heroTitle',
   'heroSubtitle',
+  'heroImageUrl',
   'heroImageAlt',
   'ctaProjects',
   'ctaRegister',
@@ -100,6 +101,7 @@ const ABOUT_KEY_ORDER = [
   'governanceTitle',
   'governanceBody',
   'governanceBody2',
+  'governanceImageUrl',
   'imageGovernance',
   'diffKicker',
   'diffTitle',
@@ -117,6 +119,7 @@ const ABOUT_KEY_ORDER = [
   'investPoint2',
   'investPoint3',
   'investNote',
+  'investImageUrl',
   'investImageAlt',
   'safetyKicker',
   'safetyTitle',
@@ -135,6 +138,7 @@ const ABOUT_KEY_ORDER = [
   'reportingStep2Body',
   'reportingStep3Title',
   'reportingStep3Body',
+  'reportingImageUrl',
   'imageReporting',
   'familyKicker',
   'familyTitle',
@@ -159,6 +163,7 @@ const HOME_SECTIONS = [
       'heroBullet5',
       'heroPrimaryCta',
       'heroSecondaryCta',
+      'heroImageUrl',
       'heroImageAlt',
     ],
   },
@@ -188,8 +193,8 @@ const HOME_SECTIONS = [
       'whyUsTitle',
       'whyUsBody1',
       'whyUsBody2',
-      'whyUsVideoUrl',
-      'whyUsVideoCaption',
+      'whyUsImageUrl',
+      'whyUsImageAlt',
     ],
   },
   {
@@ -311,6 +316,7 @@ const WORK_WITH_US_KEY_ORDER = [
   'heroEyebrow',
   'heroTitle',
   'heroSubtitle',
+  'heroImageUrl',
   'introTitle',
   'introBody',
   'rolesKicker',
@@ -328,6 +334,10 @@ const WORK_WITH_US_KEY_ORDER = [
   'email',
   'phone',
   'message',
+  'resumeLabel',
+  'resumeHint',
+  'resumeTooLarge',
+  'resumeInvalid',
   'submit',
   'submitting',
   'success',
@@ -343,6 +353,7 @@ const CONTACT_KEY_ORDER = [
   'heroTitle',
   'heroThanks',
   'heroInvite',
+  'heroImageUrl',
   'scheduleTitle',
   'scheduleDescription',
   'scheduleCta',
@@ -393,6 +404,7 @@ const PAGE_CONFIG = {
       'metaDescription',
       'heroTitle',
       'heroSubtitle',
+      'heroImageUrl',
       'intro',
       'highlight1Title',
       'highlight1Body',
@@ -426,6 +438,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
   const [activePage, setActivePage] = useState('HOME')
   const [previewLocale, setPreviewLocale] = useState('en')
   const [isLoading, setIsLoading] = useState(false)
+  const [uploadingImageKey, setUploadingImageKey] = useState('')
   const [status, setStatus] = useState('')
   const [highlightedFieldId, setHighlightedFieldId] = useState('')
   const iframeRef = useRef(null)
@@ -460,6 +473,7 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
     const esKeys = Object.keys(activeContent.es || {})
     const allKeys = new Set([...enKeys, ...esKeys])
     const unknownKeys = Array.from(allKeys).filter((key) => {
+      if (HIDDEN_LEGACY_FIELD_KEYS.has(key)) return false
       if (pageOrder.includes(key)) return false
       // FAQ categories/items are edited via the structured editor below.
       if (activePage === 'FAQ' && FAQ_STRUCTURED_KEY_REGEX.test(key)) return false
@@ -505,32 +519,6 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
       applyFaqUpdate((s) =>
         faqUpdateQuestionField(s, categoryId, questionIndex, field, locale, value)
       ),
-  }
-
-  const careersStructure = useMemo(() => {
-    if (activePage !== 'WORK_WITH_US') return null
-    return parseCareersRoles(contentByPage.WORK_WITH_US)
-  }, [activePage, contentByPage])
-
-  const applyCareersUpdate = (producer) => {
-    setContentByPage((prev) => {
-      const base = prev.WORK_WITH_US || { en: {}, es: {} }
-      const currentStructure = parseCareersRoles(base)
-      const nextStructure = producer(currentStructure)
-      return {
-        ...prev,
-        WORK_WITH_US: composeCareersFlat(nextStructure, base),
-      }
-    })
-  }
-
-  const careersHandlers = {
-    onAddRole: () => applyCareersUpdate((s) => careersAddRole(s)),
-    onRemoveRole: (roleId) => applyCareersUpdate((s) => careersRemoveRole(s, roleId)),
-    onMoveRole: (roleId, direction) =>
-      applyCareersUpdate((s) => careersMoveRole(s, roleId, direction)),
-    onRoleFieldChange: (roleId, field, locale, value) =>
-      applyCareersUpdate((s) => careersUpdateRoleField(s, roleId, field, locale, value)),
   }
 
   const isLongField = (key) => {
@@ -579,6 +567,40 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
         },
       },
     }))
+  }
+
+  const handleSharedImageChange = (key, value) => {
+    setContentByPage((prev) => ({
+      ...prev,
+      [activePage]: {
+        ...(prev[activePage] || {}),
+        en: { ...(prev[activePage]?.en || {}), [key]: value },
+        es: { ...(prev[activePage]?.es || {}), [key]: value },
+      },
+    }))
+  }
+
+  const handleImageUpload = async (key, file) => {
+    if (!file) return
+    if (file.size > 4 * 1024 * 1024) {
+      setStatus(t('imageTooLarge'))
+      return
+    }
+    setStatus('')
+    setUploadingImageKey(key)
+    try {
+      const body = new FormData()
+      body.set('image', file)
+      const response = await fetch('/api/admin/uploads/content-images', { method: 'POST', body })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || t('imageUploadFailed'))
+      handleSharedImageChange(key, data.url)
+      setStatus(t('imageUploaded'))
+    } catch (error) {
+      setStatus(error.message || t('imageUploadFailed'))
+    } finally {
+      setUploadingImageKey('')
+    }
   }
 
   const handleSave = async () => {
@@ -631,6 +653,39 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
     const useTextarea = isLongField(key)
     const enValue = contentByPage[activePage]?.en?.[key] ?? ''
     const esValue = contentByPage[activePage]?.es?.[key] ?? ''
+
+    if (IMAGE_FIELD_KEYS.has(key)) {
+      const value = enValue || esValue
+      return (
+        <div key={key} className="space-y-3 rounded-lg border border-border p-4">
+          <Label className="block font-mono text-xs text-muted-foreground">{key}</Label>
+          {value ? (
+            <img
+              src={value}
+              alt=""
+              className="max-h-56 w-full rounded-md border border-border/70 bg-muted object-cover"
+            />
+          ) : null}
+          <Input
+            value={value}
+            onChange={(event) => handleSharedImageChange(key, event.target.value)}
+            placeholder={t('imageUrlPlaceholder')}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              disabled={Boolean(uploadingImageKey)}
+              onChange={(event) => handleImageUpload(key, event.target.files?.[0])}
+              className="max-w-sm"
+            />
+            <span className="text-xs text-muted-foreground">
+              {uploadingImageKey === key ? t('uploadingImage') : t('imageUploadHint')}
+            </span>
+          </div>
+        </div>
+      )
+    }
 
     if (useTextarea) {
       return (
@@ -755,13 +810,6 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
         const payload = event.data?.payload || {}
         const locale = payload.locale || previewLocale
         if (payload.kind === 'role') {
-          focusInputId(
-            roleInputId({
-              roleId: payload.roleId,
-              field: payload.field,
-              locale,
-            })
-          )
           return
         }
         if (payload.key) focusInputId(`${locale}-${payload.key}`)
@@ -809,6 +857,14 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
               <CardDescription>{t('pageDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {activePage === 'WORK_WITH_US' ? (
+                <div className="rounded-lg border border-main-gold/30 bg-main-gold/5 p-4 text-sm text-muted-foreground">
+                  {t('rolesManagedOnPage')}{' '}
+                  <Link href="/work-with-us" className="font-semibold text-main-gold underline underline-offset-4">
+                    {t('openRolesManager')}
+                  </Link>
+                </div>
+              ) : null}
               {activeSections ? (
                 <div className="space-y-8">
                   {activeSections.map((section) => {
@@ -861,16 +917,6 @@ export default function ContentAdminClient({ records, fallbackByPage }) {
                     structure={faqStructure}
                     highlightedFieldId={highlightedFieldId}
                     {...faqHandlers}
-                  />
-                </div>
-              ) : null}
-
-              {activePage === 'WORK_WITH_US' && careersStructure ? (
-                <div className="border-t border-border pt-6">
-                  <RolesStructuredEditor
-                    structure={careersStructure}
-                    highlightedFieldId={highlightedFieldId}
-                    {...careersHandlers}
                   />
                 </div>
               ) : null}

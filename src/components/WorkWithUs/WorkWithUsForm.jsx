@@ -13,6 +13,12 @@ import { GENERAL_INTEREST_VALUE } from '@/lib/careerRoles'
 import { cn } from '@/lib/utils'
 
 const HIGHLIGHT_MS = 1800
+const MAX_RESUME_BYTES = 3 * 1024 * 1024
+const ALLOWED_RESUME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+])
 
 export default function WorkWithUsForm({
   content,
@@ -53,14 +59,12 @@ export default function WorkWithUsForm({
     const form = e.target
     const roleId = selectedRoleId || GENERAL_INTEREST_VALUE
     const selectedRole = roles.find((role) => role.id === roleId)
+    const resume = form.resume.files?.[0]
     const payload = {
       name: form.name.value?.trim(),
       email: form.email.value?.trim(),
       phone: form.phone.value?.trim(),
       message: form.message.value?.trim(),
-      roleId,
-      roleTitle: selectedRole?.title || content.formInterestGeneral,
-      locale,
     }
 
     if (!payload.name || !payload.email || !payload.message) {
@@ -69,11 +73,28 @@ export default function WorkWithUsForm({
       return
     }
 
+    if (resume && resume.size > MAX_RESUME_BYTES) {
+      setStatus('resumeTooLarge')
+      setIsSubmitting(false)
+      return
+    }
+    if (resume && !ALLOWED_RESUME_TYPES.has(resume.type)) {
+      setStatus('invalidResume')
+      setIsSubmitting(false)
+      return
+    }
+
     try {
+      const formData = new FormData()
+      Object.entries(payload).forEach(([key, value]) => formData.set(key, value || ''))
+      formData.set('roleId', roleId)
+      formData.set('roleTitle', selectedRole?.title || content.formInterestGeneral)
+      formData.set('locale', locale)
+      if (resume) formData.set('resume', resume)
+
       const res = await fetch('/api/work-with-us', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
       })
 
       if (!res.ok) {
@@ -159,6 +180,16 @@ export default function WorkWithUsForm({
               className="min-h-[140px] resize-y"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="careers-resume">{content.resumeLabel}</Label>
+            <Input
+              id="careers-resume"
+              name="resume"
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            />
+            <p className="text-xs text-muted-foreground">{content.resumeHint}</p>
+          </div>
 
           <p className="text-xs text-muted-foreground">{content.privacyNote}</p>
           {content.eeoNote ? (
@@ -175,6 +206,12 @@ export default function WorkWithUsForm({
           )}
           {status === 'error' && (
             <p className="text-sm font-medium text-destructive">{content.error}</p>
+          )}
+          {status === 'resumeTooLarge' && (
+            <p className="text-sm font-medium text-destructive">{content.resumeTooLarge}</p>
+          )}
+          {status === 'invalidResume' && (
+            <p className="text-sm font-medium text-destructive">{content.resumeInvalid}</p>
           )}
 
           <Button

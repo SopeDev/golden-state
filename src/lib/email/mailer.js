@@ -116,7 +116,7 @@ const createSmtpTransport = () => {
   })
 }
 
-const sendViaSmtp = async ({ to, subject, html, text }) => {
+const sendViaSmtp = async ({ to, subject, html, text, attachments = [] }) => {
   const transport = createSmtpTransport()
   if (!transport) return null
 
@@ -131,7 +131,7 @@ const sendViaSmtp = async ({ to, subject, html, text }) => {
     subject,
     html,
     text,
-    attachments: logoAttachment ? [logoAttachment] : undefined,
+    attachments: [...(logoAttachment ? [logoAttachment] : []), ...attachments],
   })
 
   console.info('[email:smtp] sent', {
@@ -145,7 +145,7 @@ const sendViaSmtp = async ({ to, subject, html, text }) => {
   return { ok: true, provider: 'smtp', messageId: result.messageId }
 }
 
-const sendViaResend = async ({ to, subject, html, text }) => {
+const sendViaResend = async ({ to, subject, html, text, attachments = [] }) => {
   const resend = getResendClient()
   if (!resend) return null
 
@@ -158,7 +158,7 @@ const sendViaResend = async ({ to, subject, html, text }) => {
     subject,
     html,
     text,
-    attachments: logoAttachment ? [logoAttachment] : undefined,
+    attachments: [...(logoAttachment ? [logoAttachment] : []), ...attachments],
   })
 
   if (error) {
@@ -177,12 +177,12 @@ const sendViaResend = async ({ to, subject, html, text }) => {
 }
 
 /** Primary: Resend. Fallback: SMTP (if configured). Else log preview in dev. */
-export async function sendEmail({ to, subject, html, text }) {
-  const resendResult = await sendViaResend({ to, subject, html, text })
+export async function sendEmail({ to, subject, html, text, attachments }) {
+  const resendResult = await sendViaResend({ to, subject, html, text, attachments })
   if (resendResult?.ok) return resendResult
 
   if (resendResult && !resendResult.ok) {
-    const smtpFallback = await sendViaSmtp({ to, subject, html, text })
+    const smtpFallback = await sendViaSmtp({ to, subject, html, text, attachments })
     if (smtpFallback?.ok) {
       console.warn('[email] Resend failed — delivered via SMTP fallback')
       return smtpFallback
@@ -193,7 +193,7 @@ export async function sendEmail({ to, subject, html, text }) {
     )
   }
 
-  const smtpResult = await sendViaSmtp({ to, subject, html, text })
+  const smtpResult = await sendViaSmtp({ to, subject, html, text, attachments })
   if (smtpResult?.ok) return smtpResult
 
   const preview = text || html?.replace(/<[^>]+>/g, ' ').slice(0, 300)

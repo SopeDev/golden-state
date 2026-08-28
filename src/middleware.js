@@ -49,6 +49,7 @@ const adminPermissionFor = (pathname, method) => {
   if (path.includes('/admin/properties/') && path.includes('/notify-documents')) return P.NOTIFY_PROPERTY_INVESTORS
   if (path.includes('/admin/properties/') && path.includes('/documents')) return P.MANAGE_PROPERTY_DOCUMENTS
   if (path.includes('/admin/uploads/property-images')) return P.EDIT_PROPERTIES
+  if (path.includes('/admin/uploads/content-images')) return P.EDIT_WEBSITE_CONTENT
   if (path.startsWith('/admin/property-types') || path.startsWith('/api/admin/property-types')) {
     return write ? P.MANAGE_PROPERTY_TYPES : P.VIEW_PROPERTIES
   }

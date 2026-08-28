@@ -67,10 +67,11 @@ export default function ContactPageClient({ content }) {
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">
           <Image
-            src="/images/contact_1920.webp"
+            src={content.heroImageUrl || '/images/contact_1920.webp'}
             alt="Contact hero background"
             fill
             priority
+            unoptimized
             className="object-cover object-[60%_center]"
             sizes="100vw"
           />

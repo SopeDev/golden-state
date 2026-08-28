@@ -35,7 +35,7 @@ export function getAdminNotifyEmails() {
   return [CORPORATE_ADMIN_EMAIL]
 }
 
-async function deliverAdminEmail(locale, content) {
+async function deliverAdminEmail(locale, content, attachments) {
   const recipients = getAdminNotifyEmails()
   await Promise.all(
     recipients.map((to) =>
@@ -44,6 +44,7 @@ async function deliverAdminEmail(locale, content) {
         subject: content.subject,
         html: content.html,
         text: content.text,
+        attachments,
       })
     )
   )
@@ -377,6 +378,7 @@ export async function notifyAdminsWorkWithUsInquiry({
   message,
   roleTitle,
   locale = 'en',
+  resume,
 }) {
   const content = buildAdminEmail({
     locale,
@@ -398,5 +400,5 @@ export async function notifyAdminsWorkWithUsInquiry({
     note: message,
   })
 
-  return deliverAdminEmail(locale, content)
+  return deliverAdminEmail(locale, content, resume ? [resume] : undefined)
 }

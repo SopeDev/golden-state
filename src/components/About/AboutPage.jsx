@@ -49,10 +49,11 @@ export default function AboutPage({ content }) {
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">
           <Image
-            src="/images/skyline-3_1920.webp"
+            src={content.heroImageUrl || '/images/skyline-3_1920.webp'}
             alt={content.heroImageAlt}
             fill
             priority
+            unoptimized
             className="object-cover object-[center_35%]"
             sizes="100vw"
           />
@@ -150,9 +151,10 @@ export default function AboutPage({ content }) {
           <div className="w-full min-w-0 max-w-md lg:justify-self-end">
             <div className="relative aspect-square w-full overflow-hidden rounded-xl border-2 border-main-gold/35 shadow-lg">
               <Image
-                src="/images/governance_1920.webp"
+                src={content.governanceImageUrl || '/images/governance_1920.webp'}
                 alt={content.imageGovernance}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 448px"
               />
@@ -213,9 +215,10 @@ export default function AboutPage({ content }) {
           <div className="relative mx-auto w-full max-w-lg lg:order-2 lg:mx-0 lg:max-w-none">
             <div className="relative aspect-[16/10] overflow-hidden rounded-xl border-2 border-main-gold/35 shadow-lg">
               <Image
-                src="/images/investors.webp"
+                src={content.investImageUrl || '/images/investors.webp'}
                 alt={content.investImageAlt}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 480px"
               />
@@ -301,9 +304,10 @@ export default function AboutPage({ content }) {
           <div className="w-full min-w-0">
             <div className="relative aspect-square w-full overflow-hidden rounded-xl border-2 border-main-gold/35 shadow-lg lg:sticky lg:top-28">
               <Image
-                src="/images/dashboard_1920.webp"
+                src={content.reportingImageUrl || '/images/dashboard_1920.webp'}
                 alt={content.imageReporting}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 480px"
               />

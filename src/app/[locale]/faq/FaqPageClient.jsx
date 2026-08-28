@@ -11,10 +11,11 @@ export default function FaqPageClient({ content, sections }) {
       <section className="relative overflow-hidden border-b border-border text-primary-foreground">
         <div className="absolute inset-0">
           <Image
-            src="/images/skyline-3_1920.webp"
+            src={content.heroImageUrl || '/images/skyline-3_1920.webp'}
             alt={content.heroTitle}
             fill
             priority
+            unoptimized
             className="object-cover object-[center_35%]"
             sizes="100vw"
           />

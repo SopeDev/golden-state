@@ -156,10 +156,11 @@ function HomeHero({ content, statsLayout = HOME_STATS_LAYOUT }) {
     >
       <div className="absolute inset-0">
         <Image
-          src="/images/cal-skyline_1920.webp"
+          src={content.heroImageUrl || '/images/cal-skyline_1920.webp'}
           alt={content.heroImageAlt || ''}
           fill
           priority
+          unoptimized
           className="object-cover object-center"
           sizes="100vw"
         />
@@ -284,8 +285,6 @@ function HomeWhatIs({ content }) {
 }
 
 function HomeWhyUs({ content }) {
-  const hasVideo = Boolean(content.whyUsVideoUrl)
-
   return (
     <section className="border-y border-main-gold/25 bg-off-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 lg:grid-cols-2 lg:items-center">
@@ -299,41 +298,17 @@ function HomeWhyUs({ content }) {
             {content.whyUsBody2 ? <p>{content.whyUsBody2}</p> : null}
           </div>
         </div>
-        <div>
-          {hasVideo ? (
-            <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-lg">
-              <div className="aspect-video bg-black">
-                <iframe
-                  src={content.whyUsVideoUrl}
-                  title="Golden State explainer"
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-              {content.whyUsVideoCaption ? (
-                <p className="px-5 py-3 text-sm text-muted-foreground">{content.whyUsVideoCaption}</p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="relative overflow-hidden rounded-xl border border-border/80 bg-card shadow-lg">
-              <div className="aspect-video">
-                <Image
-                  src="/images/skyline-3_1920.webp"
-                  alt=""
-                  fill
-                  className="object-cover object-[center_35%]"
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/85 to-secondary-blue/65" aria-hidden />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="rounded-full border border-main-gold/40 bg-primary/40 px-5 py-2 text-sm font-semibold text-main-gold backdrop-blur-sm">
-                    {content.whyUsVideoCaption || 'Video coming soon'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="relative mx-auto w-full max-w-lg lg:mx-0 lg:max-w-none">
+          <div className="relative aspect-[16/10] overflow-hidden rounded-xl border-2 border-main-gold/35 shadow-lg">
+            <Image
+              src={content.whyUsImageUrl || '/images/skyline-3_1920.webp'}
+              alt={content.whyUsImageAlt || ''}
+              fill
+              unoptimized
+              className="object-cover object-[center_35%]"
+              sizes="(max-width: 1024px) 100vw, 480px"
+            />
+          </div>
         </div>
       </div>
     </section>
