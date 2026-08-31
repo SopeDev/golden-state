@@ -993,7 +993,7 @@
     "email": "Email",
     "phone": "Phone (optional)",
     "message": "Message",
-    "resumeLabel": "Resume (optional)",
+    "resumeLabel": "Resume",
     "resumeHint": "PDF, DOC, or DOCX · maximum 3 MB",
     "resumeTooLarge": "Your resume must be 3 MB or less.",
     "resumeInvalid": "Please upload a PDF, DOC, or DOCX resume.",

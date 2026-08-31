@@ -34,8 +34,11 @@ export async function POST(request) {
     const resumeEntry = body.get('resume')
     const resume = resumeEntry instanceof File && resumeEntry.size > 0 ? resumeEntry : null
 
-    if (!name || !email || !message) {
-      return NextResponse.json({ message: 'Name, email, and message are required' }, { status: 400 })
+    if (!name || !email || !message || !resume) {
+      return NextResponse.json(
+        { message: 'Name, email, message, and resume are required' },
+        { status: 400 }
+      )
     }
     if (resume?.size > MAX_RESUME_BYTES) {
       return NextResponse.json({ message: 'Resume must be 3 MB or less' }, { status: 413 })

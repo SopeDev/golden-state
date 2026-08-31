@@ -38,6 +38,9 @@ export default function WorkWithUsForm({
   const applyingLabel = selectedRole
     ? String(content.formApplyingFor || 'Applying for {role}').replace('{role}', selectedRole.title)
     : ''
+  const resumeLabel = String(content.resumeLabel || (locale === 'es' ? 'Currículum' : 'Resume'))
+    .replace(/\s*\((?:optional|opcional)\)\s*/i, '')
+    .trim()
 
   useEffect(() => {
     if (!highlightNonce) return
@@ -68,7 +71,7 @@ export default function WorkWithUsForm({
       message: form.message.value?.trim(),
     }
 
-    if (!payload.name || !payload.email || !payload.message) {
+    if (!payload.name || !payload.email || !payload.message || !resume) {
       setStatus('validation')
       setIsSubmitting(false)
       return
@@ -188,11 +191,12 @@ export default function WorkWithUsForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="careers-resume">{content.resumeLabel}</Label>
+            <Label htmlFor="careers-resume">{resumeLabel}</Label>
             <Input
               id="careers-resume"
               name="resume"
               type="file"
+              required
               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             />
             <p className="text-xs text-muted-foreground">{content.resumeHint}</p>

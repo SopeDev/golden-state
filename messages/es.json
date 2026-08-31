@@ -993,7 +993,7 @@
     "email": "Correo",
     "phone": "Teléfono (opcional)",
     "message": "Mensaje",
-    "resumeLabel": "Currículum (opcional)",
+    "resumeLabel": "Currículum",
     "resumeHint": "PDF, DOC o DOCX · máximo 3 MB",
     "resumeTooLarge": "Tu currículum debe pesar 3 MB o menos.",
     "resumeInvalid": "Sube un currículum en formato PDF, DOC o DOCX.",
